@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import VideoFeed from "@/components/VideoFeed";
@@ -14,6 +15,8 @@ import {
 } from "@/components/ui/collapsible";
 import PerformanceAnalytics from "@/components/PerformanceAnalytics";
 import CoachPersonalitySelector from "@/components/CoachPersonalitySelector";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 
 const Index = () => {
@@ -23,6 +26,7 @@ const Index = () => {
     "Enable your camera and select an exercise to begin. Let's see what you've got!"
   );
   const [isDebugMode, setIsDebugMode] = useState(false);
+  const [isRecordingEnabled, setIsRecordingEnabled] = useState(false);
   const [poseData, setPoseData] = useState<PoseData | null>(null);
   const [formScore, setFormScore] = useState(100);
   const [sessionStart, setSessionStart] = useState<number | null>(null);
@@ -72,6 +76,7 @@ const Index = () => {
               onFormScoreUpdate={setFormScore}
               onNewRepData={handleNewRepData}
               coachPersonality={coachPersonality}
+              isRecordingEnabled={isRecordingEnabled}
             />
             <div className="flex justify-between items-center flex-wrap gap-4">
               <ExerciseSelector 
@@ -82,15 +87,20 @@ const Index = () => {
                 selectedPersonality={coachPersonality}
                 onPersonalityChange={setCoachPersonality}
               />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsDebugMode((prev) => !prev)}
-                className="mt-2 sm:mt-0"
-              >
-                <Bug className="mr-2 h-4 w-4" />
-                {isDebugMode ? "Hide" : "Show"} Debug
-              </Button>
+              <div className="flex items-center gap-4 mt-2 sm:mt-0">
+                <div className="flex items-center space-x-2">
+                  <Switch id="enable-recording" checked={isRecordingEnabled} onCheckedChange={setIsRecordingEnabled} />
+                  <Label htmlFor="enable-recording">Enable Recording</Label>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsDebugMode((prev) => !prev)}
+                >
+                  <Bug className="mr-2 h-4 w-4" />
+                  {isDebugMode ? "Hide" : "Show"} Debug
+                </Button>
+              </div>
             </div>
           </div>
 

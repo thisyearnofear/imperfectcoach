@@ -19,9 +19,10 @@ interface VideoFeedProps {
   onFormScoreUpdate: (score: number) => void;
   onNewRepData: (data: RepData) => void;
   coachPersonality: CoachPersonality;
+  isRecordingEnabled: boolean;
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled }: VideoFeedProps) => {
   const [cameraStatus, setCameraStatus] = useState<"idle" | "pending" | "granted" | "denied">("idle");
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
@@ -80,6 +81,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play();
       }
       setCameraStatus("granted");
 
@@ -110,8 +112,8 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
   const startRecording = () => {
     if (!videoRef.current || !canvasRef.current) return;
 
-    const videoStream = (videoRef.current as any).captureStream();
-    const canvasStream = (canvasRef.current as any).captureStream();
+    const videoStream = (videoRef.current as HTMLVideoElement & { captureStream: () => MediaStream }).captureStream();
+    const canvasStream = (canvasRef.current as HTMLCanvasElement & { captureStream: () => MediaStream }).captureStream();
     
     const combinedStream = new MediaStream([
       ...videoStream.getVideoTracks(),
@@ -188,17 +190,19 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
           )}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
             <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={handleRecordClick} variant={isRecording ? "destructive" : "secondary"} size="icon">
-                    {isRecording ? <div className="h-3 w-3 rounded-sm bg-white animate-pulse" /> : <Video className="h-4 w-4" />}
-                    <span className="sr-only">{isRecording ? "Stop Recording" : "Start Recording"}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{isRecording ? "Stop Recording" : "Start Recording"}</p>
-                </TooltipContent>
-              </Tooltip>
+              {isRecordingEnabled && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={handleRecordClick} variant={isRecording ? "destructive" : "secondary"} size="icon">
+                      {isRecording ? <div className="h-3 w-3 rounded-sm bg-white animate-pulse" /> : <Video className="h-4 w-4" />}
+                      <span className="sr-only">{isRecording ? "Stop Recording" : "Start Recording"}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isRecording ? "Stop Recording" : "Start Recording"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button onClick={stopCamera} variant="destructive" size="icon">
