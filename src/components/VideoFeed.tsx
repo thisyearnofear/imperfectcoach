@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, SwitchCamera, Loader2 } from "lucide-react";
@@ -79,10 +80,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
+      // The useEffect below now handles attaching the stream to the video element.
       setCameraStatus("granted");
 
       const allDevices = await navigator.mediaDevices.enumerateDevices();
@@ -92,9 +90,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     } catch (error) {
       console.error("Error accessing camera:", error);
       setCameraStatus("denied");
-      if (streamRef.current) {
-        streamRef.current = null;
-      }
+      streamRef.current = null; // Clear stream ref on error
       setModelStatus("idle");
     }
   };
@@ -167,6 +163,18 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
       startRecording();
     }
   };
+
+  useEffect(() => {
+    if (cameraStatus === 'granted' && videoRef.current && streamRef.current) {
+      if (videoRef.current.srcObject !== streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.play().catch(err => {
+          console.error("Video play failed:", err);
+          onFormFeedback("Could not play video feed. Please check browser settings.");
+        });
+      }
+    }
+  }, [cameraStatus, onFormFeedback]);
 
   useEffect(() => {
     return () => {
