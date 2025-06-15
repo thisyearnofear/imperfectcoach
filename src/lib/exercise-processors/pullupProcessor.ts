@@ -1,3 +1,4 @@
+
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { calculateAngle } from '@/lib/poseUtils';
 import { RepState, WorkoutMode, PoseData, ProcessorResult } from '@/lib/types';
@@ -21,6 +22,12 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
     const rightHip = keypoints.find(k => k.name === 'right_hip');
 
     if (!nose || !leftWrist || !rightWrist || !leftShoulder || !rightShoulder || !leftElbow || !rightElbow || !leftHip || !rightHip) {
+        return null;
+    }
+    
+    const isHanging = leftWrist.y < leftShoulder.y && rightWrist.y < rightShoulder.y;
+    if (!isHanging) {
+        // Not in a pull-up position, return null to allow pre-workout feedback to take over.
         return null;
     }
 
@@ -53,9 +60,10 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
 
     const chinAboveWrists = nose.y < leftWrist.y && nose.y < rightWrist.y;
     const armsFullyExtended = leftElbowAngle > 150 && rightElbowAngle > 150; // Relaxed from 160
-    const aiFeedbackPayloadBase = { reps: internalReps, leftElbowAngle, rightElbowAngle, repState, formIssues: lastRepIssues };
+    const isPulledUp = leftShoulderAngle < 100 && rightShoulderAngle < 100;
+    const aiFeedbackPayloadBase = { reps: internalReps, leftElbowAngle, rightElbowAngle, repState, formIssues: lastRepIssues, leftShoulderAngle, rightShoulderAngle };
 
-    if (repState === 'DOWN' && leftElbowAngle < 90 && rightElbowAngle < 90) {
+    if (repState === 'DOWN' && isPulledUp) {
         if (!chinAboveWrists) {
             currentIssues.push('partial_top_rom');
             feedback = "Get your chin over the bar!";
