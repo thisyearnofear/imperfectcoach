@@ -5,6 +5,7 @@ import { useAudioFeedback } from './useAudioFeedback';
 import { processPullups } from '@/lib/exercise-processors/pullupProcessor';
 import { processJumps } from '@/lib/exercise-processors/jumpProcessor';
 import { useAIFeedback } from './useAIFeedback';
+import { calculateAngle } from '@/lib/poseUtils';
 
 interface UseExerciseProcessorProps {
   exercise: Exercise;
@@ -141,10 +142,19 @@ export const useExerciseProcessor = ({
             const leftWrist = keypoints.find(k => k.name === 'left_wrist');
             const leftElbow = keypoints.find(k => k.name === 'left_elbow');
             const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
+            const rightWrist = keypoints.find(k => k.name === 'right_wrist');
+            const rightElbow = keypoints.find(k => k.name === 'right_elbow');
+            const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
 
-            if (leftWrist?.score > 0.3 && leftElbow?.score > 0.3 && leftShoulder?.score > 0.3) {
-                // simple check for hanging position (wrists higher than elbows, elbows higher than shoulders)
-                if (leftWrist.y < leftElbow.y && leftElbow.y < leftShoulder.y) {
+            const allKeypointsVisible = leftWrist?.score > 0.4 && leftElbow?.score > 0.4 && leftShoulder?.score > 0.4 &&
+                                        rightWrist?.score > 0.4 && rightElbow?.score > 0.4 && rightShoulder?.score > 0.4;
+
+            if (allKeypointsVisible) {
+                const leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+                const rightElbowAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
+                
+                // Check if arms are reasonably extended, indicating a hanging position
+                if (leftElbowAngle > 140 && rightElbowAngle > 140) {
                     onFormFeedback("You're in the start position. Pull up to begin!");
                 } else {
                     onFormFeedback("Hang from the bar with arms fully extended to start.");

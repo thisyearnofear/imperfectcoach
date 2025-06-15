@@ -42,14 +42,14 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
     let formCheckSpeak: { issue: string; phrase: string } | undefined;
 
     const angleDifference = Math.abs(leftElbowAngle - rightElbowAngle);
-    if (angleDifference > 25) {
+    if (angleDifference > 30) { // Relaxed from 25
         currentIssues.push('asymmetry');
         feedback = "Pull evenly with both arms!";
         formCheckSpeak = { issue: 'asymmetry', phrase: 'Pull evenly' };
     }
 
     const chinAboveWrists = nose.y < leftWrist.y && nose.y < rightWrist.y;
-    const armsFullyExtended = leftElbowAngle > 160 && rightElbowAngle > 160;
+    const armsFullyExtended = leftElbowAngle > 150 && rightElbowAngle > 150; // Relaxed from 160
     const aiFeedbackPayloadBase = { reps: internalReps, leftElbowAngle, rightElbowAngle, repState, formIssues: lastRepIssues };
 
     if (repState === 'DOWN' && leftElbowAngle < 90 && rightElbowAngle < 90) {
@@ -66,6 +66,8 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
             formCheckSpeak
         };
     } else if (repState === 'UP' && armsFullyExtended) {
+        // We count the rep if arms are extended beyond 150 degrees.
+        // But we still check if they achieved "perfect" extension (160 degrees).
         if (leftElbowAngle < 160 || rightElbowAngle < 160) {
             currentIssues.push('partial_bottom_rom');
             feedback = "Full extension at the bottom!";
