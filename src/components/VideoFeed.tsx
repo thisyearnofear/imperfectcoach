@@ -8,18 +8,22 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { usePoseDetection } from "@/hooks/usePoseDetection";
+import { PoseData } from "@/components/DebugPanel";
 
 interface VideoFeedProps {
   onRepCount: (update: (prev: number) => number) => void;
   onFormFeedback: (message: string) => void;
+  isDebugMode: boolean;
+  onPoseData: (data: PoseData) => void;
 }
 
-const VideoFeed = ({ onRepCount, onFormFeedback }: VideoFeedProps) => {
+const VideoFeed = ({ onRepCount, onFormFeedback, isDebugMode, onPoseData }: VideoFeedProps) => {
   const [cameraStatus, setCameraStatus] = useState<"idle" | "pending" | "granted" | "denied">("idle");
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [currentDeviceId, setCurrentDeviceId] = useState<string | undefined>(undefined);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   const handleModelFeedback = (message: string) => {
@@ -36,6 +40,9 @@ const VideoFeed = ({ onRepCount, onFormFeedback }: VideoFeedProps) => {
     cameraStatus,
     onRepCount,
     onFormFeedback: handleModelFeedback,
+    canvasRef,
+    isDebugMode,
+    onPoseData,
   });
 
   const stopCamera = () => {
@@ -102,6 +109,7 @@ const VideoFeed = ({ onRepCount, onFormFeedback }: VideoFeedProps) => {
       {cameraStatus === "granted" ? (
         <div className="relative w-full h-full">
           <video ref={videoRef} autoPlay playsInline className="w-full h-full rounded-md object-cover" />
+          <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full rounded-md" />
           {modelStatus === 'loading' && (
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white rounded-md">
                 <Loader2 className="animate-spin h-8 w-8 mb-2" />

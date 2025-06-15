@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import * as tf from '@tensorflow/tfjs-core';
@@ -7,11 +8,20 @@ import '@tensorflow/tfjs-backend-webgl';
 type VideoStatus = "idle" | "pending" | "granted" | "denied";
 type RepState = 'DOWN' | 'UP';
 
+export interface PoseData {
+  keypoints: posedetection.Keypoint[];
+  leftElbowAngle: number;
+  rightElbowAngle: number;
+}
+
 interface UsePoseDetectionProps {
   videoRef: React.RefObject<HTMLVideoElement>;
   cameraStatus: VideoStatus;
   onRepCount: (count: (prevCount: number) => number) => void;
   onFormFeedback: (message: string) => void;
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+  isDebugMode: boolean;
+  onPoseData: (data: PoseData) => void;
 }
 
 // Utility function to calculate angle between three points
@@ -25,7 +35,38 @@ const calculateAngle = (a: posedetection.Keypoint, b: posedetection.Keypoint, c:
     return angle;
 };
 
-export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFeedback }: UsePoseDetectionProps) => {
+// Drawing utilities
+const drawKeypoints = (keypoints: posedetection.Keypoint[], ctx: CanvasRenderingContext2D) => {
+    keypoints.forEach(keypoint => {
+        if (keypoint.score && keypoint.score > 0.5) {
+            ctx.beginPath();
+            ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = 'aqua';
+            ctx.fill();
+        }
+    });
+};
+
+const drawSkeleton = (keypoints: posedetection.Keypoint[], ctx: CanvasRenderingContext2D) => {
+    const adjacentKeyPoints = posedetection.util.getAdjacentPairs(posedetection.SupportedModels.MoveNet);
+    
+    adjacentKeyPoints.forEach(([i, j]) => {
+        const kp1 = keypoints[i];
+        const kp2 = keypoints[j];
+
+        if (kp1.score && kp2.score && kp1.score > 0.5 && kp2.score > 0.5) {
+            ctx.beginPath();
+            ctx.moveTo(kp1.x, kp1.y);
+            ctx.lineTo(kp2.x, kp2.y);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'aqua';
+            ctx.stroke();
+        }
+    });
+};
+
+
+export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData }: UsePoseDetectionProps) => {
   const detectorRef = useRef<posedetection.PoseDetector | null>(null);
   const animationFrameId = useRef<number | null>(null);
   const [repState, setRepState] = useState<RepState>('DOWN');
@@ -49,8 +90,26 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
   // Main detection loop
   useEffect(() => {
     const detectPose = async () => {
-      if (detectorRef.current && videoRef.current && videoRef.current.readyState === 4) {
-        const poses = await detectorRef.current.estimatePoses(videoRef.current);
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const detector = detectorRef.current;
+      
+      if (detector && video && video.readyState === 4) {
+        const poses = await detector.estimatePoses(video);
+
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            // Match canvas dimensions to video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (isDebugMode && poses && poses.length > 0) {
+              drawKeypoints(poses[0].keypoints, ctx);
+              drawSkeleton(poses[0].keypoints, ctx);
+            }
+          }
+        }
 
         if (poses && poses.length > 0) {
           const keypoints = poses[0].keypoints;
@@ -73,6 +132,14 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
             const leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
             const rightElbowAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
             
+            if (isDebugMode) {
+              onPoseData({
+                keypoints: keypoints,
+                leftElbowAngle,
+                rightElbowAngle,
+              });
+            }
+
             const chinAboveWrists = nose.y < leftWrist.y && nose.y < rightWrist.y;
             const armsStraight = leftElbowAngle > 160 && rightElbowAngle > 160;
 
@@ -106,7 +173,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback]);
+  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData]);
 
   // Cleanup detector on unmount
   useEffect(() => {
