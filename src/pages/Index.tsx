@@ -15,6 +15,7 @@ const Index = () => {
   );
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [poseData, setPoseData] = useState<PoseData | null>(null);
+  const [formScore, setFormScore] = useState(100);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -28,6 +29,7 @@ const Index = () => {
               onFormFeedback={setFormFeedback}
               isDebugMode={isDebugMode}
               onPoseData={setPoseData}
+              onFormScoreUpdate={setFormScore}
             />
             <div className="flex justify-between items-center">
               <ExerciseSelector />
@@ -44,7 +46,7 @@ const Index = () => {
 
           {/* Right Panel: Coach Feedback & Stats */}
           <div className="lg:col-span-1">
-            <CoachFeedback reps={reps} formFeedback={formFeedback} />
+            <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} />
             {isDebugMode && <DebugPanel poseData={poseData} />}
           </div>
         </div>

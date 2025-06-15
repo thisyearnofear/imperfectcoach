@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, SwitchCamera, Loader2 } from "lucide-react";
@@ -15,9 +14,10 @@ interface VideoFeedProps {
   onFormFeedback: (message: string) => void;
   isDebugMode: boolean;
   onPoseData: (data: PoseData) => void;
+  onFormScoreUpdate: (score: number) => void;
 }
 
-const VideoFeed = ({ onRepCount, onFormFeedback, isDebugMode, onPoseData }: VideoFeedProps) => {
+const VideoFeed = ({ onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate }: VideoFeedProps) => {
   const [cameraStatus, setCameraStatus] = useState<"idle" | "pending" | "granted" | "denied">("idle");
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
@@ -43,6 +43,7 @@ const VideoFeed = ({ onRepCount, onFormFeedback, isDebugMode, onPoseData }: Vide
     canvasRef,
     isDebugMode,
     onPoseData,
+    onFormScoreUpdate,
   });
 
   const stopCamera = () => {

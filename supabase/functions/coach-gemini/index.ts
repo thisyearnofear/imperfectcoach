@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 // Safety check for API key
@@ -32,16 +31,22 @@ serve(async (req) => {
       rightElbowAngle,
       repState,
       exercise,
+      formIssues, // Now receiving form issues
     } = await req.json()
+
+    const formattedIssues = formIssues && formIssues.length > 0
+        ? `Last rep's issues: ${formIssues.join(', ').replace(/_/g, ' ')}.`
+        : "Last rep's form was solid.";
 
     const userPrompt = `
       Analyze this data for a ${exercise}:
       - Current Reps: ${reps}
       - Left Elbow Angle: ${Math.round(leftElbowAngle)}°
       - Right Elbow Angle: ${Math.round(rightElbowAngle)}°
-      - Current Phase: ${repState} (UP means top of movement, DOWN means bottom)
+      - Current Phase: ${repState} (UP is top of rep, DOWN is bottom)
+      - ${formattedIssues}
 
-      Provide new, concise feedback based on this snapshot.
+      Provide new, concise feedback. If there were issues, focus on correcting one.
     `
 
     const requestBody = {

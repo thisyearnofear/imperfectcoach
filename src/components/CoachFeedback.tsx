@@ -2,9 +2,16 @@
 interface CoachFeedbackProps {
   reps: number;
   formFeedback: string;
+  formScore: number;
 }
 
-const CoachFeedback = ({ reps, formFeedback }: CoachFeedbackProps) => {
+const CoachFeedback = ({ reps, formFeedback, formScore }: CoachFeedbackProps) => {
+  const getScoreColor = () => {
+    if (formScore >= 80) return 'text-green-500';
+    if (formScore >= 60) return 'text-yellow-500';
+    return 'text-destructive';
+  }
+
   return (
     <div className="bg-card p-4 rounded-lg border border-border/40 h-full flex flex-col">
       <h3 className="text-lg font-semibold mb-3 text-primary">Coach Gemini says...</h3>
@@ -15,7 +22,7 @@ const CoachFeedback = ({ reps, formFeedback }: CoachFeedbackProps) => {
       </div>
       <div className="mt-4">
         <h4 className="font-semibold">Reps: <span className="text-primary font-bold text-2xl ml-2">{reps}</span></h4>
-        <h4 className="font-semibold mt-2">Form: <span className="text-primary font-bold text-lg ml-2">-</span></h4>
+        <h4 className="font-semibold mt-2">Form Score: <span className={`font-bold text-2xl ml-2 ${getScoreColor()}`}>{formScore.toFixed(0)}</span></h4>
       </div>
     </div>
   );

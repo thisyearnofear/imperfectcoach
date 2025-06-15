@@ -22,6 +22,7 @@ interface UsePoseDetectionProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   isDebugMode: boolean;
   onPoseData: (data: PoseData) => void;
+  onFormScoreUpdate: (score: number) => void;
 }
 
 // Utility function to calculate angle between three points
@@ -65,24 +66,24 @@ const drawSkeleton = (keypoints: posedetection.Keypoint[], ctx: CanvasRenderingC
     });
 };
 
-export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData }: UsePoseDetectionProps) => {
+export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate }: UsePoseDetectionProps) => {
   const detectorRef = useRef<posedetection.PoseDetector | null>(null);
   const animationFrameId = useRef<number | null>(null);
   const [repState, setRepState] = useState<RepState>('DOWN');
   const [internalReps, setInternalReps] = useState(0);
   const aiFeedbackCooldown = useRef(false);
+  const lastRepIssues = useRef<string[]>([]);
+  const repScores = useRef<number[]>([]);
 
   const getAIFeedback = async (data: Record<string, any>) => {
     if (aiFeedbackCooldown.current) return;
     aiFeedbackCooldown.current = true;
-    setTimeout(() => { aiFeedbackCooldown.current = false; }, 3000); // 3-second cooldown
+    setTimeout(() => { aiFeedbackCooldown.current = false; }, 4000); // 4-second cooldown
 
     try {
-      // Let user know coach is thinking, without overwriting crucial feedback
-      // onFormFeedback('Coach is thinking...');
       const { data: responseData, error } = await supabase.functions.invoke('coach-gemini', {
         body: {
-          exercise: 'push-up', // Hardcoded for now, can be passed as prop later
+          exercise: 'pull-up', // Changed to pull-up
           ...data,
         }
       });
@@ -92,7 +93,6 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
       }
     } catch (error) {
       console.error('Error getting AI feedback:', error);
-      // Fallback is handled by edge function, but good to have one client-side too
     }
   };
 
@@ -170,25 +170,65 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
               });
             }
 
+            // --- FORM ANALYSIS & REP COUNTING FOR PULL-UPS ---
+            let currentRepScore = 100;
+            const currentIssues: string[] = [];
+
+            // 1. Check for Asymmetry
+            const angleDifference = Math.abs(leftElbowAngle - rightElbowAngle);
+            if (angleDifference > 25) {
+                currentIssues.push('asymmetry');
+                onFormFeedback("Pull evenly with both arms!");
+            }
+
+            // Pull-up specific logic
             const chinAboveWrists = nose.y < leftWrist.y && nose.y < rightWrist.y;
-            const armsStraight = leftElbowAngle > 160 && rightElbowAngle > 160;
+            const armsFullyExtended = leftElbowAngle > 160 && rightElbowAngle > 160;
 
             const feedbackPayload = {
               reps: internalReps,
               leftElbowAngle,
               rightElbowAngle,
               repState,
+              formIssues: lastRepIssues.current,
             };
 
+            // State transitions for PULL-UP
             if (repState === 'DOWN' && chinAboveWrists) {
-              setRepState('UP');
-              getAIFeedback(feedbackPayload);
-            } else if (repState === 'UP' && armsStraight) {
-              setRepState('DOWN');
-              incrementReps();
-              getAIFeedback({ ...feedbackPayload, reps: internalReps + 1 });
-            } else if (repState === 'UP' && !armsStraight) {
-              getAIFeedback(feedbackPayload);
+                // Just finished the UP part of the motion
+                setRepState('UP');
+
+                const shoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+                if (nose.y > wrist.y) { // Simplified: chin not above wrists
+                    currentIssues.push('partial_top_rom');
+                    onFormFeedback("Get your chin over the bar!");
+                }
+                
+                getAIFeedback(feedbackPayload);
+
+            } else if (repState === 'UP' && armsFullyExtended) {
+                // Just finished the DOWN part of the motion, completing a rep
+                setRepState('DOWN');
+                incrementReps();
+
+                if (leftElbowAngle < 160 || rightElbowAngle < 160) {
+                    currentIssues.push('partial_bottom_rom');
+                    onFormFeedback("Full extension at the bottom!");
+                }
+                
+                // Score the rep
+                if (currentIssues.includes('asymmetry')) currentRepScore -= 30;
+                if (currentIssues.includes('partial_top_rom')) currentRepScore -= 25;
+                if (currentIssues.includes('partial_bottom_rom')) currentRepScore -= 25;
+                
+                lastRepIssues.current = [...new Set(currentIssues)];
+                repScores.current.push(Math.max(0, currentRepScore));
+                if (repScores.current.length > 5) repScores.current.shift(); // Keep last 5 scores
+
+                const avgScore = repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length;
+                onFormScoreUpdate(avgScore);
+
+                getAIFeedback({ ...feedbackPayload, reps: internalReps + 1, formIssues: lastRepIssues.current });
             }
           }
         }
@@ -210,7 +250,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, internalReps]);
+  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, internalReps]);
 
   // Cleanup detector on unmount
   useEffect(() => {
