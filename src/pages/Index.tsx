@@ -17,6 +17,8 @@ import PerformanceAnalytics from "@/components/PerformanceAnalytics";
 import CoachPersonalitySelector from "@/components/CoachPersonalitySelector";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useAchievements } from "@/hooks/useAchievements";
+import UnlockedAchievements from "@/components/UnlockedAchievements";
 
 
 const Index = () => {
@@ -33,6 +35,8 @@ const Index = () => {
   const [repHistory, setRepHistory] = useState<RepData[]>([]);
   const [coachPersonality, setCoachPersonality] = useState<CoachPersonality>("competitive");
   const [coachModel, setCoachModel] = useState<CoachModel>('gemini');
+
+  const { achievements } = useAchievements(reps, repHistory, formScore);
 
   const handleExerciseChange = (exercise: Exercise) => {
     if (exercise !== selectedExercise) {
@@ -112,10 +116,10 @@ const Index = () => {
               <CollapsibleTrigger asChild>
                 <Button variant="outline" className="w-full justify-start">
                   <AnalyticsIcon className="mr-2 h-4 w-4" />
-                  Show Performance Analytics
+                  Show Performance &amp; Achievements
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
+              <CollapsibleContent className="mt-2 space-y-4">
                 <PerformanceAnalytics
                   repHistory={repHistory}
                   sessionStart={sessionStart}
@@ -123,6 +127,7 @@ const Index = () => {
                   averageFormScore={formScore}
                   exercise={selectedExercise}
                 />
+                <UnlockedAchievements achievements={achievements} />
               </CollapsibleContent>
             </Collapsible>
             

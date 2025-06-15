@@ -25,3 +25,16 @@ export interface PoseData {
 export type CoachPersonality = "competitive" | "supportive" | "zen";
 
 export type CoachModel = "gemini" | "openai" | "anthropic";
+
+export type AchievementId =
+  | "first_rep"
+  | "ten_reps"
+  | "perfect_form_rep"
+  | "great_form_session";
+
+export interface Achievement {
+  id: AchievementId;
+  name: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
