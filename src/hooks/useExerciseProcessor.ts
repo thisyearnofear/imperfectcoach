@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +15,36 @@ interface UseExerciseProcessorProps {
   coachPersonality: CoachPersonality;
   isDebugMode: boolean;
   onPoseData: (data: PoseData) => void;
+}
+
+const cachedFeedback: Record<string, string[]> = {
+    asymmetry: [
+        "Try to pull up with both arms equally.",
+        "Keep your body balanced during the pull-up.",
+        "Focus on an even pull."
+    ],
+    partial_top_rom: [
+        "Get that chin over the bar!",
+        "A little higher next time.",
+        "Almost there, pull all the way up!"
+    ],
+    partial_bottom_rom: [
+        "Go all the way down for a full rep.",
+        "Make sure to fully extend your arms at the bottom.",
+        "Full range of motion is key!"
+    ],
+    general: [
+        "Keep up the great work!",
+        "Nice form!",
+        "You're doing great!"
+    ]
+};
+
+const getRandomFeedback = (issues: string[]): string => {
+    const relevantIssues = issues.filter(issue => issue in cachedFeedback);
+    const issue = relevantIssues.length > 0 ? relevantIssues[Math.floor(Math.random() * relevantIssues.length)] : 'general';
+    const messages = cachedFeedback[issue as keyof typeof cachedFeedback] || cachedFeedback.general;
+    return messages[Math.floor(Math.random() * messages.length)];
 }
 
 export const useExerciseProcessor = ({
@@ -55,6 +84,11 @@ export const useExerciseProcessor = ({
     aiFeedbackCooldown.current = true;
     setTimeout(() => { aiFeedbackCooldown.current = false; }, 4000); // 4-second cooldown
 
+    if (!navigator.onLine) {
+        onFormFeedback(getRandomFeedback(lastRepIssues.current));
+        return;
+    }
+
     try {
       const { data: responseData, error } = await supabase.functions.invoke('coach-gemini', {
         body: { exercise, personality: coachPersonality, ...data }
@@ -65,6 +99,7 @@ export const useExerciseProcessor = ({
       }
     } catch (error) {
       console.error('Error getting AI feedback:', error);
+      onFormFeedback(getRandomFeedback(lastRepIssues.current));
     }
   };
 
@@ -158,7 +193,7 @@ export const useExerciseProcessor = ({
       case 'squats': if (workoutMode === 'training') onFormFeedback("Squat detection is not yet implemented."); break;
       case 'jumps': if (workoutMode === 'training') onFormFeedback("Jump detection is not yet implemented."); break;
     }
-  }, [exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps]);
+  }, [exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps, getAIFeedback]);
 
   const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
 

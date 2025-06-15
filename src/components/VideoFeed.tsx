@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, SwitchCamera, Loader2 } from "lucide-react";
 import {
@@ -30,11 +31,11 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const onCameraStatusChange = (status: CameraStatus) => {
+  const onCameraStatusChange = useCallback((status: CameraStatus) => {
     if (status === 'idle' || status === 'denied') {
         setModelStatus('idle');
     }
-  };
+  }, []);
 
   const { cameraStatus, devices, enableCamera, stopCamera, flipCamera } = useCamera({ 
     videoRef, 
