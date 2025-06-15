@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { supabase } from '@/integrations/supabase/client';
-import { Exercise, RepData, PoseData, RepState, CoachPersonality, WorkoutMode } from '@/lib/types';
+import { Exercise, RepData, PoseData, RepState, CoachPersonality, WorkoutMode, ProcessorResult } from '@/lib/types';
 import { useAudioFeedback } from './useAudioFeedback';
-import { calculateAngle } from '@/lib/poseUtils';
+import { processPullups } from '@/lib/exercise-processors/pullupProcessor';
+import { processJumps } from '@/lib/exercise-processors/jumpProcessor';
 
 interface UseExerciseProcessorProps {
   exercise: Exercise;
@@ -121,144 +122,78 @@ export const useExerciseProcessor = ({
     if (!pose) return;
     const { keypoints } = pose;
 
-    const handlePullups = (keypoints: posedetection.Keypoint[]) => {
-      const nose = keypoints.find(k => k.name === 'nose');
-      const leftWrist = keypoints.find(k => k.name === 'left_wrist');
-      const rightWrist = keypoints.find(k => k.name === 'right_wrist');
-      const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
-      const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
-      const leftElbow = keypoints.find(k => k.name === 'left_elbow');
-      const rightElbow = keypoints.find(k => k.name === 'right_elbow');
-
-      if (nose && leftWrist && rightWrist && leftShoulder && rightShoulder && leftElbow && rightElbow) {
-        if (nose.score < 0.5 || leftWrist.score < 0.5 || rightWrist.score < 0.5) {
-            if (workoutMode === 'training') onFormFeedback("Make sure you're fully in view!");
-            return;
+    let result: (Omit<ProcessorResult, 'feedback'> & { feedback?: string }) | null = null;
+    
+    // Special handling for jump ground level calibration
+    if (exercise === 'jumps' && jumpGroundLevel.current === null) {
+        const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
+        const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
+        if (leftAnkle && rightAnkle && leftAnkle.score > 0.5 && rightAnkle.score > 0.5) {
+            jumpGroundLevel.current = (leftAnkle.y + rightAnkle.y) / 2;
+            onFormFeedback("Crouch down, then jump as high as you can!");
+        } else {
+            onFormFeedback("Stand in full view to calibrate for jumps.");
         }
-        const leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
-        const rightElbowAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
-        const poseData: PoseData = { keypoints, leftElbowAngle, rightElbowAngle };
-        if (isDebugMode) onPoseData(poseData);
-        
-        const triggerPulse = (duration = 500) => {
-            formIssuePulse.current = true;
-            if (pulseTimeout.current) clearTimeout(pulseTimeout.current);
-            pulseTimeout.current = setTimeout(() => { formIssuePulse.current = false; }, duration);
-        };
-        const formCheckSpeak = (issue: string, phrase: string) => {
-            if (workoutMode === 'assessment') return;
-            if (!lastRepIssues.current.includes(issue)) {
-                speak(phrase);
-                triggerPulse();
-            }
-        };
-
-        let currentRepScore = 100;
-        const currentIssues: string[] = [];
-        const angleDifference = Math.abs(leftElbowAngle - rightElbowAngle);
-        if (angleDifference > 25) {
-            currentIssues.push('asymmetry');
-            if (workoutMode === 'training') onFormFeedback("Pull evenly with both arms!");
-            formCheckSpeak('asymmetry', 'Pull evenly');
-        }
-
-        const chinAboveWrists = nose.y < leftWrist.y && nose.y < rightWrist.y;
-        const armsFullyExtended = leftElbowAngle > 160 && rightElbowAngle > 160;
-        const feedbackPayload = { reps: internalReps, leftElbowAngle, rightElbowAngle, repState, formIssues: lastRepIssues.current };
-
-        if (repState === 'DOWN' && leftElbowAngle < 90 && rightElbowAngle < 90) {
-            setRepState('UP');
-            if (!chinAboveWrists) {
-                currentIssues.push('partial_top_rom');
-                if (workoutMode === 'training') onFormFeedback("Get your chin over the bar!");
-                formCheckSpeak('partial_top_rom', 'Higher');
-            }
-            getAIFeedback(feedbackPayload);
-        } else if (repState === 'UP' && armsFullyExtended) {
-            setRepState('DOWN');
-            if (leftElbowAngle < 160 || rightElbowAngle < 160) {
-                currentIssues.push('partial_bottom_rom');
-                if (workoutMode === 'training') onFormFeedback("Full extension at the bottom!");
-                formCheckSpeak('partial_bottom_rom', 'Full extension');
-            }
-            if (currentIssues.includes('asymmetry')) currentRepScore -= 30;
-            if (currentIssues.includes('partial_top_rom')) currentRepScore -= 25;
-            if (currentIssues.includes('partial_bottom_rom')) currentRepScore -= 25;
-            incrementReps();
-            lastRepIssues.current = [...new Set(currentIssues)];
-            const repScore = Math.max(0, currentRepScore);
-            repScores.current.push(repScore);
-            if (repScores.current.length > 5) repScores.current.shift();
-            const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
-            onFormScoreUpdate(avgScore);
-            onNewRepData({ timestamp: Date.now(), score: repScore });
-            getAIFeedback({ ...feedbackPayload, reps: internalReps + 1, formIssues: lastRepIssues.current });
-        }
-      }
-    };
-
-    const handleJumps = (keypoints: posedetection.Keypoint[]) => {
-      const leftHip = keypoints.find(k => k.name === 'left_hip');
-      const rightHip = keypoints.find(k => k.name === 'right_hip');
-      const leftKnee = keypoints.find(k => k.name === 'left_knee');
-      const rightKnee = keypoints.find(k => k.name === 'right_knee');
-      const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
-      const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
-
-      if (!leftHip || !rightHip || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle ||
-          [leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle].some(k => k.score < 0.5)) {
-          if (workoutMode === 'training') onFormFeedback("Make sure your full body is in view!");
-          return;
-      }
-      
-      const avgAnkleY = (leftAnkle.y + rightAnkle.y) / 2;
-      const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
-      const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
-      const poseData: PoseData = { keypoints, leftKneeAngle, rightKneeAngle };
-      if (isDebugMode) onPoseData(poseData);
-      
-      if (jumpGroundLevel.current === null) {
-          jumpGroundLevel.current = avgAnkleY;
-          onFormFeedback("Crouch down, then jump as high as you can!");
-          return;
-      }
-
-      const isAirborne = avgAnkleY < jumpGroundLevel.current - 30; // 30px threshold
-
-      if (repState === 'GROUNDED' && isAirborne) {
-          setRepState('AIRBORNE');
-          if (workoutMode === 'training') onFormFeedback("Up!");
-      } else if (repState === 'AIRBORNE' && !isAirborne) {
-          setRepState('GROUNDED');
-          incrementReps();
-          
-          let currentRepScore = 100;
-          const currentIssues: string[] = [];
-
-          if (leftKneeAngle > 160 || rightKneeAngle > 160) {
-              currentIssues.push('stiff_landing');
-              if (workoutMode === 'training') onFormFeedback("Bend your knees when you land!");
-              currentRepScore -= 40;
-          } else {
-              if (workoutMode === 'training') onFormFeedback("Nice landing!");
-          }
-
-          lastRepIssues.current = [...new Set(currentIssues)];
-          const repScore = Math.max(0, currentRepScore);
-          repScores.current.push(repScore);
-          if (repScores.current.length > 5) repScores.current.shift();
-          const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
-          onFormScoreUpdate(avgScore);
-          onNewRepData({ timestamp: Date.now(), score: repScore });
-          getAIFeedback({ reps: internalReps, formIssues: lastRepIssues.current });
-      }
-    };
+        return;
+    }
 
     switch (exercise) {
-      case 'pull-ups': handlePullups(keypoints); break;
-      case 'squats': if (workoutMode === 'training') onFormFeedback("Squat detection is not yet implemented."); break;
-      case 'jumps': handleJumps(keypoints); break;
+      case 'pull-ups': 
+        result = processPullups({
+          keypoints,
+          repState,
+          internalReps,
+          lastRepIssues: lastRepIssues.current
+        });
+        break;
+      case 'squats': 
+        if (workoutMode === 'training') onFormFeedback("Squat detection is not yet implemented."); 
+        break;
+      case 'jumps': 
+        if (jumpGroundLevel.current !== null) {
+            result = processJumps({
+                keypoints,
+                repState,
+                internalReps,
+                lastRepIssues: lastRepIssues.current,
+                jumpGroundLevel: jumpGroundLevel.current,
+            });
+        }
+        break;
     }
+
+    if (!result) return;
+    
+    if (isDebugMode) onPoseData(result.poseData);
+    if (result.newRepState) setRepState(result.newRepState);
+    if (result.feedback && workoutMode === 'training') onFormFeedback(result.feedback);
+
+    if (result.formCheckSpeak && workoutMode === 'training' && !lastRepIssues.current.includes(result.formCheckSpeak.issue)) {
+        speak(result.formCheckSpeak.phrase);
+        formIssuePulse.current = true;
+        if (pulseTimeout.current) clearTimeout(pulseTimeout.current);
+        pulseTimeout.current = setTimeout(() => { formIssuePulse.current = false; }, 500);
+    }
+    
+    if (result.aiFeedbackPayload) getAIFeedback(result.aiFeedbackPayload);
+
+    if (result.isRepCompleted && result.repCompletionData) {
+        incrementReps();
+        const { score, issues } = result.repCompletionData;
+        lastRepIssues.current = [...new Set(issues)];
+        repScores.current.push(score);
+        if (repScores.current.length > 5) repScores.current.shift();
+        const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
+        onFormScoreUpdate(avgScore);
+        onNewRepData({ timestamp: Date.now(), score });
+        // Get AI feedback after rep as well
+        getAIFeedback({ 
+            reps: internalReps + 1, 
+            formIssues: lastRepIssues.current,
+            ...result.aiFeedbackPayload
+        });
+    }
+
   }, [exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps, getAIFeedback]);
 
   const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;

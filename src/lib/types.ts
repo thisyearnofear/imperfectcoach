@@ -22,6 +22,19 @@ export interface PoseData {
   rightHipAngle?: number;
 }
 
+export interface ProcessorResult {
+  newRepState?: RepState;
+  poseData: PoseData;
+  feedback?: string;
+  formCheckSpeak?: { issue: string; phrase: string };
+  isRepCompleted: boolean;
+  repCompletionData?: {
+    score: number;
+    issues: string[];
+  };
+  aiFeedbackPayload?: Record<string, any>;
+}
+
 export type CoachPersonality = "competitive" | "supportive" | "zen";
 
 export type CoachModel = "gemini" | "openai" | "anthropic";
