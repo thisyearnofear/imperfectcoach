@@ -1,4 +1,3 @@
-
 import type { Keypoint } from '@tensorflow-models/pose-detection';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { Exercise } from './types';
@@ -48,15 +47,53 @@ function getKeypoint(keypoints: Keypoint[], name: string): Keypoint | undefined 
   return keypoints.find(k => k.name === name);
 }
 
-function drawFormQualityOverlay(ctx: CanvasRenderingContext2D, score: number) {
-  if (score >= 95) return; // No overlay for near-perfect score
+function drawFormZone(ctx: CanvasRenderingContext2D, keypoints: Keypoint[], exercise: Exercise) {
+  if (exercise === 'pull-ups') {
+    const leftWrist = getKeypoint(keypoints, 'left_wrist');
+    const rightWrist = getKeypoint(keypoints, 'right_wrist');
+    const leftShoulder = getKeypoint(keypoints, 'left_shoulder');
+
+    if (leftWrist && rightWrist && leftShoulder && leftWrist.score > MIN_CONFIDENCE_TO_DRAW && rightWrist.score > MIN_CONFIDENCE_TO_DRAW && leftShoulder.score > MIN_CONFIDENCE_TO_DRAW) {
+      // Top of range (chin over bar) - Green line
+      const topY = Math.min(leftWrist.y, rightWrist.y);
+      ctx.strokeStyle = 'rgba(0, 255, 0, 0.6)';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([15, 8]);
+      ctx.beginPath();
+      ctx.moveTo(0, topY);
+      ctx.lineTo(ctx.canvas.width, topY);
+      ctx.stroke();
+
+      // Bottom of range (full extension) - Yellow line
+      const bottomY = leftShoulder.y + (leftShoulder.y - topY) * 0.1; // Approximate full extension
+      ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
+      ctx.beginPath();
+      ctx.moveTo(0, bottomY);
+      ctx.lineTo(ctx.canvas.width, bottomY);
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset line dash
+    }
+  }
+  // TODO: Add form zones for squats and jumps
+}
+
+function drawFormQualityOverlay(ctx: CanvasRenderingContext2D, score: number, pulse: boolean) {
+  if (score >= 95 && !pulse) return; // No overlay for near-perfect score
   const quality = Math.max(0, Math.min(1, score / 100));
   
   const red = Math.round(255 * (1 - quality));
   const green = Math.round(255 * quality);
-  const alpha = 0.1 + (0.2 * (1 - quality));
+  const baseAlpha = 0.1 + (0.2 * (1 - quality));
 
-  ctx.fillStyle = `rgba(${red}, ${green}, 0, ${alpha})`;
+  // Pulse effect for warnings
+  if (pulse) {
+    const pulseIntensity = Math.abs(Math.sin(Date.now() / 150)); // Fast pulse
+    const pulseAlpha = Math.max(baseAlpha, 0.3 + pulseIntensity * 0.3);
+    ctx.fillStyle = `rgba(255, 0, 0, ${pulseAlpha})`;
+  } else {
+    ctx.fillStyle = `rgba(${red}, ${green}, 0, ${baseAlpha})`;
+  }
+
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   
   if(score < 50) {
@@ -144,16 +181,17 @@ export const drawPose = (
   pose: posedetection.Pose,
   exercise: Exercise,
   formScore: number,
-  keypointHistory: Keypoint[][]
+  keypointHistory: Keypoint[][],
+  pulseWarning: boolean
 ) => {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   if (!pose) return;
 
   const { keypoints } = pose;
 
-  drawFormQualityOverlay(ctx, formScore);
+  drawFormQualityOverlay(ctx, formScore, pulseWarning);
+  drawFormZone(ctx, keypoints, exercise);
   drawTrajectoryTrails(ctx, keypointHistory, exercise);
   drawSkeletonWithColors(ctx, keypoints);
   drawKeypointsWithConfidence(ctx, keypoints, exercise);
 };
-

@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Exercise, RepData, PoseData, RepState, CoachPersonality, CameraStatus } from '@/lib/types';
 import { drawPose } from '@/lib/drawing';
+import { useAudioFeedback } from './useAudioFeedback';
 
 // Type definitions
 // Removed VideoStatus type definition
@@ -35,7 +36,7 @@ const calculateAngle = (a: posedetection.Keypoint, b: posedetection.Keypoint, c:
     return angle;
 };
 
-// Drawing utilities
+// Drawing utilities (are now in drawing.ts, can be removed but keeping for now to avoid breaking changes if used elsewhere)
 const drawKeypoints = (keypoints: posedetection.Keypoint[], ctx: CanvasRenderingContext2D) => {
     keypoints.forEach(keypoint => {
         if (keypoint.score && keypoint.score > 0.5) {
@@ -74,6 +75,9 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
   const lastRepIssues = useRef<string[]>([]);
   const repScores = useRef<number[]>([]);
   const keypointHistoryRef = useRef<posedetection.Keypoint[][]>([]);
+  const { playBeep, speak } = useAudioFeedback();
+  const formIssuePulse = useRef(false);
+  const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset state when exercise changes
   useEffect(() => {
@@ -113,6 +117,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
   const incrementReps = () => {
     onRepCount(prev => prev + 1);
     setInternalReps(prev => prev + 1);
+    playBeep();
   };
 
   // Load the model
@@ -167,7 +172,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
                 keypointHistoryRef.current.shift();
               }
 
-              drawPose(ctx, poses[0], exercise, avgScore, keypointHistoryRef.current);
+              drawPose(ctx, poses[0], exercise, avgScore, keypointHistoryRef.current, formIssuePulse.current);
             } else {
               ctx.clearRect(0, 0, canvas.width, canvas.height);
               if (keypointHistoryRef.current.length > 0) {
@@ -221,6 +226,21 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
           onPoseData(poseData);
         }
 
+        const triggerPulse = (duration = 500) => {
+            formIssuePulse.current = true;
+            if (pulseTimeout.current) clearTimeout(pulseTimeout.current);
+            pulseTimeout.current = setTimeout(() => {
+                formIssuePulse.current = false;
+            }, duration);
+        };
+
+        const formCheckSpeak = (issue: string, phrase: string) => {
+            if (!lastRepIssues.current.includes(issue)) {
+                speak(phrase);
+                triggerPulse();
+            }
+        };
+
         // --- FORM ANALYSIS & REP COUNTING FOR PULL-UPS ---
         let currentRepScore = 100;
         const currentIssues: string[] = [];
@@ -230,6 +250,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
         if (angleDifference > 25) {
             currentIssues.push('asymmetry');
             onFormFeedback("Pull evenly with both arms!");
+            formCheckSpeak('asymmetry', 'Pull evenly');
         }
 
         // Pull-up specific logic
@@ -252,6 +273,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
             if (!chinAboveWrists) {
                 currentIssues.push('partial_top_rom');
                 onFormFeedback("Get your chin over the bar!");
+                formCheckSpeak('partial_top_rom', 'Higher');
             }
             
             getAIFeedback(feedbackPayload);
@@ -259,11 +281,11 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
         } else if (repState === 'UP' && armsFullyExtended) {
             // Just finished the DOWN part of the motion, completing a rep
             setRepState('DOWN');
-            incrementReps();
 
             if (leftElbowAngle < 160 || rightElbowAngle < 160) {
                 currentIssues.push('partial_bottom_rom');
                 onFormFeedback("Full extension at the bottom!");
+                formCheckSpeak('partial_bottom_rom', 'Full extension');
             }
             
             // Score the rep
@@ -271,6 +293,8 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
             if (currentIssues.includes('partial_top_rom')) currentRepScore -= 25;
             if (currentIssues.includes('partial_bottom_rom')) currentRepScore -= 25;
             
+            incrementReps(); // Moved here to count after all checks
+
             lastRepIssues.current = [...new Set(currentIssues)];
             
             const repScore = Math.max(0, currentRepScore);
@@ -303,7 +327,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, internalReps, onNewRepData, exercise]);
+  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, internalReps, onNewRepData, exercise, coachPersonality, playBeep, speak]);
 
   // Cleanup detector on unmount
   useEffect(() => {

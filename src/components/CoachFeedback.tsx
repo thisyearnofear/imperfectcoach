@@ -1,5 +1,6 @@
 
 import { CoachModel } from "@/lib/types";
+import { Progress } from "@/components/ui/progress";
 
 interface CoachFeedbackProps {
   reps: number;
@@ -13,7 +14,13 @@ const CoachFeedback = ({ reps, formFeedback, formScore, coachModel }: CoachFeedb
     if (formScore >= 80) return 'text-green-500';
     if (formScore >= 60) return 'text-yellow-500';
     return 'text-destructive';
-  }
+  };
+
+  const getProgressColor = () => {
+    if (formScore >= 80) return 'bg-green-500';
+    if (formScore >= 60) return 'bg-yellow-500';
+    return 'bg-destructive';
+  };
 
   const coachName = coachModel.charAt(0).toUpperCase() + coachModel.slice(1);
 
@@ -25,9 +32,15 @@ const CoachFeedback = ({ reps, formFeedback, formScore, coachModel }: CoachFeedb
           {formFeedback}
         </p>
       </div>
-      <div className="mt-4">
+      <div className="mt-4 space-y-3">
         <h4 className="font-semibold">Reps: <span className="text-primary font-bold text-2xl ml-2">{reps}</span></h4>
-        <h4 className="font-semibold mt-2">Form Score: <span className={`font-bold text-2xl ml-2 ${getScoreColor()}`}>{formScore.toFixed(0)}</span></h4>
+        <div>
+          <div className="flex justify-between items-baseline mb-1">
+            <h4 className="font-semibold">Form Score:</h4>
+            <span className={`font-bold text-2xl ${getScoreColor()}`}>{formScore.toFixed(0)}</span>
+          </div>
+          <Progress value={formScore} className="h-3" indicatorClassName={getProgressColor()} />
+        </div>
       </div>
     </div>
   );
