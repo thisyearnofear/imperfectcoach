@@ -77,18 +77,21 @@ export const usePoseDetection = ({
         if (ctx) {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
+          ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas at the beginning of each frame.
 
-          if (isDebugMode && pose) {
-            keypointHistoryRef.current.push(pose.keypoints);
-            if (keypointHistoryRef.current.length > 20) {
-              keypointHistoryRef.current.shift();
+          if (pose) {
+            if (isDebugMode) {
+              keypointHistoryRef.current.push(pose.keypoints);
+              if (keypointHistoryRef.current.length > 20) {
+                keypointHistoryRef.current.shift();
+              }
             }
-            drawPose(ctx, pose, exercise, avgScore, keypointHistoryRef.current, formIssuePulse);
+            // Always draw the pose if one is detected.
+            // Pass history only in debug mode.
+            drawPose(ctx, pose, exercise, avgScore, isDebugMode ? keypointHistoryRef.current : [], formIssuePulse);
           } else {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (keypointHistoryRef.current.length > 0) {
-              keypointHistoryRef.current = [];
-            }
+            // If no pose is detected, clear the history.
+            keypointHistoryRef.current = [];
           }
         }
       }
