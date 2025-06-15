@@ -1,19 +1,42 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Video, VideoOff, SwitchCamera } from "lucide-react";
+import { Video, VideoOff, SwitchCamera, Loader2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { usePoseDetection } from "@/hooks/usePoseDetection";
 
-const VideoFeed = () => {
+interface VideoFeedProps {
+  onRepCount: (update: (prev: number) => number) => void;
+  onFormFeedback: (message: string) => void;
+}
+
+const VideoFeed = ({ onRepCount, onFormFeedback }: VideoFeedProps) => {
   const [cameraStatus, setCameraStatus] = useState<"idle" | "pending" | "granted" | "denied">("idle");
+  const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [currentDeviceId, setCurrentDeviceId] = useState<string | undefined>(undefined);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const handleModelFeedback = (message: string) => {
+    if (message.includes('Loading')) {
+      setModelStatus('loading');
+    } else if (message.includes('Ready')) {
+      setModelStatus('ready');
+    }
+    onFormFeedback(message);
+  }
+
+  usePoseDetection({
+    videoRef,
+    cameraStatus,
+    onRepCount,
+    onFormFeedback: handleModelFeedback,
+  });
 
   const stopCamera = () => {
     if (streamRef.current) {
@@ -21,6 +44,7 @@ const VideoFeed = () => {
       streamRef.current = null;
     }
     setCameraStatus("idle");
+    setModelStatus("idle");
     setDevices([]);
     setCurrentDeviceId(undefined);
   };
@@ -51,6 +75,7 @@ const VideoFeed = () => {
       if (streamRef.current) {
         streamRef.current = null;
       }
+      setModelStatus("idle");
     }
   };
 
@@ -77,6 +102,12 @@ const VideoFeed = () => {
       {cameraStatus === "granted" ? (
         <div className="relative w-full h-full">
           <video ref={videoRef} autoPlay playsInline className="w-full h-full rounded-md object-cover" />
+          {modelStatus === 'loading' && (
+            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white rounded-md">
+                <Loader2 className="animate-spin h-8 w-8 mb-2" />
+                <p className="font-semibold">Loading AI Coach...</p>
+            </div>
+          )}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -119,4 +150,3 @@ const VideoFeed = () => {
 };
 
 export default VideoFeed;
-
