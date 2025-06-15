@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import Header from "@/components/Header";
 import VideoFeed from "@/components/VideoFeed";
 import ExerciseSelector from "@/components/ExerciseSelector";
@@ -19,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAchievements } from "@/hooks/useAchievements";
 import UnlockedAchievements from "@/components/UnlockedAchievements";
+import MobileControls from "@/components/MobileControls";
 
 
 const Index = () => {
@@ -101,41 +103,52 @@ const Index = () => {
               isRecordingEnabled={isRecordingEnabled}
               workoutMode={workoutMode}
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <WorkoutModeSelector
-                selectedMode={workoutMode}
-                onModeChange={handleWorkoutModeChange}
-              />
-              <ExerciseSelector 
-                selectedExercise={selectedExercise}
-                onExerciseChange={handleExerciseChange}
-              />
+            {/* Mobile-only coach feedback */}
+            <div className="lg:hidden">
+                <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
             </div>
-            <div className="flex justify-between items-center flex-wrap gap-4 mt-2">
-              <CoachPersonalitySelector
-                selectedPersonality={coachPersonality}
-                onPersonalityChange={setCoachPersonality}
-              />
-              <div className="flex items-center gap-4 mt-2 sm:mt-0">
-                <div className="flex items-center space-x-2">
-                  <Switch id="enable-recording" checked={isRecordingEnabled} onCheckedChange={setIsRecordingEnabled} />
-                  <Label htmlFor="enable-recording">Enable Recording</Label>
+            
+            {/* Desktop-only controls */}
+            <div className="hidden lg:flex flex-col gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <WorkoutModeSelector
+                  selectedMode={workoutMode}
+                  onModeChange={handleWorkoutModeChange}
+                />
+                <ExerciseSelector 
+                  selectedExercise={selectedExercise}
+                  onExerciseChange={handleExerciseChange}
+                />
+              </div>
+              <div className="flex justify-between items-center flex-wrap gap-4 mt-2">
+                <CoachPersonalitySelector
+                  selectedPersonality={coachPersonality}
+                  onPersonalityChange={setCoachPersonality}
+                />
+                <div className="flex items-center gap-4 mt-2 sm:mt-0">
+                  <div className="flex items-center space-x-2">
+                    <Switch id="enable-recording" checked={isRecordingEnabled} onCheckedChange={setIsRecordingEnabled} />
+                    <Label htmlFor="enable-recording">Enable Recording</Label>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsDebugMode((prev) => !prev)}
+                  >
+                    <Bug className="mr-2 h-4 w-4" />
+                    {isDebugMode ? "Hide" : "Show"} Debug
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsDebugMode((prev) => !prev)}
-                >
-                  <Bug className="mr-2 h-4 w-4" />
-                  {isDebugMode ? "Hide" : "Show"} Debug
-                </Button>
               </div>
             </div>
           </div>
 
           {/* Right Panel: Coach Feedback & Stats */}
           <div className="lg:col-span-1 flex flex-col gap-4">
-            <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
+            {/* Desktop-only coach feedback */}
+            <div className="hidden lg:block">
+              <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
+            </div>
             
             <Collapsible>
               <CollapsibleTrigger asChild>
@@ -160,6 +173,20 @@ const Index = () => {
           </div>
         </div>
       </main>
+      <div className="lg:hidden">
+        <MobileControls
+          workoutMode={workoutMode}
+          onModeChange={handleWorkoutModeChange}
+          selectedExercise={selectedExercise}
+          onExerciseChange={handleExerciseChange}
+          selectedPersonality={coachPersonality}
+          onPersonalityChange={setCoachPersonality}
+          isRecordingEnabled={isRecordingEnabled}
+          onRecordingChange={setIsRecordingEnabled}
+          isDebugMode={isDebugMode}
+          onDebugChange={setIsDebugMode}
+        />
+      </div>
     </div>
   );
 };

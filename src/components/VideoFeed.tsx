@@ -74,7 +74,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
   });
 
   return (
-    <div className="bg-card p-4 rounded-lg border border-border/40 flex flex-col items-center justify-center aspect-video w-full max-w-3xl mx-auto">
+    <div className="bg-card p-4 rounded-lg border border-border/40 flex flex-col items-center justify-center aspect-[3/4] md:aspect-video w-full max-w-3xl mx-auto">
       {cameraStatus === "granted" ? (
         <div className="relative w-full h-full">
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full rounded-md object-cover" />
