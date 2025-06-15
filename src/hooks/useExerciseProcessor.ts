@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
-import { supabase } from '@/integrations/supabase/client';
 import { Exercise, RepData, PoseData, RepState, CoachPersonality, WorkoutMode, ProcessorResult } from '@/lib/types';
 import { useAudioFeedback } from './useAudioFeedback';
 import { processPullups } from '@/lib/exercise-processors/pullupProcessor';
 import { processJumps } from '@/lib/exercise-processors/jumpProcessor';
+import { useAIFeedback } from './useAIFeedback';
 
 interface UseExerciseProcessorProps {
   exercise: Exercise;
@@ -66,13 +66,19 @@ export const useExerciseProcessor = ({
 }: UseExerciseProcessorProps) => {
   const [repState, setRepState] = useState<RepState>('DOWN');
   const [internalReps, setInternalReps] = useState(0);
-  const aiFeedbackCooldown = useRef(false);
   const lastRepIssues = useRef<string[]>([]);
   const repScores = useRef<number[]>([]);
   const { playBeep, speak } = useAudioFeedback();
   const formIssuePulse = useRef(false);
   const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const jumpGroundLevel = useRef<number | null>(null);
+
+  const { getAIFeedback } = useAIFeedback({
+    exercise,
+    coachPersonality,
+    workoutMode,
+    onFormFeedback
+  });
 
   // Reset state when exercise changes
   useEffect(() => {
@@ -87,30 +93,6 @@ export const useExerciseProcessor = ({
       setRepState('GROUNDED');
     }
   }, [exercise]);
-
-  const getAIFeedback = async (data: Record<string, any>) => {
-    if (aiFeedbackCooldown.current || workoutMode === 'assessment') return;
-    aiFeedbackCooldown.current = true;
-    setTimeout(() => { aiFeedbackCooldown.current = false; }, 4000); // 4-second cooldown
-
-    if (!navigator.onLine) {
-        onFormFeedback(getRandomFeedback(lastRepIssues.current));
-        return;
-    }
-
-    try {
-      const { data: responseData, error } = await supabase.functions.invoke('coach-gemini', {
-        body: { exercise, personality: coachPersonality, ...data }
-      });
-      if (error) throw error;
-      if (responseData.feedback) {
-        onFormFeedback(responseData.feedback);
-      }
-    } catch (error) {
-      console.error('Error getting AI feedback:', error);
-      onFormFeedback(getRandomFeedback(lastRepIssues.current));
-    }
-  };
 
   const incrementReps = useCallback(() => {
     onRepCount(prev => prev + 1);
