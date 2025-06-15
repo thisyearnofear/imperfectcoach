@@ -1,7 +1,8 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import 'https://deno.land/x/xhr@0.1.0/mod.ts'; // Required for OpenAI library
 
-// API Keys from Supabase secrets
+// API Keys from Supabase secrets (as fallbacks)
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
@@ -23,7 +24,6 @@ const getSummaryPrompt = (data) => {
     const { exercise, personality, reps, averageFormScore, repHistory } = data;
     const systemPrompt = systemPrompts[personality] || systemPrompts.competitive;
 
-    // Sanitize rep history for the prompt
     const cleanRepHistory = repHistory.map(r => ({ score: r.score, timestamp: r.timestamp }));
 
     return {
@@ -62,10 +62,13 @@ const getChatPrompt = (data) => {
 
 // --- API HELPERS ---
 
-const generateGeminiFeedback = async (body) => {
+const generateGeminiFeedback = async (body, apiKey) => {
     const { type = 'summary' } = body;
+    const finalApiKey = apiKey || GEMINI_API_KEY;
+    if (!finalApiKey) throw new Error("GEMINI_API_KEY is not set.");
+    
     const { system, user } = type === 'summary' ? getSummaryPrompt(body) : getChatPrompt(body);
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${finalApiKey}`;
     
     const requestBody = {
       contents: [{ parts: [{ text: system }, { text: user }] }],
@@ -83,8 +86,11 @@ const generateGeminiFeedback = async (body) => {
     return data.candidates[0].content.parts[0].text.trim();
 };
 
-const generateOpenAIFeedback = async (body) => {
+const generateOpenAIFeedback = async (body, apiKey) => {
     const { type = 'summary' } = body;
+    const finalApiKey = apiKey || OPENAI_API_KEY;
+    if (!finalApiKey) throw new Error("OPENAI_API_KEY is not set.");
+
     const { system, user } = type === 'summary' ? getSummaryPrompt(body) : getChatPrompt(body);
     const API_URL = 'https://api.openai.com/v1/chat/completions';
 
@@ -101,7 +107,7 @@ const generateOpenAIFeedback = async (body) => {
     const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Authorization': `Bearer ${finalApiKey}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
@@ -112,13 +118,16 @@ const generateOpenAIFeedback = async (body) => {
     return data.choices[0].message.content;
 };
 
-const generateAnthropicFeedback = async (body) => {
+const generateAnthropicFeedback = async (body, apiKey) => {
     const { type = 'summary' } = body;
+    const finalApiKey = apiKey || ANTHROPIC_API_KEY;
+    if (!finalApiKey) throw new Error("ANTHROPIC_API_KEY is not set.");
+
     const { system, user } = type === 'summary' ? getSummaryPrompt(body) : getChatPrompt(body);
     const API_URL = 'https://api.anthropic.com/v1/messages';
     
     const requestBody = {
-        model: 'claude-3-haiku-20240307',
+        model: 'claude-3-haiku-20240307', // Using a reliable and fast model
         system: system,
         messages: [{ role: 'user', content: user }],
         max_tokens: 150,
@@ -128,7 +137,7 @@ const generateAnthropicFeedback = async (body) => {
     const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
-            'x-api-key': ANTHROPIC_API_KEY,
+            'x-api-key': finalApiKey,
             'anthropic-version': '2023-06-01',
             'content-type': 'application/json'
         },
@@ -149,10 +158,9 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { model = 'gemini', type } = body;
+    const { model = 'gemini', type, userApiKeys } = body;
     
     if (type !== 'summary' && type !== 'chat') {
-        // Fallback for any other calls
         return new Response(JSON.stringify({ feedback: "Request type not supported." }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400
@@ -162,17 +170,14 @@ serve(async (req) => {
     let feedback;
     switch (model) {
       case 'openai':
-        if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not set.");
-        feedback = await generateOpenAIFeedback(body);
+        feedback = await generateOpenAIFeedback(body, userApiKeys?.openai);
         break;
       case 'anthropic':
-        if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set.");
-        feedback = await generateAnthropicFeedback(body);
+        feedback = await generateAnthropicFeedback(body, userApiKeys?.anthropic);
         break;
       case 'gemini':
       default:
-        if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not set.");
-        feedback = await generateGeminiFeedback(body);
+        feedback = await generateGeminiFeedback(body, userApiKeys?.gemini);
         break;
     }
 

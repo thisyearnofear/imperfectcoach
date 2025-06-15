@@ -54,10 +54,13 @@ export const useAIFeedback = ({
         return {};
     }
 
+    const userApiKeys = JSON.parse(localStorage.getItem('user-api-keys') || '{}');
+
     const promises = models.map(model => 
-        supabase.functions.invoke('coach-gemini', { // The function is still named 'coach-gemini' in Supabase
+        supabase.functions.invoke('coach-gemini', {
             body: { 
-                model, // Pass the specific model for the summary
+                userApiKeys,
+                model,
                 type: 'summary',
                 exercise,
                 personality: coachPersonality,
@@ -91,9 +94,12 @@ export const useAIFeedback = ({
         return "You're offline. Please connect to the internet to chat with the coach.";
     }
 
+    const userApiKeys = JSON.parse(localStorage.getItem('user-api-keys') || '{}');
+
     try {
         const { data: responseData, error } = await supabase.functions.invoke('coach-gemini', {
             body: {
+                userApiKeys,
                 model,
                 type: 'chat',
                 exercise,

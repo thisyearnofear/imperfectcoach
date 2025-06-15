@@ -2,12 +2,13 @@
 import React from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { BarChart2 as AnalyticsIcon } from "lucide-react";
+import { BarChart2 as AnalyticsIcon, Settings } from "lucide-react";
 import CoachFeedback from "@/components/CoachFeedback";
 import PerformanceAnalytics from "@/components/PerformanceAnalytics";
 import UnlockedAchievements from "@/components/UnlockedAchievements";
 import DebugPanel from "@/components/DebugPanel";
 import { CoachSummarySelector } from "@/components/CoachSummarySelector";
+import { ApiKeySettings } from "@/components/ApiKeySettings";
 import { CoachModel, Exercise, RepData, SessionSummaries, Achievement, PoseData, WorkoutMode, ChatMessage } from '@/lib/types';
 
 interface RightPanelProps {
@@ -84,6 +85,24 @@ export const RightPanel = (props: RightPanelProps) => {
                 </CollapsibleContent>
               </Collapsible>
             </div>
+
+            <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Advanced Settings
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 space-y-4 animate-fade-in">
+                    <div className="bg-card p-4 rounded-lg border">
+                        <h4 className="text-sm font-semibold mb-2">Custom API Keys</h4>
+                        <p className="text-xs text-muted-foreground mb-4">
+                            Optionally provide your own API keys. They are stored only in your browser and are used instead of the default keys.
+                        </p>
+                        <ApiKeySettings />
+                    </div>
+                </CollapsibleContent>
+              </Collapsible>
             
             {props.isDebugMode && <DebugPanel poseData={props.poseData} />}
           </div>
