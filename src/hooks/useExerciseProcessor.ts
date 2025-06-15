@@ -94,40 +94,6 @@ function getJumpReadyFeedback(keypoints: posedetection.Keypoint[], jumpGroundLev
     }
 }
 
-function handlePreWorkoutPose(
-    pose: posedetection.Pose,
-    params: {
-        exercise: Exercise,
-        workoutMode: WorkoutMode,
-        onFormFeedback: (msg: string) => void,
-        onPoseData: (data: PoseData | null) => void,
-        jumpGroundLevel: React.MutableRefObject<number | null>,
-        isDebugMode: boolean
-    }
-) {
-    const { exercise, workoutMode, onFormFeedback, onPoseData, jumpGroundLevel, isDebugMode } = params;
-    const { keypoints, score } = pose;
-    if (isDebugMode) onPoseData({ keypoints });
-
-    if (score < 0.4) {
-        onFormFeedback("I'm having trouble seeing you clearly. Try improving the lighting or adjusting your camera angle.");
-        return;
-    }
-
-    if (workoutMode === 'assessment') {
-        onFormFeedback("Get into starting position. The assessment will begin with your first rep.");
-        return;
-    }
-
-    let feedback = "";
-    if (exercise === 'jumps') {
-        feedback = getJumpReadyFeedback(keypoints, jumpGroundLevel);
-    } else if (exercise === 'pull-ups') {
-        feedback = getPullupReadyFeedback(keypoints);
-    }
-    onFormFeedback(feedback);
-}
-
 function handleProcessorResult(
     result: (Omit<ProcessorResult, 'feedback'> & { feedback?: string }),
     params: {
@@ -233,24 +199,27 @@ export const useExerciseProcessor = ({
   }, [onRepCount, playBeep]);
 
   const processPose = useCallback((pose: posedetection.Pose | null) => {
-    if (!isWorkoutActive) {
-        if (!pose) {
+    if (!pose) {
+        if (!isWorkoutActive) {
             onFormFeedback("I can't see you. Please step in front of the camera and make sure you're well-lit.");
-            if (isDebugMode) onPoseData(null);
-            return;
         }
-        handlePreWorkoutPose(pose, { exercise, workoutMode, onFormFeedback, onPoseData, jumpGroundLevel, isDebugMode });
-        return; // Stop here if workout is not active
+        if (isDebugMode) onPoseData(null);
+        return;
     }
 
-    if (!pose) return;
-    
-    const { keypoints } = pose;
+    const { keypoints, score } = pose;
+
+    if (score < 0.4) {
+        onFormFeedback("I'm having trouble seeing you clearly. Try improving the lighting or adjusting your camera angle.");
+        if (isDebugMode) onPoseData({ keypoints });
+        return;
+    }
 
     let result: (Omit<ProcessorResult, 'feedback'> & { feedback?: string }) | null = null;
     
     if (exercise === 'jumps' && jumpGroundLevel.current === null) {
-        onFormFeedback("Calibrating jump height...");
+        const feedback = getJumpReadyFeedback(keypoints, jumpGroundLevel);
+        if (!isWorkoutActive) onFormFeedback(feedback);
         if (isDebugMode) onPoseData({ keypoints });
         return;
     }
@@ -280,15 +249,27 @@ export const useExerciseProcessor = ({
         break;
     }
 
-    if (!result) return;
-    
-    handleProcessorResult(result, {
-        workoutMode, isDebugMode, onPoseData, setRepState, onFormFeedback, speak,
-        lastRepIssues, formIssuePulse, pulseTimeout, getAIFeedback, incrementReps,
-        internalReps, onFormScoreUpdate, repScores, onNewRepData
-    });
+    if (result) {
+        handleProcessorResult(result, {
+            workoutMode, isDebugMode, onPoseData, setRepState, onFormFeedback, speak,
+            lastRepIssues, formIssuePulse, pulseTimeout, getAIFeedback, incrementReps,
+            internalReps, onFormScoreUpdate, repScores, onNewRepData
+        });
+    } else if (!isWorkoutActive) {
+        // If processor gives no specific result and workout hasn't started, give pre-workout guidance.
+        let feedback = "";
+        if (workoutMode === 'assessment') {
+             feedback = "Get into starting position. The assessment will begin with your first rep.";
+        } else if (exercise === 'pull-ups') {
+            feedback = getPullupReadyFeedback(keypoints);
+        } else if (exercise === 'jumps') {
+            feedback = getJumpReadyFeedback(keypoints, jumpGroundLevel);
+        }
+        onFormFeedback(feedback);
+        if (isDebugMode) onPoseData({ keypoints });
+    }
 
-  }, [exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps, getAIFeedback, isWorkoutActive]);
+  }, [isWorkoutActive, exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps, getAIFeedback]);
 
   const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
 
