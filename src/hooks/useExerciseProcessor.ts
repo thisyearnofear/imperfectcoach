@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
-import { Exercise, RepData, PoseData, RepState, CoachPersonality, WorkoutMode, ProcessorResult, PullupRepDetails } from '@/lib/types';
+import { Exercise, RepData, PoseData, RepState, CoachPersonality, WorkoutMode, ProcessorResult, PullupRepDetails, JumpRepDetails } from '@/lib/types';
 import { useAudioFeedback } from './useAudioFeedback';
 import { processPullups } from '@/lib/exercise-processors/pullupProcessor';
 import { processJumps } from '@/lib/exercise-processors/jumpProcessor';
@@ -114,12 +114,14 @@ function handleProcessorResult(
         onNewRepData: (data: RepData) => void;
         currentRepAngles: React.MutableRefObject<{ left: number[], right: number[] }>;
         exercise: Exercise;
+        peakAirborneY: React.MutableRefObject<number | null>;
     }
 ) {
     const {
         workoutMode, isDebugMode, onPoseData, repState, onFormFeedback, speak,
         lastRepIssues, formIssuePulse, pulseTimeout, getAIFeedback, incrementReps,
-        internalReps, onFormScoreUpdate, repScores, onNewRepData, currentRepAngles, exercise
+        internalReps, onFormScoreUpdate, repScores, onNewRepData, currentRepAngles, exercise,
+        peakAirborneY
     } = params;
     
     if (isDebugMode) onPoseData(result.poseData);
@@ -137,14 +139,14 @@ function handleProcessorResult(
 
     if (result.isRepCompleted && result.repCompletionData) {
         incrementReps();
-        const { score, issues } = result.repCompletionData;
+        const { score, issues, details: resultDetails } = result.repCompletionData;
         lastRepIssues.current = [...new Set(issues)];
         repScores.current.push(score);
         if (repScores.current.length > 5) repScores.current.shift();
         const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
         onFormScoreUpdate(avgScore);
 
-        let details: PullupRepDetails | undefined = undefined;
+        let details: PullupRepDetails | JumpRepDetails | undefined = resultDetails;
         if (exercise === 'pull-ups') {
             const { left, right } = currentRepAngles.current;
             if (left.length > 0 && right.length > 0) {
@@ -153,6 +155,9 @@ function handleProcessorResult(
                 const asymmetry = Math.max(...left.map((l, i) => Math.abs(l - right[i])));
                 details = { peakElbowFlexion, bottomElbowExtension, asymmetry };
             }
+        } else if (exercise === 'jumps') {
+            // Reset for next jump.
+            peakAirborneY.current = null;
         }
         
         onNewRepData({ timestamp: Date.now(), score, details });
@@ -185,6 +190,7 @@ export const useExerciseProcessor = ({
   const formIssuePulse = useRef(false);
   const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const jumpGroundLevel = useRef<number | null>(null);
+  const peakAirborneY = useRef<number | null>(null);
   const currentRepAngles = useRef<{ left: number[], right: number[] }>({ left: [], right: [] });
 
   const { getAIFeedback } = useAIFeedback({
@@ -200,6 +206,7 @@ export const useExerciseProcessor = ({
     repScores.current = [];
     lastRepIssues.current = [];
     jumpGroundLevel.current = null;
+    peakAirborneY.current = null;
 
     if (exercise === 'pull-ups' || exercise === 'squats') {
       repState.current = 'DOWN';
@@ -254,12 +261,27 @@ export const useExerciseProcessor = ({
         break;
       case 'jumps': 
         if (jumpGroundLevel.current !== null) {
+            const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
+            const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
+
+            if (leftAnkle?.score > 0.5 && rightAnkle?.score > 0.5) {
+                const avgAnkleY = (leftAnkle.y + rightAnkle.y) / 2;
+                const isAirborne = avgAnkleY < jumpGroundLevel.current - 30;
+
+                if (repState.current === 'GROUNDED' && isAirborne) {
+                    peakAirborneY.current = avgAnkleY;
+                } else if (repState.current === 'AIRBORNE' && isAirborne) {
+                    peakAirborneY.current = Math.min(peakAirborneY.current ?? avgAnkleY, avgAnkleY);
+                }
+            }
+            
             result = processJumps({
                 keypoints,
                 repState: repState.current,
                 internalReps,
                 lastRepIssues: lastRepIssues.current,
                 jumpGroundLevel: jumpGroundLevel.current,
+                peakAirborneY: peakAirborneY.current,
             });
         }
         break;
@@ -280,7 +302,7 @@ export const useExerciseProcessor = ({
             workoutMode, isDebugMode, onPoseData, repState, onFormFeedback, speak,
             lastRepIssues, formIssuePulse, pulseTimeout, getAIFeedback, incrementReps,
             internalReps, onFormScoreUpdate, repScores, onNewRepData,
-            currentRepAngles, exercise
+            currentRepAngles, exercise, peakAirborneY
         });
     } else if (!isWorkoutActive) {
         // If processor gives no specific result and workout hasn't started, give pre-workout guidance.

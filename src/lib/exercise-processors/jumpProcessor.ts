@@ -1,7 +1,7 @@
 
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { calculateAngle } from '@/lib/poseUtils';
-import { RepState, PoseData, ProcessorResult } from '@/lib/types';
+import { RepState, PoseData, ProcessorResult, JumpRepDetails } from '@/lib/types';
 
 interface JumpProcessorParams {
   keypoints: posedetection.Keypoint[];
@@ -9,9 +9,10 @@ interface JumpProcessorParams {
   internalReps: number;
   lastRepIssues: string[];
   jumpGroundLevel: number;
+  peakAirborneY: number | null;
 }
 
-export const processJumps = ({ keypoints, repState, internalReps, lastRepIssues, jumpGroundLevel }: JumpProcessorParams): Omit<ProcessorResult, 'feedback'> & { feedback?: string } | null => {
+export const processJumps = ({ keypoints, repState, internalReps, lastRepIssues, jumpGroundLevel, peakAirborneY }: JumpProcessorParams): Omit<ProcessorResult, 'feedback'> & { feedback?: string } | null => {
     const leftHip = keypoints.find(k => k.name === 'left_hip');
     const rightHip = keypoints.find(k => k.name === 'right_hip');
     const leftKnee = keypoints.find(k => k.name === 'left_knee');
@@ -43,21 +44,39 @@ export const processJumps = ({ keypoints, repState, internalReps, lastRepIssues,
             feedback: "Up!"
         };
     } else if (repState === 'AIRBORNE' && !isAirborne) {
-        let currentRepScore = 100;
         const currentIssues: string[] = [];
         let feedback: string;
 
-        if (leftKneeAngle > 160 || rightKneeAngle > 160) {
+        // Scoring for jump height
+        const jumpHeight = peakAirborneY ? jumpGroundLevel - peakAirborneY : 0;
+        const heightScore = Math.min(100, (jumpHeight / 120) * 100); // Assume 120px is a 100% jump
+        if (jumpHeight < 40) {
+            currentIssues.push('low_jump');
+        }
+
+        // Scoring for landing
+        const stiffLanding = leftKneeAngle > 160 || rightKneeAngle > 160;
+        const landingScore = stiffLanding ? 40 : 100;
+        if (stiffLanding) {
             currentIssues.push('stiff_landing');
-            feedback = "Bend your knees when you land!";
-            currentRepScore -= 40;
+            feedback = "Bend your knees more when you land!";
         } else {
             feedback = "Nice landing!";
         }
+
+        if (jumpHeight > 40) {
+            feedback = `Nice jump! Height: ${jumpHeight.toFixed(0)}px`;
+        }
+        
+        const currentRepScore = Math.round((heightScore * 0.5) + (landingScore * 0.5));
         
         const repCompletionData = {
             score: Math.max(0, currentRepScore),
             issues: [...new Set(currentIssues)],
+            details: {
+                jumpHeight,
+                landingKneeFlexion: (leftKneeAngle + rightKneeAngle) / 2
+            } as JumpRepDetails
         };
 
         return {

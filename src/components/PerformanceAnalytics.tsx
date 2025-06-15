@@ -1,3 +1,4 @@
+
 import { useRef } from "react";
 import {
   Card,
@@ -20,7 +21,7 @@ import {
   Line,
   Bar,
 } from "recharts";
-import { RepData, Exercise, SessionSummaries, CoachModel, PullupRepDetails, ChatMessage } from "@/lib/types";
+import { RepData, Exercise, SessionSummaries, CoachModel, PullupRepDetails, JumpRepDetails, ChatMessage } from "@/lib/types";
 import { exportToCSV, shareCardImage, exportChartImage } from "@/lib/exportUtils";
 import { AIChat } from "@/components/AIChat";
 
@@ -56,16 +57,20 @@ const PerformanceAnalytics = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   
-  const isPullupSession = exercise === 'pull-ups' && repHistory.some(rep => rep.details);
+  const isPullupSession = exercise === 'pull-ups' && repHistory.some(rep => rep.details && 'peakElbowFlexion' in rep.details);
+  const isJumpSession = exercise === 'jumps' && repHistory.some(rep => rep.details && 'jumpHeight' in rep.details);
 
   const chartData = repHistory.map((rep, index) => {
-    const details = rep.details as PullupRepDetails | undefined;
+    const pullupDetails = isPullupSession ? (rep.details as PullupRepDetails) : undefined;
+    const jumpDetails = isJumpSession ? (rep.details as JumpRepDetails) : undefined;
     return {
       name: `Rep ${index + 1}`,
       score: rep.score,
-      'Top ROM': details?.peakElbowFlexion,
-      'Bottom ROM': details?.bottomElbowExtension,
-      Asymmetry: details?.asymmetry,
+      'Top ROM': pullupDetails?.peakElbowFlexion,
+      'Bottom ROM': pullupDetails?.bottomElbowExtension,
+      Asymmetry: pullupDetails?.asymmetry,
+      'Jump Height': jumpDetails?.jumpHeight,
+      'Landing Flexion': jumpDetails?.landingKneeFlexion,
     };
   });
 
@@ -105,11 +110,11 @@ const PerformanceAnalytics = ({
         <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Rep Analysis</h4>
         <div className="h-60" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+            <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis yAxisId="left" domain={[0, 100]} stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} />
-              {isPullupSession && <YAxis yAxisId="right" orientation="right" domain={[0, 180]} stroke="hsl(var(--accent-foreground))" fontSize={12} tickLine={false} axisLine={false} />}
+              {(isPullupSession || isJumpSession) && <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--accent-foreground))" fontSize={12} tickLine={false} axisLine={false} />}
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--background))",
@@ -121,8 +126,10 @@ const PerformanceAnalytics = ({
               />
               <Legend wrapperStyle={{ fontSize: "12px" }} />
               <Bar yAxisId="left" dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} animationDuration={800} />
-              {isPullupSession && <Line yAxisId="right" type="monotone" dataKey="Top ROM" stroke="hsl(var(--green-500))" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
-              {isPullupSession && <Line yAxisId="right" type="monotone" dataKey="Bottom ROM" stroke="hsl(var(--yellow-500))" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
+              {isPullupSession && <Line yAxisId="right" type="monotone" dataKey="Top ROM" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
+              {isPullupSession && <Line yAxisId="right" type="monotone" dataKey="Bottom ROM" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
+              {isJumpSession && <Line yAxisId="right" type="monotone" dataKey="Jump Height" stroke="#38bdf8" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
+              {isJumpSession && <Line yAxisId="right" type="monotone" dataKey="Landing Flexion" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
             </ComposedChart>
           </ResponsiveContainer>
         </div>

@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import 'https://deno.land/x/xhr@0.1.0/mod.ts'; // Required for OpenAI library
 
@@ -22,6 +23,9 @@ const systemPrompts = {
 const getExerciseDataContext = (exercise) => {
   if (exercise === 'pull-ups') {
     return `For pull-ups, the rep data includes details: 'peakElbowFlexion' is the elbow angle at the top of the pull (a smaller angle means a higher pull, which is better), 'bottomElbowExtension' is the elbow angle at the bottom of the hang (a larger angle means fuller extension, which is better, >160 degrees is ideal), and 'asymmetry' is the difference in elbow angle between arms (lower is better, ideally close to 0). Use this detailed data to give specific feedback.`;
+  }
+  if (exercise === 'jumps') {
+    return `For jumps, the rep data includes details: 'jumpHeight' is the vertical distance achieved in pixels (higher is better), and 'landingKneeFlexion' is the average knee angle upon landing (a smaller angle, e.g., < 160 degrees, indicates better shock absorption and is safer). Use this detailed data to give specific feedback on both height and landing form.`;
   }
   // Future context for other exercises can be added here.
   return '';

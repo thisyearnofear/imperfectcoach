@@ -1,4 +1,3 @@
-
 import type { Keypoint } from '@tensorflow-models/pose-detection';
 
 export type Exercise = "pull-ups" | "jumps" | "squats";
@@ -13,10 +12,15 @@ export interface PullupRepDetails {
   asymmetry: number; // Max difference between arm angles during rep
 }
 
+export interface JumpRepDetails {
+  jumpHeight: number; // In pixels, relative to ground level
+  landingKneeFlexion: number; // Average knee angle on landing
+}
+
 export interface RepData {
   timestamp: number;
   score: number;
-  details?: PullupRepDetails;
+  details?: PullupRepDetails | JumpRepDetails;
 }
 
 export interface PoseData {
@@ -40,6 +44,7 @@ export interface ProcessorResult {
   repCompletionData?: {
     score: number;
     issues: string[];
+    details?: PullupRepDetails | JumpRepDetails;
   };
   aiFeedbackPayload?: Record<string, any>;
 }
