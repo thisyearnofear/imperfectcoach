@@ -18,6 +18,8 @@ import MobileControls from "@/components/MobileControls";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 import { useWorkout } from "@/hooks/useWorkout";
 import DesktopControls from "@/components/DesktopControls";
+import { usePerformanceStats } from "@/hooks/usePerformanceStats";
+import { useAIFeedback } from "@/hooks/useAIFeedback";
 
 const Index = () => {
   // UI and settings state
@@ -30,6 +32,8 @@ const Index = () => {
   const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState(false);
   const [isHighContrast, setIsHighContrast] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [sessionSummary, setSessionSummary] = useState<string | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
 
   // Workout state managed by custom hook
   const {
@@ -49,12 +53,25 @@ const Index = () => {
     handleWorkoutModeChange,
     handleNewRepData,
     resetSession,
+    endSession,
   } = useWorkout();
 
   // Other hooks
-  const { achievements } = useAchievements(reps, repHistory, formScore);
+  const { repTimings, sessionDuration } = usePerformanceStats(repHistory, sessionStart);
+  const { achievements } = useAchievements(reps, repHistory, formScore, repTimings.stdDev);
   const { speak } = useAudioFeedback();
+  const { getAISessionSummary } = useAIFeedback({
+    exercise: selectedExercise,
+    coachPersonality,
+    workoutMode,
+    onFormFeedback: setFormFeedback
+  });
   const wasWorkoutActive = useRef(isWorkoutActive);
+  const analyticsRef = useRef<HTMLDivElement>(null);
+
+  const scrollToAnalytics = () => {
+    analyticsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   // Effects
   useEffect(() => {
@@ -62,9 +79,25 @@ const Index = () => {
     if (wasWorkoutActive.current && !isWorkoutActive && repHistory.length > 0) {
       setFormFeedback("Time's up! Great session. Here's your summary.");
       setIsAnalyticsOpen(true);
+      
+      setIsSummaryLoading(true);
+      setSessionSummary(null);
+      getAISessionSummary({
+        reps,
+        averageFormScore: formScore,
+        repHistory,
+      }).then(summary => {
+          setSessionSummary(summary);
+          setIsSummaryLoading(false);
+      });
+
+      setTimeout(() => scrollToAnalytics(), 300);
+    } else if (!isWorkoutActive && repHistory.length === 0) {
+      setSessionSummary(null);
+      setIsSummaryLoading(false);
     }
     wasWorkoutActive.current = isWorkoutActive;
-  }, [isWorkoutActive, repHistory.length, setFormFeedback]);
+  }, [isWorkoutActive, repHistory.length, setFormFeedback, getAISessionSummary, reps, formScore]);
 
   useEffect(() => {
     if (isAudioFeedbackEnabled && formFeedback) {
@@ -108,6 +141,7 @@ const Index = () => {
               workoutMode={workoutMode}
               isWorkoutActive={isWorkoutActive}
               timeLeft={timeLeft}
+              onSessionEnd={endSession}
               onSessionReset={resetSession}
             />
             {/* Mobile-only coach feedback */}
@@ -140,24 +174,30 @@ const Index = () => {
               <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
             </div>
             
-            <Collapsible open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-start">
-                  <AnalyticsIcon className="mr-2 h-4 w-4" />
-                  Show Performance &amp; Achievements
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 space-y-4 animate-fade-in">
-                <PerformanceAnalytics
-                  repHistory={repHistory}
-                  sessionStart={sessionStart}
-                  totalReps={reps}
-                  averageFormScore={formScore}
-                  exercise={selectedExercise}
-                />
-                <UnlockedAchievements achievements={achievements} />
-              </CollapsibleContent>
-            </Collapsible>
+            <div ref={analyticsRef}>
+              <Collapsible open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    <AnalyticsIcon className="mr-2 h-4 w-4" />
+                    Show Performance &amp; Achievements
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 space-y-4 animate-fade-in">
+                  <PerformanceAnalytics
+                    repHistory={repHistory}
+                    sessionStart={sessionStart}
+                    totalReps={reps}
+                    averageFormScore={formScore}
+                    exercise={selectedExercise}
+                    sessionDuration={sessionDuration}
+                    repTimings={repTimings}
+                    sessionSummary={sessionSummary}
+                    isSummaryLoading={isSummaryLoading}
+                  />
+                  <UnlockedAchievements achievements={achievements} />
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
             
             {isDebugMode && <DebugPanel poseData={poseData} />}
           </div>

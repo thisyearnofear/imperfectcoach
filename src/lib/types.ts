@@ -1,3 +1,4 @@
+
 import type { Keypoint } from '@tensorflow-models/pose-detection';
 
 export type Exercise = "pull-ups" | "jumps" | "squats";
@@ -44,7 +45,8 @@ export type AchievementId =
   | "first_rep"
   | "ten_reps"
   | "perfect_form_rep"
-  | "great_form_session";
+  | "great_form_session"
+  | "consistent_performer";
 
 export type WorkoutMode = "training" | "assessment";
 

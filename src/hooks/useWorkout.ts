@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Exercise, RepData, WorkoutMode } from '@/lib/types';
 
@@ -16,10 +17,14 @@ export const useWorkout = () => {
     const [timeLeft, setTimeLeft] = useState(WORKOUT_DURATION);
     const [isWorkoutActive, setIsWorkoutActive] = useState(false);
 
+    const endSession = useCallback(() => {
+        setIsWorkoutActive(false);
+    }, []);
+
     useEffect(() => {
         if (!isWorkoutActive || timeLeft <= 0) {
             if (isWorkoutActive && timeLeft <= 0) {
-                setIsWorkoutActive(false);
+                endSession();
             }
             return;
         }
@@ -29,7 +34,7 @@ export const useWorkout = () => {
         }, 1000);
 
         return () => clearInterval(intervalId);
-    }, [isWorkoutActive, timeLeft]);
+    }, [isWorkoutActive, timeLeft, endSession]);
 
     const resetSession = useCallback(() => {
         setReps(0);
@@ -91,5 +96,6 @@ export const useWorkout = () => {
         handleWorkoutModeChange,
         handleNewRepData,
         resetSession,
+        endSession,
     };
 };

@@ -1,4 +1,3 @@
-
 import { useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Exercise, CoachPersonality, WorkoutMode } from '@/lib/types';
@@ -46,5 +45,26 @@ export const useAIFeedback = ({
     }
   }, [exercise, coachPersonality, workoutMode, onFormFeedback]);
 
-  return { getAIFeedback };
+  const getAISessionSummary = useCallback(async (summaryData: Record<string, any>) => {
+    if (!navigator.onLine) {
+        return "You're offline. Connect to the internet to get a session summary.";
+    }
+    try {
+        const { data: responseData, error } = await supabase.functions.invoke('coach-gemini', {
+            body: { 
+                type: 'summary',
+                exercise,
+                personality: coachPersonality,
+                ...summaryData 
+            }
+        });
+        if (error) throw error;
+        return responseData.feedback || "Could not generate summary.";
+    } catch (error) {
+        console.error('Error getting AI session summary:', error);
+        return "There was an issue generating your session summary.";
+    }
+  }, [exercise, coachPersonality]);
+
+  return { getAIFeedback, getAISessionSummary };
 };

@@ -25,10 +25,11 @@ interface VideoFeedProps {
   workoutMode: WorkoutMode;
   isWorkoutActive: boolean;
   timeLeft: number;
+  onSessionEnd: () => void;
   onSessionReset: () => void;
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionReset }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -53,7 +54,12 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
 
   const handleStopCamera = () => {
     stopCamera();
+    onSessionEnd();
+  };
+
+  const handleEnableCamera = () => {
     onSessionReset();
+    enableCamera();
   };
 
   const handleModelFeedback = (message: string) => {
@@ -150,7 +156,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
       ) : (
         <div className="text-center">
           {cameraStatus === "denied" && <p className="text-destructive mb-4">Camera access denied. Please check your browser settings.</p>}
-          <Button onClick={() => enableCamera()} disabled={cameraStatus === "pending"}>
+          <Button onClick={handleEnableCamera} disabled={cameraStatus === "pending"}>
             <Video className="mr-2 h-4 w-4" />
             {cameraStatus === 'pending' ? 'Starting Camera...' : 'Enable Camera'}
           </Button>

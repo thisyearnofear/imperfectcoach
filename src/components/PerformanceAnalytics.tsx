@@ -1,4 +1,3 @@
-
 import { useRef } from "react";
 import {
   Card,
@@ -21,29 +20,32 @@ import {
   Line,
 } from "recharts";
 import { RepData, Exercise } from "@/lib/types";
-import { usePerformanceStats } from "@/hooks/usePerformanceStats";
 import { exportToCSV, shareCardImage, exportChartImage } from "@/lib/exportUtils";
 
 interface PerformanceAnalyticsProps {
   repHistory: RepData[];
-  sessionStart: number | null;
   totalReps: number;
   averageFormScore: number;
   exercise: Exercise;
+  sessionDuration: string;
+  repTimings: { avg: number; stdDev: number };
+  sessionSummary: string | null;
+  isSummaryLoading: boolean;
 }
 
 const PerformanceAnalytics = ({
   repHistory,
-  sessionStart,
   totalReps,
   averageFormScore,
   exercise,
+  sessionDuration,
+  repTimings,
+  sessionSummary,
+  isSummaryLoading,
 }: PerformanceAnalyticsProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   
-  const { repTimings, sessionDuration } = usePerformanceStats(repHistory, sessionStart);
-
   const chartData = repHistory.map((rep, index) => ({
     name: `Rep ${index + 1}`,
     score: rep.score,
@@ -94,11 +96,18 @@ const PerformanceAnalytics = ({
                 }}
               />
               <Legend wrapperStyle={{ fontSize: "14px" }} />
-              <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} />
+              <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} animationDuration={800} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
+      {(isSummaryLoading || sessionSummary) && (
+        <CardFooter className="flex-col items-start gap-2 pt-4 border-t -mb-2 mx-6">
+          <h4 className="text-sm font-semibold">AI Coach Summary</h4>
+          {isSummaryLoading && <p className="text-sm text-muted-foreground animate-pulse">Your coach is analyzing your performance...</p>}
+          {sessionSummary && <p className="text-sm text-foreground/90 whitespace-pre-wrap">{sessionSummary}</p>}
+        </CardFooter>
+      )}
       <CardFooter className="flex flex-col sm:flex-row gap-2 pt-6">
         <Button onClick={() => shareCardImage(cardRef, exercise, totalReps, averageFormScore)} variant="default" size="sm" className="w-full" disabled={repHistory.length === 0}>
           <Share2 className="mr-2 h-4 w-4" />

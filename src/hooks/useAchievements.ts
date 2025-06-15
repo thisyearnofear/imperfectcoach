@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { RepData, Achievement, AchievementId } from "@/lib/types";
@@ -7,7 +6,8 @@ import { ACHIEVEMENTS } from "@/lib/achievements";
 export const useAchievements = (
   reps: number,
   repHistory: RepData[],
-  averageFormScore: number
+  averageFormScore: number,
+  repTimingStdDev?: number,
 ) => {
   const [unlockedAchievements, setUnlockedAchievements] = useState<Set<AchievementId>>(new Set());
 
@@ -35,6 +35,11 @@ export const useAchievements = (
         newAchievements.push("great_form_session");
       }
 
+      // Achievement: Consistent Performer
+      if (reps > 10 && repTimingStdDev !== undefined && repTimingStdDev < 1.5 && !unlockedAchievements.has("consistent_performer")) {
+        newAchievements.push("consistent_performer");
+      }
+
       if (newAchievements.length > 0) {
         const updatedAchievements = new Set(unlockedAchievements);
         newAchievements.forEach(id => {
@@ -52,7 +57,7 @@ export const useAchievements = (
     };
 
     checkAchievements();
-  }, [reps, repHistory, averageFormScore, unlockedAchievements]);
+  }, [reps, repHistory, averageFormScore, unlockedAchievements, repTimingStdDev]);
   
   useEffect(() => {
     if (repHistory.length === 0 && reps === 0) {

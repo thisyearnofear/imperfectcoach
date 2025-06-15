@@ -100,7 +100,7 @@ function handleProcessorResult(
         workoutMode: WorkoutMode;
         isDebugMode: boolean;
         onPoseData: (data: PoseData | null) => void;
-        setRepState: React.Dispatch<React.SetStateAction<RepState>>;
+        repState: React.MutableRefObject<RepState>;
         onFormFeedback: (message: string) => void;
         speak: (phrase: string) => void;
         lastRepIssues: React.MutableRefObject<string[]>;
@@ -115,13 +115,13 @@ function handleProcessorResult(
     }
 ) {
     const {
-        workoutMode, isDebugMode, onPoseData, setRepState, onFormFeedback, speak,
+        workoutMode, isDebugMode, onPoseData, repState, onFormFeedback, speak,
         lastRepIssues, formIssuePulse, pulseTimeout, getAIFeedback, incrementReps,
         internalReps, onFormScoreUpdate, repScores, onNewRepData
     } = params;
     
     if (isDebugMode) onPoseData(result.poseData);
-    if (result.newRepState) setRepState(result.newRepState);
+    if (result.newRepState) repState.current = result.newRepState;
     if (result.feedback && workoutMode === 'training') onFormFeedback(result.feedback);
 
     if (result.formCheckSpeak && workoutMode === 'training' && !lastRepIssues.current.includes(result.formCheckSpeak.issue)) {
@@ -162,7 +162,7 @@ export const useExerciseProcessor = ({
   onPoseData,
   isWorkoutActive,
 }: UseExerciseProcessorProps) => {
-  const [repState, setRepState] = useState<RepState>('DOWN');
+  const repState = useRef<RepState>('DOWN');
   const [internalReps, setInternalReps] = useState(0);
   const lastRepIssues = useRef<string[]>([]);
   const repScores = useRef<number[]>([]);
@@ -186,9 +186,9 @@ export const useExerciseProcessor = ({
     jumpGroundLevel.current = null;
 
     if (exercise === 'pull-ups' || exercise === 'squats') {
-      setRepState('DOWN');
+      repState.current = 'DOWN';
     } else { // For jumps and any future exercises starting from ground
-      setRepState('GROUNDED');
+      repState.current = 'GROUNDED';
     }
   }, [exercise]);
 
@@ -228,7 +228,7 @@ export const useExerciseProcessor = ({
       case 'pull-ups': 
         result = processPullups({
           keypoints,
-          repState,
+          repState: repState.current,
           internalReps,
           lastRepIssues: lastRepIssues.current
         });
@@ -240,7 +240,7 @@ export const useExerciseProcessor = ({
         if (jumpGroundLevel.current !== null) {
             result = processJumps({
                 keypoints,
-                repState,
+                repState: repState.current,
                 internalReps,
                 lastRepIssues: lastRepIssues.current,
                 jumpGroundLevel: jumpGroundLevel.current,
@@ -251,7 +251,7 @@ export const useExerciseProcessor = ({
 
     if (result) {
         handleProcessorResult(result, {
-            workoutMode, isDebugMode, onPoseData, setRepState, onFormFeedback, speak,
+            workoutMode, isDebugMode, onPoseData, repState, onFormFeedback, speak,
             lastRepIssues, formIssuePulse, pulseTimeout, getAIFeedback, incrementReps,
             internalReps, onFormScoreUpdate, repScores, onNewRepData
         });
