@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import * as tf from '@tensorflow/tfjs-core';
@@ -6,6 +5,7 @@ import '@tensorflow/tfjs-backend-webgl';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Exercise, RepData, PoseData, RepState, CoachPersonality, CameraStatus } from '@/lib/types';
+import { drawPose } from '@/lib/drawing';
 
 // Type definitions
 // Removed VideoStatus type definition
@@ -73,12 +73,14 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
   const aiFeedbackCooldown = useRef(false);
   const lastRepIssues = useRef<string[]>([]);
   const repScores = useRef<number[]>([]);
+  const keypointHistoryRef = useRef<posedetection.Keypoint[][]>([]);
 
   // Reset state when exercise changes
   useEffect(() => {
     setInternalReps(0);
     repScores.current = [];
     lastRepIssues.current = [];
+    keypointHistoryRef.current = []; // Reset trajectory history
     if (exercise === 'pull-ups' || exercise === 'squats') {
       setRepState('DOWN');
     } else {
@@ -154,10 +156,23 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
             // Match canvas dimensions to video
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
             if (isDebugMode && poses && poses.length > 0) {
-              drawKeypoints(poses[0].keypoints, ctx);
-              drawSkeleton(poses[0].keypoints, ctx);
+              const avgScore = repScores.current.length > 0 
+                ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length
+                : 100;
+              
+              keypointHistoryRef.current.push(poses[0].keypoints);
+              if (keypointHistoryRef.current.length > 20) { // Keep last 20 frames for trail
+                keypointHistoryRef.current.shift();
+              }
+
+              drawPose(ctx, poses[0], exercise, avgScore, keypointHistoryRef.current);
+            } else {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              if (keypointHistoryRef.current.length > 0) {
+                  keypointHistoryRef.current = [];
+              }
             }
           }
         }
