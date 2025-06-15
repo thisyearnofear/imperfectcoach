@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { PoseData, CoachPersonality, CoachModel, SessionSummaries } from '@/lib/types';
+import { PoseData, CoachPersonality, CoachModel, SessionSummaries, ChatMessage } from '@/lib/types';
 import { useAchievements } from "@/hooks/useAchievements";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 import { useWorkout } from "@/hooks/useWorkout";
@@ -20,6 +20,9 @@ export const useIndexPage = () => {
   const [sessionSummaries, setSessionSummaries] = useState<SessionSummaries | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [selectedCoaches, setSelectedCoaches] = useState<CoachModel[]>(['gemini']);
+  const [sessionHasConcluded, setSessionHasConcluded] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
   // Workout state managed by custom hook
   const {
@@ -49,7 +52,7 @@ export const useIndexPage = () => {
   const { repTimings, sessionDuration } = usePerformanceStats(repHistory, sessionStart);
   const { achievements } = useAchievements(reps, repHistory, formScore, repTimings.stdDev);
   const { speak } = useAudioFeedback();
-  const { getAISessionSummary } = useAIFeedback({
+  const { getAISessionSummary, getAIChatResponse } = useAIFeedback({
     exercise: selectedExercise,
     coachPersonality,
     workoutMode,
@@ -60,6 +63,8 @@ export const useIndexPage = () => {
   const handleTryAgain = () => {
     resetSession();
     setIsAnalyticsOpen(false);
+    setSessionHasConcluded(false);
+    setChatMessages([]);
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -69,9 +74,15 @@ export const useIndexPage = () => {
     if (wasWorkoutActive.current && !isWorkoutActive && repHistory.length > 0) {
       setFormFeedback("Time's up! Great session. Here's your summary.");
       setIsAnalyticsOpen(true);
-      
+      setSessionHasConcluded(true);
+      setTimeout(() => analyticsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
+    wasWorkoutActive.current = isWorkoutActive;
+  }, [isWorkoutActive, repHistory.length, setFormFeedback, analyticsRef]);
+
+  useEffect(() => {
+    if (sessionHasConcluded && repHistory.length > 0) {
       setIsSummaryLoading(true);
-      setSessionSummaries(null);
       getAISessionSummary({
         reps,
         averageFormScore: formScore,
@@ -80,14 +91,11 @@ export const useIndexPage = () => {
           setSessionSummaries(summaries);
           setIsSummaryLoading(false);
       });
-
-      setTimeout(() => analyticsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
-    } else if (!isWorkoutActive && repHistory.length === 0) {
-      setSessionSummaries(null);
-      setIsSummaryLoading(false);
+    } else {
+        setSessionSummaries(null);
+        setIsSummaryLoading(false);
     }
-    wasWorkoutActive.current = isWorkoutActive;
-  }, [isWorkoutActive, repHistory.length, setFormFeedback, getAISessionSummary, reps, formScore, endSession, selectedCoaches]);
+  }, [sessionHasConcluded, selectedCoaches, getAISessionSummary, repHistory, reps, formScore]);
 
   useEffect(() => {
     if (isAudioFeedbackEnabled && formFeedback) {
@@ -111,6 +119,30 @@ export const useIndexPage = () => {
     setFormFeedback(`Switched to Coach ${modelName}. Ready when you are!`);
   };
 
+  const handleSendMessage = async (message: string, model: CoachModel) => {
+    if (!message.trim()) return;
+
+    const newUserMessage: ChatMessage = { role: 'user', content: message };
+    setChatMessages(prev => [...prev, newUserMessage]);
+    setIsChatLoading(true);
+
+    const fullHistory = [...chatMessages, newUserMessage];
+
+    const response = await getAIChatResponse(
+        fullHistory,
+        {
+            reps,
+            averageFormScore: formScore,
+            repHistory,
+        },
+        model
+    );
+
+    const newAssistantMessage: ChatMessage = { role: 'assistant', content: response };
+    setChatMessages(prev => [...prev, newAssistantMessage]);
+    setIsChatLoading(false);
+  };
+
   return {
     // State
     isDebugMode, isRecordingEnabled, poseData, coachPersonality, coachModel, 
@@ -118,12 +150,13 @@ export const useIndexPage = () => {
     sessionSummaries, isSummaryLoading, selectedCoaches, selectedExercise, reps,
     formFeedback, formScore, repHistory, workoutMode, timeLeft, isWorkoutActive,
     repTimings, sessionDuration, achievements, analyticsRef, topRef,
+    chatMessages, isChatLoading,
     // Setters
     setIsDebugMode, setIsRecordingEnabled, setPoseData, setCoachPersonality,
     setIsMobileSettingsOpen, setIsAudioFeedbackEnabled, setIsHighContrast, setIsAnalyticsOpen,
     setSelectedCoaches, setReps, setFormFeedback, setFormScore,
     // Handlers
     handleCoachModelChange, handleExerciseChange, handleWorkoutModeChange,
-    handleNewRepData, resetSession, endSession, handleTryAgain,
+    handleNewRepData, resetSession, endSession, handleTryAgain, handleSendMessage,
   };
 };

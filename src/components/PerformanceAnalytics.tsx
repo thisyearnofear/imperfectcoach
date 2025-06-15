@@ -20,8 +20,9 @@ import {
   Line,
   Bar,
 } from "recharts";
-import { RepData, Exercise, SessionSummaries, CoachModel, PullupRepDetails } from "@/lib/types";
+import { RepData, Exercise, SessionSummaries, CoachModel, PullupRepDetails, ChatMessage } from "@/lib/types";
 import { exportToCSV, shareCardImage, exportChartImage } from "@/lib/exportUtils";
+import { AIChat } from "@/components/AIChat";
 
 interface PerformanceAnalyticsProps {
   repHistory: RepData[];
@@ -33,6 +34,9 @@ interface PerformanceAnalyticsProps {
   sessionSummaries: SessionSummaries | null;
   isSummaryLoading: boolean;
   onTryAgain: () => void;
+  chatMessages: ChatMessage[];
+  isChatLoading: boolean;
+  onSendMessage: (message: string, model: CoachModel) => Promise<void>;
 }
 
 const PerformanceAnalytics = ({
@@ -45,6 +49,9 @@ const PerformanceAnalytics = ({
   sessionSummaries,
   isSummaryLoading,
   onTryAgain,
+  chatMessages,
+  isChatLoading,
+  onSendMessage,
 }: PerformanceAnalyticsProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -121,8 +128,8 @@ const PerformanceAnalytics = ({
         </div>
       </CardContent>
       {(isSummaryLoading || sessionSummaries) && (
-        <CardFooter className="flex-col items-start gap-4 pt-4 border-t -mb-2 mx-6">
-          {isSummaryLoading && (
+        <CardFooter className="flex-col items-start gap-4 pt-4 border-t mx-6">
+          {isSummaryLoading && !sessionSummaries && (
             <div className="w-full">
                 <h4 className="text-sm font-semibold mb-2">AI Coach Summaries</h4>
                 <p className="text-sm text-muted-foreground animate-pulse">Your coaches are analyzing your performance...</p>
@@ -131,12 +138,19 @@ const PerformanceAnalytics = ({
           {sessionSummaries && Object.keys(sessionSummaries).length > 0 && (
              <div className="w-full space-y-4">
                 <h4 className="text-sm font-semibold">AI Coach Summaries</h4>
+                {isSummaryLoading && <p className="text-sm text-muted-foreground animate-pulse">Updating summaries...</p>}
                 {Object.entries(sessionSummaries).map(([model, summary]) => (
                     <div key={model}>
                         <p className="font-semibold text-primary text-sm">{coachName(model)}'s take:</p>
                         <p className="text-sm text-foreground/90 whitespace-pre-wrap">{summary}</p>
                     </div>
                 ))}
+                 <AIChat 
+                    summaries={sessionSummaries}
+                    messages={chatMessages}
+                    isLoading={isChatLoading}
+                    onSendMessage={onSendMessage}
+                />
             </div>
           )}
         </CardFooter>

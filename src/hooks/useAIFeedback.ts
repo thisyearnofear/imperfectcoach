@@ -1,6 +1,7 @@
+
 import { useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Exercise, CoachPersonality, WorkoutMode, CoachModel, SessionSummaries } from '@/lib/types';
+import { Exercise, CoachPersonality, WorkoutMode, CoachModel, SessionSummaries, ChatMessage } from '@/lib/types';
 import { getRandomFeedback } from '@/lib/feedbackUtils';
 
 interface UseAIFeedbackProps {
@@ -81,5 +82,36 @@ export const useAIFeedback = ({
     return summaries;
   }, [exercise, coachPersonality]);
 
-  return { getAIFeedback, getAISessionSummary };
+  const getAIChatResponse = useCallback(async (
+    chatHistory: ChatMessage[],
+    sessionData: Record<string, any>,
+    model: CoachModel
+  ): Promise<string> => {
+    if (!navigator.onLine) {
+        return "You're offline. Please connect to the internet to chat with the coach.";
+    }
+
+    try {
+        const { data: responseData, error } = await supabase.functions.invoke('coach-gemini', {
+            body: {
+                model,
+                type: 'chat',
+                exercise,
+                personality: coachPersonality,
+                ...sessionData,
+                chatHistory,
+            }
+        });
+
+        if (error) throw error;
+        
+        return responseData.feedback || "Sorry, I couldn't come up with a response.";
+
+    } catch (error) {
+        console.error(`Error getting AI chat response for ${model}:`, error);
+        return "Sorry, there was an issue getting a response from the coach.";
+    }
+  }, [exercise, coachPersonality]);
+
+  return { getAIFeedback, getAISessionSummary, getAIChatResponse };
 };

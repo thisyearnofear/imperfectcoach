@@ -61,6 +61,11 @@ export type AchievementId =
 
 export type WorkoutMode = "training" | "assessment";
 
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface Achievement {
   id: AchievementId;
   name: string;

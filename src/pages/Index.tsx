@@ -67,6 +67,9 @@ const Index = () => {
             isDebugMode={page.isDebugMode}
             poseData={page.poseData}
             onTryAgain={page.handleTryAgain}
+            chatMessages={page.chatMessages}
+            isChatLoading={page.isChatLoading}
+            onSendMessage={page.handleSendMessage}
           />
         </div>
       </main>

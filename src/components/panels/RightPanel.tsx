@@ -8,7 +8,7 @@ import PerformanceAnalytics from "@/components/PerformanceAnalytics";
 import UnlockedAchievements from "@/components/UnlockedAchievements";
 import DebugPanel from "@/components/DebugPanel";
 import { CoachSummarySelector } from "@/components/CoachSummarySelector";
-import { CoachModel, Exercise, RepData, SessionSummaries, Achievement, PoseData, WorkoutMode } from '@/lib/types';
+import { CoachModel, Exercise, RepData, SessionSummaries, Achievement, PoseData, WorkoutMode, ChatMessage } from '@/lib/types';
 
 interface RightPanelProps {
     reps: number;
@@ -32,6 +32,9 @@ interface RightPanelProps {
     isDebugMode: boolean;
     poseData: PoseData | null;
     onTryAgain: () => void;
+    chatMessages: ChatMessage[];
+    isChatLoading: boolean;
+    onSendMessage: (message: string, model: CoachModel) => Promise<void>;
 }
 
 export const RightPanel = (props: RightPanelProps) => {
@@ -73,6 +76,9 @@ export const RightPanel = (props: RightPanelProps) => {
                     sessionSummaries={props.sessionSummaries}
                     isSummaryLoading={props.isSummaryLoading}
                     onTryAgain={props.onTryAgain}
+                    chatMessages={props.chatMessages}
+                    isChatLoading={props.isChatLoading}
+                    onSendMessage={props.onSendMessage}
                   />
                   <UnlockedAchievements achievements={props.achievements} />
                 </CollapsibleContent>

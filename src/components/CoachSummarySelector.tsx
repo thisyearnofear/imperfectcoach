@@ -26,7 +26,7 @@ export function CoachSummarySelector({ selectedCoaches, onSelectionChange, disab
             onValueChange={(value: CoachModel[]) => {
                 if (value) onSelectionChange(value);
             }}
-            className="flex-wrap justify-start"
+            className="flex-wrap justify-center"
             disabled={disabled}
         >
             {coachOptions.map(coach => (
