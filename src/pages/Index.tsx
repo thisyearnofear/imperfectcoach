@@ -1,54 +1,59 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import VideoFeed from "@/components/VideoFeed";
-import ExerciseSelector from "@/components/ExerciseSelector";
 import CoachFeedback from "@/components/CoachFeedback";
 import { Button } from "@/components/ui/button";
-import { Bug, BarChart2 as AnalyticsIcon, Settings, Timer } from "lucide-react";
+import { BarChart2 as AnalyticsIcon, Settings } from "lucide-react";
 import DebugPanel from "@/components/DebugPanel";
-import { Exercise, RepData, PoseData, CoachPersonality, CoachModel, WorkoutMode } from "@/lib/types";
+import { PoseData, CoachPersonality, CoachModel } from "@/lib/types";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import PerformanceAnalytics from "@/components/PerformanceAnalytics";
-import CoachPersonalitySelector from "@/components/CoachPersonalitySelector";
-import WorkoutModeSelector from "@/components/WorkoutModeSelector";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { useAchievements } from "@/hooks/useAchievements";
 import UnlockedAchievements from "@/components/UnlockedAchievements";
 import MobileControls from "@/components/MobileControls";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
-import { ThemeToggle } from "@/components/ThemeToggle";
-
-const WORKOUT_DURATION = 120; // 2 minutes in seconds
+import { useWorkout } from "@/hooks/useWorkout";
+import DesktopControls from "@/components/DesktopControls";
 
 const Index = () => {
-  const [selectedExercise, setSelectedExercise] = useState<Exercise>("pull-ups");
-  const [reps, setReps] = useState(0);
-  const [formFeedback, setFormFeedback] = useState(
-    "Enable your camera and select an exercise to begin. Let's see what you've got!"
-  );
+  // UI and settings state
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [isRecordingEnabled, setIsRecordingEnabled] = useState(false);
   const [poseData, setPoseData] = useState<PoseData | null>(null);
-  const [formScore, setFormScore] = useState(100);
-  const [sessionStart, setSessionStart] = useState<number | null>(null);
-  const [repHistory, setRepHistory] = useState<RepData[]>([]);
   const [coachPersonality, setCoachPersonality] = useState<CoachPersonality>("competitive");
   const [coachModel, setCoachModel] = useState<CoachModel>('gemini');
-  const [workoutMode, setWorkoutMode] = useState<WorkoutMode>('training');
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
   const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState(false);
   const [isHighContrast, setIsHighContrast] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(WORKOUT_DURATION);
-  const [isWorkoutActive, setIsWorkoutActive] = useState(false);
 
+  // Workout state managed by custom hook
+  const {
+    selectedExercise,
+    reps,
+    formFeedback,
+    formScore,
+    sessionStart,
+    repHistory,
+    workoutMode,
+    timeLeft,
+    isWorkoutActive,
+    setReps,
+    setFormFeedback,
+    setFormScore,
+    handleExerciseChange,
+    handleWorkoutModeChange,
+    handleNewRepData,
+  } = useWorkout();
+
+  // Other hooks
   const { achievements } = useAchievements(reps, repHistory, formScore);
   const { speak } = useAudioFeedback();
 
+  // Effects
   useEffect(() => {
     if (isAudioFeedbackEnabled && formFeedback) {
       if (formFeedback.includes("Enable your camera") || formFeedback.includes("Model loaded")) return;
@@ -57,22 +62,6 @@ const Index = () => {
   }, [formFeedback, isAudioFeedbackEnabled, speak]);
   
   useEffect(() => {
-    if (!isWorkoutActive || timeLeft <= 0) {
-      if (isWorkoutActive && timeLeft <= 0) {
-        setFormFeedback("Time's up! Great session!");
-        setIsWorkoutActive(false);
-      }
-      return;
-    }
-
-    const intervalId = setInterval(() => {
-      setTimeLeft((prevTime) => prevTime - 1);
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, [isWorkoutActive, timeLeft, setFormFeedback]);
-
-  useEffect(() => {
     const root = document.documentElement;
     if (isHighContrast) {
       root.classList.add('high-contrast');
@@ -80,62 +69,6 @@ const Index = () => {
       root.classList.remove('high-contrast');
     }
   }, [isHighContrast]);
-
-  const resetSession = () => {
-    setReps(0);
-    setFormScore(100);
-    setSessionStart(null);
-    setRepHistory([]);
-    setPoseData(null);
-    setIsWorkoutActive(false);
-    setTimeLeft(WORKOUT_DURATION);
-  }
-
-  const handleExerciseChange = (exercise: Exercise) => {
-    if (exercise !== selectedExercise) {
-      setSelectedExercise(exercise);
-      resetSession();
-      let initialFeedback = `Switched to ${exercise}. Let's get to it!`;
-      if (exercise === 'pull-ups') {
-          initialFeedback = "To begin, hang from the bar with arms fully extended.";
-      } else if (exercise === 'jumps') {
-          initialFeedback = "To begin, stand still in full view of the camera.";
-      }
-      setFormFeedback(initialFeedback);
-    }
-  };
-
-  const handleWorkoutModeChange = (mode: WorkoutMode) => {
-    if (mode === workoutMode) return;
-
-    setWorkoutMode(mode);
-    resetSession();
-    
-    let initialFeedback;
-    if (mode === 'assessment') {
-        initialFeedback = "Assessment mode: Your form will be scored without coaching.";
-    } else {
-        if (selectedExercise === 'pull-ups') {
-            initialFeedback = "To begin, hang from the bar with arms fully extended.";
-        } else if (selectedExercise === 'jumps') {
-            initialFeedback = "To begin, stand still in full view of the camera.";
-        } else {
-            initialFeedback = `Training mode: Switched to ${selectedExercise}. Let's get to it!`;
-        }
-    }
-    setFormFeedback(initialFeedback);
-  };
-
-  const handleNewRepData = (data: RepData) => {
-    if (!sessionStart) {
-      setSessionStart(Date.now() - 2000); // Start timer on first rep (with a small buffer)
-    }
-    if (!isWorkoutActive) {
-      setIsWorkoutActive(true);
-      setTimeLeft(WORKOUT_DURATION);
-    }
-    setRepHistory((prev) => [...prev, data]);
-  };
 
   const handleCoachModelChange = (model: CoachModel) => {
     setCoachModel(model);
@@ -168,48 +101,22 @@ const Index = () => {
                 <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} timeLeft={timeLeft} isWorkoutActive={isWorkoutActive} />
             </div>
             
-            {/* Desktop-only controls */}
-            <div className="hidden lg:flex flex-col gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <WorkoutModeSelector
-                  selectedMode={workoutMode}
-                  onModeChange={handleWorkoutModeChange}
-                />
-                <ExerciseSelector 
-                  selectedExercise={selectedExercise}
-                  onExerciseChange={handleExerciseChange}
-                />
-              </div>
-              <div className="flex justify-between items-center flex-wrap gap-4 mt-2">
-                <CoachPersonalitySelector
-                  selectedPersonality={coachPersonality}
-                  onPersonalityChange={setCoachPersonality}
-                />
-                <div className="flex items-center gap-4 mt-2 sm:mt-0 flex-wrap">
-                  <ThemeToggle />
-                  <div className="flex items-center space-x-2">
-                    <Switch id="enable-high-contrast" checked={isHighContrast} onCheckedChange={setIsHighContrast} />
-                    <Label htmlFor="enable-high-contrast">High Contrast</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch id="enable-audio" checked={isAudioFeedbackEnabled} onCheckedChange={setIsAudioFeedbackEnabled} />
-                    <Label htmlFor="enable-audio">Audio Feedback</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch id="enable-recording" checked={isRecordingEnabled} onCheckedChange={setIsRecordingEnabled} />
-                    <Label htmlFor="enable-recording">Enable Recording</Label>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsDebugMode((prev) => !prev)}
-                  >
-                    <Bug className="mr-2 h-4 w-4" />
-                    {isDebugMode ? "Hide" : "Show"} Debug
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <DesktopControls
+              workoutMode={workoutMode}
+              onWorkoutModeChange={handleWorkoutModeChange}
+              selectedExercise={selectedExercise}
+              onExerciseChange={handleExerciseChange}
+              coachPersonality={coachPersonality}
+              onCoachPersonalityChange={setCoachPersonality}
+              isHighContrast={isHighContrast}
+              onHighContrastChange={setIsHighContrast}
+              isAudioFeedbackEnabled={isAudioFeedbackEnabled}
+              onAudioFeedbackChange={setIsAudioFeedbackEnabled}
+              isRecordingEnabled={isRecordingEnabled}
+              onRecordingChange={setIsRecordingEnabled}
+              isDebugMode={isDebugMode}
+              onDebugChange={setIsDebugMode}
+            />
           </div>
 
           {/* Right Panel: Coach Feedback & Stats */}
