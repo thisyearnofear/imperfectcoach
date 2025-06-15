@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { Exercise, RepData, PoseData, RepState, CoachPersonality, WorkoutMode, ProcessorResult } from '@/lib/types';
@@ -17,6 +16,7 @@ interface UseExerciseProcessorProps {
   coachPersonality: CoachPersonality;
   isDebugMode: boolean;
   onPoseData: (data: PoseData) => void;
+  isWorkoutActive: boolean;
 }
 
 const cachedFeedback: Record<string, string[]> = {
@@ -64,6 +64,7 @@ export const useExerciseProcessor = ({
   coachPersonality,
   isDebugMode,
   onPoseData,
+  isWorkoutActive,
 }: UseExerciseProcessorProps) => {
   const [repState, setRepState] = useState<RepState>('DOWN');
   const [internalReps, setInternalReps] = useState(0);
@@ -105,18 +106,52 @@ export const useExerciseProcessor = ({
     if (!pose) return;
     const { keypoints } = pose;
 
+    if (!isWorkoutActive) {
+        // Pre-workout positioning guidance
+        if (workoutMode === 'assessment') {
+            onFormFeedback("Get into starting position. The assessment will begin with your first rep.");
+            return;
+        }
+
+        if (exercise === 'jumps') {
+            if (jumpGroundLevel.current === null) {
+                const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
+                const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
+                if (leftAnkle && rightAnkle && leftAnkle.score > 0.5 && rightAnkle.score > 0.5) {
+                    jumpGroundLevel.current = (leftAnkle.y + rightAnkle.y) / 2;
+                    onFormFeedback("Crouch down, then jump as high as you can to start!");
+                } else {
+                    onFormFeedback("Stand in full view of the camera to calibrate.");
+                }
+            } else {
+                 onFormFeedback("Ready for your first jump! Start when you're ready.");
+            }
+        } else if (exercise === 'pull-ups') {
+            const leftWrist = keypoints.find(k => k.name === 'left_wrist');
+            const leftElbow = keypoints.find(k => k.name === 'left_elbow');
+            const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
+
+            if (leftWrist?.score > 0.3 && leftElbow?.score > 0.3 && leftShoulder?.score > 0.3) {
+                // simple check for hanging position (wrists higher than elbows, elbows higher than shoulders)
+                if (leftWrist.y < leftElbow.y && leftElbow.y < leftShoulder.y) {
+                    onFormFeedback("You're in the start position. Pull up to begin!");
+                } else {
+                    onFormFeedback("Hang from the bar with arms fully extended to start.");
+                }
+            } else {
+                 onFormFeedback("Get in view of the camera, ready to hang from the bar.");
+            }
+        }
+
+        if (isDebugMode) onPoseData({ keypoints });
+        return; // Stop here if workout is not active
+    }
+
     let result: (Omit<ProcessorResult, 'feedback'> & { feedback?: string }) | null = null;
     
-    // Special handling for jump ground level calibration
+    // Special handling for jump ground level calibration (should have happened pre-workout)
     if (exercise === 'jumps' && jumpGroundLevel.current === null) {
-        const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
-        const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
-        if (leftAnkle && rightAnkle && leftAnkle.score > 0.5 && rightAnkle.score > 0.5) {
-            jumpGroundLevel.current = (leftAnkle.y + rightAnkle.y) / 2;
-            onFormFeedback("Crouch down, then jump as high as you can!");
-        } else {
-            onFormFeedback("Stand in full view to calibrate for jumps.");
-        }
+        onFormFeedback("Calibrating jump height...");
         if (isDebugMode) onPoseData({ keypoints });
         return;
     }
@@ -178,7 +213,7 @@ export const useExerciseProcessor = ({
         });
     }
 
-  }, [exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps, getAIFeedback]);
+  }, [exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps, getAIFeedback, isWorkoutActive]);
 
   const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Exercise, RepData, WorkoutMode } from '@/lib/types';
 
@@ -46,13 +45,7 @@ export const useWorkout = () => {
         if (exercise !== selectedExercise) {
             setSelectedExercise(exercise);
             resetSession();
-            let initialFeedback = `Switched to ${exercise}. Let's get to it!`;
-            if (exercise === 'pull-ups') {
-                initialFeedback = "To begin, hang from the bar with arms fully extended.";
-            } else if (exercise === 'jumps') {
-                initialFeedback = "To begin, stand still in full view of the camera.";
-            }
-            setFormFeedback(initialFeedback);
+            setFormFeedback(`Switched to ${exercise}. Get into position to begin.`);
         }
     }, [selectedExercise, resetSession]);
 
@@ -64,15 +57,9 @@ export const useWorkout = () => {
         
         let initialFeedback;
         if (mode === 'assessment') {
-            initialFeedback = "Assessment mode: Your form will be scored without coaching.";
+            initialFeedback = "Assessment mode: Get into position. Scoring starts on your first rep.";
         } else {
-            if (selectedExercise === 'pull-ups') {
-                initialFeedback = "To begin, hang from the bar with arms fully extended.";
-            } else if (selectedExercise === 'jumps') {
-                initialFeedback = "To begin, stand still in full view of the camera.";
-            } else {
-                initialFeedback = `Training mode: Switched to ${selectedExercise}. Let's get to it!`;
-            }
+            initialFeedback = `Training mode for ${selectedExercise}. Get into position to begin.`;
         }
         setFormFeedback(initialFeedback);
     }, [workoutMode, resetSession, selectedExercise]);

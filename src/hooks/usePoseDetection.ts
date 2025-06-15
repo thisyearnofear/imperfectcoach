@@ -61,6 +61,7 @@ export const usePoseDetection = ({
     coachPersonality,
     isDebugMode,
     onPoseData,
+    isWorkoutActive, // Pass workout status to processor
   });
 
   useEffect(() => {
@@ -99,7 +100,7 @@ export const usePoseDetection = ({
       animationFrameId.current = requestAnimationFrame(detect);
     };
 
-    if (modelStatus === 'ready' && isWorkoutActive) {
+    if (modelStatus === 'ready') { // Start detection as soon as model is ready
       animationFrameId.current = requestAnimationFrame(detect);
     }
 
@@ -108,7 +109,7 @@ export const usePoseDetection = ({
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose, isWorkoutActive]);
+  }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose]);
 
   useEffect(() => {
     keypointHistoryRef.current = [];
