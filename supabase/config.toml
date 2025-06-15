@@ -1,1 +1,5 @@
+
 project_id = "bolosphrmagsddyppziz"
+
+[functions.coach-gemini]
+verify_jwt = false

@@ -1,8 +1,8 @@
-
 import { useEffect, useRef, useState } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
+import { supabase } from '@/integrations/supabase/client';
 
 // Type definitions
 type VideoStatus = "idle" | "pending" | "granted" | "denied";
@@ -65,11 +65,41 @@ const drawSkeleton = (keypoints: posedetection.Keypoint[], ctx: CanvasRenderingC
     });
 };
 
-
 export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData }: UsePoseDetectionProps) => {
   const detectorRef = useRef<posedetection.PoseDetector | null>(null);
   const animationFrameId = useRef<number | null>(null);
   const [repState, setRepState] = useState<RepState>('DOWN');
+  const [internalReps, setInternalReps] = useState(0);
+  const aiFeedbackCooldown = useRef(false);
+
+  const getAIFeedback = async (data: Record<string, any>) => {
+    if (aiFeedbackCooldown.current) return;
+    aiFeedbackCooldown.current = true;
+    setTimeout(() => { aiFeedbackCooldown.current = false; }, 3000); // 3-second cooldown
+
+    try {
+      // Let user know coach is thinking, without overwriting crucial feedback
+      // onFormFeedback('Coach is thinking...');
+      const { data: responseData, error } = await supabase.functions.invoke('coach-gemini', {
+        body: {
+          exercise: 'push-up', // Hardcoded for now, can be passed as prop later
+          ...data,
+        }
+      });
+      if (error) throw error;
+      if (responseData.feedback) {
+        onFormFeedback(responseData.feedback);
+      }
+    } catch (error) {
+      console.error('Error getting AI feedback:', error);
+      // Fallback is handled by edge function, but good to have one client-side too
+    }
+  };
+
+  const incrementReps = () => {
+    onRepCount(prev => prev + 1);
+    setInternalReps(prev => prev + 1);
+  };
 
   // Load the model
   useEffect(() => {
@@ -143,15 +173,22 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
             const chinAboveWrists = nose.y < leftWrist.y && nose.y < rightWrist.y;
             const armsStraight = leftElbowAngle > 160 && rightElbowAngle > 160;
 
+            const feedbackPayload = {
+              reps: internalReps,
+              leftElbowAngle,
+              rightElbowAngle,
+              repState,
+            };
+
             if (repState === 'DOWN' && chinAboveWrists) {
               setRepState('UP');
-              onFormFeedback('Great height!');
+              getAIFeedback(feedbackPayload);
             } else if (repState === 'UP' && armsStraight) {
               setRepState('DOWN');
-              onRepCount(prev => prev + 1);
-              onFormFeedback('Nice rep!');
+              incrementReps();
+              getAIFeedback({ ...feedbackPayload, reps: internalReps + 1 });
             } else if (repState === 'UP' && !armsStraight) {
-              onFormFeedback('Extend your arms fully!');
+              getAIFeedback(feedbackPayload);
             }
           }
         }
@@ -160,12 +197,12 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
     };
 
     if (cameraStatus === 'granted' && detectorRef.current) {
-        animationFrameId.current = requestAnimationFrame(detectPose);
+      animationFrameId.current = requestAnimationFrame(detectPose);
     } else {
-        if (animationFrameId.current) {
-            cancelAnimationFrame(animationFrameId.current);
-            animationFrameId.current = null;
-        }
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+        animationFrameId.current = null;
+      }
     }
 
     return () => {
@@ -173,7 +210,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData]);
+  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, internalReps]);
 
   // Cleanup detector on unmount
   useEffect(() => {
