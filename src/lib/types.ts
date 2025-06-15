@@ -41,6 +41,10 @@ export type CoachPersonality = "competitive" | "supportive" | "zen";
 
 export type CoachModel = "gemini" | "openai" | "anthropic";
 
+export type SessionSummaries = {
+  [key in CoachModel]?: string;
+};
+
 export type AchievementId =
   | "first_rep"
   | "ten_reps"

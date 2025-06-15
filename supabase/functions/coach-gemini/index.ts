@@ -1,108 +1,169 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import 'https://deno.land/x/xhr@0.1.0/mod.ts'; // Required for OpenAI library
 
-// Safety check for API key
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
-if (!GEMINI_API_KEY) {
-  console.error("GEMINI_API_KEY is not set in Supabase secrets.");
-}
-
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`
+// API Keys from Supabase secrets
+const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-const systemPrompts = {
-  competitive: `You are Coach Gemini, a data-driven, competitive fitness AI. You are obsessed with numbers and peak performance. Your feedback is always short, punchy, and motivational—sometimes a bit harsh, but always to push for improvement. Analyze the provided workout data and give real-time advice. Your responses should be a single sentence of 10 words or less. Never break character.`,
-  supportive: `You are Coach Aura, a supportive and encouraging fitness guide. You focus on progress, not perfection. Your feedback is always positive, gentle, and celebratory. You aim to make fitness feel joyful and accessible. Analyze the provided workout data and give uplifting advice. Your responses should be a single, encouraging sentence of 15 words or less.`,
-  zen: `You are Sensei Kai, a mindful and calm fitness instructor. You focus on form, breath, and the mind-body connection. Your feedback is serene, observant, and insightful, like a haiku. You encourage finding peace in movement. Analyze the provided workout data and offer a brief, tranquil observation. Your responses should be a single, poetic sentence of 12 words or less.`
 };
 
+// --- PROMPT ENGINEERING ---
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+const systemPrompts = {
+  competitive: `You are a data-driven, competitive fitness AI. You are obsessed with numbers and peak performance. Your feedback is always short, punchy, and motivational—sometimes a bit harsh, but always to push for improvement. Analyze the provided workout data.`,
+  supportive: `You are a supportive and encouraging fitness guide. You focus on progress, not perfection. Your feedback is always positive, gentle, and celebratory. You aim to make fitness feel joyful and accessible. Analyze the provided workout data.`,
+  zen: `You are a mindful and calm fitness instructor. You focus on form, breath, and the mind-body connection. Your feedback is serene, observant, and insightful. You encourage finding peace in movement. Analyze the provided workout data.`
+};
 
-  try {
-    if (!GEMINI_API_KEY) {
-        throw new Error("Missing GEMINI_API_KEY. Please set it in Supabase project secrets.");
-    }
-      
-    const {
-      reps,
-      repState,
-      exercise,
-      formIssues,
-      personality = 'competitive', // Default to competitive
-      ...dynamicData
-    } = await req.json()
+const getSummaryPrompt = (data) => {
+    const { exercise, personality, reps, averageFormScore, repHistory } = data;
+    const systemPrompt = systemPrompts[personality] || systemPrompts.competitive;
+
+    // Sanitize rep history for the prompt
+    const cleanRepHistory = repHistory.map(r => ({ score: r.score, timestamp: r.timestamp }));
+
+    return {
+        system: `${systemPrompt} Your task is to provide a comprehensive, yet concise (2-3 sentences) summary of the user's workout session based on the data below. Focus on overall performance, consistency, and one key area for improvement.`,
+        user: `
+        Workout Analysis Request:
+        - Exercise: ${exercise}
+        - Total Reps: ${reps}
+        - Average Form Score: ${averageFormScore.toFixed(1)}%
+        - Session Data (rep scores): ${JSON.stringify(cleanRepHistory.map(r => r.score))}
+        
+        Please provide your expert summary.`
+    };
+};
+
+// --- API HELPERS ---
+
+const generateGeminiFeedback = async (body) => {
+    const { personality } = body;
+    const { system, user } = getSummaryPrompt(body);
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
     
-    const systemPrompt = systemPrompts[personality as keyof typeof systemPrompts] || systemPrompts.competitive;
-    
-    let dataString = `- Current Reps: ${reps}\n- Current Phase: ${repState}`;
-    
-    if (exercise === 'pull-ups') {
-        const { leftElbowAngle, rightElbowAngle } = dynamicData;
-        dataString += `\n- Left Elbow Angle: ${Math.round(leftElbowAngle ?? 0)}°\n- Right Elbow Angle: ${Math.round(rightElbowAngle ?? 0)}°`;
-    } else if (exercise === 'squats') {
-        const { leftKneeAngle, rightKneeAngle, leftHipAngle, rightHipAngle } = dynamicData;
-        dataString += `\n- Left Knee Angle: ${Math.round(leftKneeAngle ?? 0)}°\n- Right Knee Angle: ${Math.round(rightKneeAngle ?? 0)}°`;
-        dataString += `\n- Left Hip Angle: ${Math.round(leftHipAngle ?? 0)}°\n- Right Hip Angle: ${Math.round(rightHipAngle ?? 0)}°`;
-    } // No specific data for jumps yet
-
-    const formattedIssues = formIssues && formIssues.length > 0
-        ? `Last rep's issues: ${formIssues.join(', ').replace(/_/g, ' ')}.`
-        : "Last rep's form was solid.";
-
-    const userPrompt = `
-      Analyze this data for a ${exercise}:
-      ${dataString}
-      - ${formattedIssues}
-
-      Provide new, concise feedback. If there were issues, focus on correcting one.
-    `
-
     const requestBody = {
-      contents: [
-        {
-          parts: [{ text: systemPrompt }, { text: userPrompt }],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.8,
-        maxOutputTokens: 60,
-      },
-    }
+      contents: [{ parts: [{ text: system }, { text: user }] }],
+      generationConfig: { temperature: 0.8, maxOutputTokens: 150 },
+    };
 
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
-    })
+    });
 
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Gemini API Error:', errorData);
-        throw new Error(`Gemini API responded with status: ${response.status}`);
+    if (!response.ok) throw new Error(`Gemini API Error: ${await response.text()}`);
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text.trim();
+};
+
+const generateOpenAIFeedback = async (body) => {
+    const { system, user } = getSummaryPrompt(body);
+    const API_URL = 'https://api.openai.com/v1/chat/completions';
+
+    const requestBody = {
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user }
+      ],
+      temperature: 0.7,
+      max_tokens: 150,
+    };
+
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) throw new Error(`OpenAI API Error: ${await response.text()}`);
+    const data = await response.json();
+    return data.choices[0].message.content;
+};
+
+const generateAnthropicFeedback = async (body) => {
+    const { system, user } = getSummaryPrompt(body);
+    const API_URL = 'https://api.anthropic.com/v1/messages';
+    
+    const requestBody = {
+        model: 'claude-3-haiku-20240307',
+        system: system,
+        messages: [{ role: 'user', content: user }],
+        max_tokens: 150,
+        temperature: 0.7,
+    };
+
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) throw new Error(`Anthropic API Error: ${await response.text()}`);
+    const data = await response.json();
+    return data.content[0].text;
+};
+
+// --- MAIN SERVER ---
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const body = await req.json();
+    const { model = 'gemini', type } = body;
+    
+    // This function now primarily handles summaries.
+    // Real-time feedback can be re-introduced if needed.
+    if (type !== 'summary') {
+        // Fallback for any non-summary calls
+        return new Response(JSON.stringify({ feedback: "Ready for your summary." }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
     }
 
-    const responseData = await response.json();
-    const feedback = responseData.candidates[0].content.parts[0].text.trim();
+    let feedback;
+    switch (model) {
+      case 'openai':
+        if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not set.");
+        feedback = await generateOpenAIFeedback(body);
+        break;
+      case 'anthropic':
+        if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set.");
+        feedback = await generateAnthropicFeedback(body);
+        break;
+      case 'gemini':
+      default:
+        if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not set.");
+        feedback = await generateGeminiFeedback(body);
+        break;
+    }
 
     return new Response(JSON.stringify({ feedback }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    });
 
   } catch (error) {
-    console.error('Error in coach-gemini function:', error.message)
-    const feedback = "Let's go! Keep that fire burning!" // Generic fallback
-    return new Response(JSON.stringify({ feedback }), {
-      status: 200, // Return 200 with fallback to not break the client
+    console.error('Error in AI coach function:', error.message);
+    return new Response(JSON.stringify({ feedback: "An error occurred while getting feedback." }), {
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    });
   }
-})
-
+});

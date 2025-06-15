@@ -5,7 +5,7 @@ import CoachFeedback from "@/components/CoachFeedback";
 import { Button } from "@/components/ui/button";
 import { BarChart2 as AnalyticsIcon, Settings } from "lucide-react";
 import DebugPanel from "@/components/DebugPanel";
-import { PoseData, CoachPersonality, CoachModel } from "@/lib/types";
+import { PoseData, CoachPersonality, CoachModel, SessionSummaries } from "@/lib/types";
 import {
   Collapsible,
   CollapsibleContent,
@@ -20,6 +20,7 @@ import { useWorkout } from "@/hooks/useWorkout";
 import DesktopControls from "@/components/DesktopControls";
 import { usePerformanceStats } from "@/hooks/usePerformanceStats";
 import { useAIFeedback } from "@/hooks/useAIFeedback";
+import { CoachSummarySelector } from "@/components/CoachSummarySelector";
 
 const Index = () => {
   // UI and settings state
@@ -32,8 +33,9 @@ const Index = () => {
   const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState(false);
   const [isHighContrast, setIsHighContrast] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
-  const [sessionSummary, setSessionSummary] = useState<string | null>(null);
+  const [sessionSummaries, setSessionSummaries] = useState<SessionSummaries | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [selectedCoaches, setSelectedCoaches] = useState<CoachModel[]>(['gemini']);
 
   // Workout state managed by custom hook
   const {
@@ -81,23 +83,23 @@ const Index = () => {
       setIsAnalyticsOpen(true);
       
       setIsSummaryLoading(true);
-      setSessionSummary(null);
+      setSessionSummaries(null);
       getAISessionSummary({
         reps,
         averageFormScore: formScore,
         repHistory,
-      }).then(summary => {
-          setSessionSummary(summary);
+      }, selectedCoaches).then(summaries => {
+          setSessionSummaries(summaries);
           setIsSummaryLoading(false);
       });
 
       setTimeout(() => scrollToAnalytics(), 300);
     } else if (!isWorkoutActive && repHistory.length === 0) {
-      setSessionSummary(null);
+      setSessionSummaries(null);
       setIsSummaryLoading(false);
     }
     wasWorkoutActive.current = isWorkoutActive;
-  }, [isWorkoutActive, repHistory.length, setFormFeedback, getAISessionSummary, reps, formScore, endSession]);
+  }, [isWorkoutActive, repHistory.length, setFormFeedback, getAISessionSummary, reps, formScore, endSession, selectedCoaches]);
 
   useEffect(() => {
     if (isAudioFeedbackEnabled && formFeedback) {
@@ -183,6 +185,13 @@ const Index = () => {
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2 space-y-4 animate-fade-in">
+                  <div className="bg-card p-4 rounded-lg border">
+                    <CoachSummarySelector 
+                      selectedCoaches={selectedCoaches}
+                      onSelectionChange={setSelectedCoaches}
+                      disabled={isWorkoutActive || isSummaryLoading}
+                    />
+                  </div>
                   <PerformanceAnalytics
                     repHistory={repHistory}
                     totalReps={reps}
@@ -190,7 +199,7 @@ const Index = () => {
                     exercise={selectedExercise}
                     sessionDuration={sessionDuration}
                     repTimings={repTimings}
-                    sessionSummary={sessionSummary}
+                    sessionSummaries={sessionSummaries}
                     isSummaryLoading={isSummaryLoading}
                   />
                   <UnlockedAchievements achievements={achievements} />

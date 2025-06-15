@@ -1,3 +1,4 @@
+
 import { useRef } from "react";
 import {
   Card,
@@ -19,7 +20,7 @@ import {
   Legend,
   Line,
 } from "recharts";
-import { RepData, Exercise } from "@/lib/types";
+import { RepData, Exercise, SessionSummaries, CoachModel } from "@/lib/types";
 import { exportToCSV, shareCardImage, exportChartImage } from "@/lib/exportUtils";
 
 interface PerformanceAnalyticsProps {
@@ -29,7 +30,7 @@ interface PerformanceAnalyticsProps {
   exercise: Exercise;
   sessionDuration: string;
   repTimings: { avg: number; stdDev: number };
-  sessionSummary: string | null;
+  sessionSummaries: SessionSummaries | null;
   isSummaryLoading: boolean;
 }
 
@@ -40,7 +41,7 @@ const PerformanceAnalytics = ({
   exercise,
   sessionDuration,
   repTimings,
-  sessionSummary,
+  sessionSummaries,
   isSummaryLoading,
 }: PerformanceAnalyticsProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -50,6 +51,8 @@ const PerformanceAnalytics = ({
     name: `Rep ${index + 1}`,
     score: rep.score,
   }));
+
+  const coachName = (model: string) => model.charAt(0).toUpperCase() + model.slice(1);
 
   return (
     <Card ref={cardRef} className="bg-card">
@@ -101,11 +104,25 @@ const PerformanceAnalytics = ({
           </ResponsiveContainer>
         </div>
       </CardContent>
-      {(isSummaryLoading || sessionSummary) && (
-        <CardFooter className="flex-col items-start gap-2 pt-4 border-t -mb-2 mx-6">
-          <h4 className="text-sm font-semibold">AI Coach Summary</h4>
-          {isSummaryLoading && <p className="text-sm text-muted-foreground animate-pulse">Your coach is analyzing your performance...</p>}
-          {sessionSummary && <p className="text-sm text-foreground/90 whitespace-pre-wrap">{sessionSummary}</p>}
+      {(isSummaryLoading || sessionSummaries) && (
+        <CardFooter className="flex-col items-start gap-4 pt-4 border-t -mb-2 mx-6">
+          {isSummaryLoading && (
+            <div className="w-full">
+                <h4 className="text-sm font-semibold mb-2">AI Coach Summaries</h4>
+                <p className="text-sm text-muted-foreground animate-pulse">Your coaches are analyzing your performance...</p>
+            </div>
+          )}
+          {sessionSummaries && Object.keys(sessionSummaries).length > 0 && (
+             <div className="w-full space-y-4">
+                <h4 className="text-sm font-semibold">AI Coach Summaries</h4>
+                {Object.entries(sessionSummaries).map(([model, summary]) => (
+                    <div key={model}>
+                        <p className="font-semibold text-primary text-sm">{coachName(model)}'s take:</p>
+                        <p className="text-sm text-foreground/90 whitespace-pre-wrap">{summary}</p>
+                    </div>
+                ))}
+            </div>
+          )}
         </CardFooter>
       )}
       <CardFooter className="flex flex-col sm:flex-row gap-2 pt-6">
