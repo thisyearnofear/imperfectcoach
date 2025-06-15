@@ -97,7 +97,7 @@ const Index = () => {
       setIsSummaryLoading(false);
     }
     wasWorkoutActive.current = isWorkoutActive;
-  }, [isWorkoutActive, repHistory.length, setFormFeedback, getAISessionSummary, reps, formScore]);
+  }, [isWorkoutActive, repHistory.length, setFormFeedback, getAISessionSummary, reps, formScore, endSession]);
 
   useEffect(() => {
     if (isAudioFeedbackEnabled && formFeedback) {
@@ -185,7 +185,6 @@ const Index = () => {
                 <CollapsibleContent className="mt-2 space-y-4 animate-fade-in">
                   <PerformanceAnalytics
                     repHistory={repHistory}
-                    sessionStart={sessionStart}
                     totalReps={reps}
                     averageFormScore={formScore}
                     exercise={selectedExercise}
