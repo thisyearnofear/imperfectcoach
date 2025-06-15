@@ -6,9 +6,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { usePoseDetection, PoseData, RepData } from "@/hooks/usePoseDetection";
+import { usePoseDetection } from "@/hooks/usePoseDetection";
+import { Exercise, PoseData, RepData } from "@/lib/types";
 
 interface VideoFeedProps {
+  exercise: Exercise;
   onRepCount: (update: (prev: number) => number) => void;
   onFormFeedback: (message: string) => void;
   isDebugMode: boolean;
@@ -17,7 +19,7 @@ interface VideoFeedProps {
   onNewRepData: (data: RepData) => void;
 }
 
-const VideoFeed = ({ onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData }: VideoFeedProps) => {
   const [cameraStatus, setCameraStatus] = useState<"idle" | "pending" | "granted" | "denied">("idle");
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
@@ -38,6 +40,7 @@ const VideoFeed = ({ onRepCount, onFormFeedback, isDebugMode, onPoseData, onForm
   usePoseDetection({
     videoRef,
     cameraStatus,
+    exercise,
     onRepCount,
     onFormFeedback: handleModelFeedback,
     canvasRef,

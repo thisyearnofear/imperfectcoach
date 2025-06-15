@@ -27,12 +27,22 @@ serve(async (req) => {
       
     const {
       reps,
-      leftElbowAngle,
-      rightElbowAngle,
       repState,
       exercise,
-      formIssues, // Now receiving form issues
+      formIssues,
+      ...dynamicData
     } = await req.json()
+    
+    let dataString = `- Current Reps: ${reps}\n- Current Phase: ${repState}`;
+    
+    if (exercise === 'pull-ups') {
+        const { leftElbowAngle, rightElbowAngle } = dynamicData;
+        dataString += `\n- Left Elbow Angle: ${Math.round(leftElbowAngle ?? 0)}°\n- Right Elbow Angle: ${Math.round(rightElbowAngle ?? 0)}°`;
+    } else if (exercise === 'squats') {
+        const { leftKneeAngle, rightKneeAngle, leftHipAngle, rightHipAngle } = dynamicData;
+        dataString += `\n- Left Knee Angle: ${Math.round(leftKneeAngle ?? 0)}°\n- Right Knee Angle: ${Math.round(rightKneeAngle ?? 0)}°`;
+        dataString += `\n- Left Hip Angle: ${Math.round(leftHipAngle ?? 0)}°\n- Right Hip Angle: ${Math.round(rightHipAngle ?? 0)}°`;
+    } // No specific data for jumps yet
 
     const formattedIssues = formIssues && formIssues.length > 0
         ? `Last rep's issues: ${formIssues.join(', ').replace(/_/g, ' ')}.`
@@ -40,10 +50,7 @@ serve(async (req) => {
 
     const userPrompt = `
       Analyze this data for a ${exercise}:
-      - Current Reps: ${reps}
-      - Left Elbow Angle: ${Math.round(leftElbowAngle)}°
-      - Right Elbow Angle: ${Math.round(rightElbowAngle)}°
-      - Current Phase: ${repState} (UP is top of rep, DOWN is bottom)
+      ${dataString}
       - ${formattedIssues}
 
       Provide new, concise feedback. If there were issues, focus on correcting one.
