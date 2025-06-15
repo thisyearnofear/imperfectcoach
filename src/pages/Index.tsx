@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import VideoFeed from "@/components/VideoFeed";
@@ -21,6 +22,7 @@ import { useAchievements } from "@/hooks/useAchievements";
 import UnlockedAchievements from "@/components/UnlockedAchievements";
 import MobileControls from "@/components/MobileControls";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 
 const Index = () => {
@@ -105,7 +107,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col animate-fade-in">
       <Header coachModel={coachModel} onCoachModelChange={handleCoachModelChange} onSettingsClick={() => setIsMobileSettingsOpen(true)} />
       <main className="flex-grow container mx-auto p-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
@@ -146,6 +148,7 @@ const Index = () => {
                   onPersonalityChange={setCoachPersonality}
                 />
                 <div className="flex items-center gap-4 mt-2 sm:mt-0 flex-wrap">
+                  <ThemeToggle />
                   <div className="flex items-center space-x-2">
                     <Switch id="enable-high-contrast" checked={isHighContrast} onCheckedChange={setIsHighContrast} />
                     <Label htmlFor="enable-high-contrast">High Contrast</Label>
@@ -185,7 +188,7 @@ const Index = () => {
                   Show Performance &amp; Achievements
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 space-y-4">
+              <CollapsibleContent className="mt-2 space-y-4 animate-fade-in">
                 <PerformanceAnalytics
                   repHistory={repHistory}
                   sessionStart={sessionStart}
