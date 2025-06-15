@@ -3,6 +3,7 @@ import * as posedetection from '@tensorflow-models/pose-detection';
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Type definitions
 type VideoStatus = "idle" | "pending" | "granted" | "denied";
@@ -111,11 +112,20 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
   useEffect(() => {
     const loadModel = async () => {
       onFormFeedback('Loading pose detection model...');
-      await tf.setBackend('webgl');
-      const detectorConfig = { modelType: posedetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
-      const detector = await posedetection.createDetector(posedetection.SupportedModels.MoveNet, detectorConfig);
-      detectorRef.current = detector;
-      onFormFeedback('Model loaded. Ready to start!');
+      try {
+        await tf.setBackend('webgl');
+        const detectorConfig = { modelType: posedetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
+        const detector = await posedetection.createDetector(posedetection.SupportedModels.MoveNet, detectorConfig);
+        detectorRef.current = detector;
+        onFormFeedback('Model loaded. Ready to start!');
+      } catch (error) {
+        console.error("Failed to load pose detection model:", error);
+        onFormFeedback("The AI Coach could not be started. Try refreshing the page.");
+        toast.error("AI Coach failed to load", {
+          description: "There was a problem loading the pose detection model. This could be due to a network issue or an unsupported browser/device.",
+          duration: 10000,
+        });
+      }
     };
 
     if (cameraStatus === 'granted' && !detectorRef.current) {
