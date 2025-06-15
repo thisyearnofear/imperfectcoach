@@ -110,8 +110,8 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
   const startRecording = () => {
     if (!videoRef.current || !canvasRef.current) return;
 
-    const videoStream = videoRef.current.captureStream();
-    const canvasStream = canvasRef.current.captureStream();
+    const videoStream = (videoRef.current as any).captureStream();
+    const canvasStream = (canvasRef.current as any).captureStream();
     
     const combinedStream = new MediaStream([
       ...videoStream.getVideoTracks(),
