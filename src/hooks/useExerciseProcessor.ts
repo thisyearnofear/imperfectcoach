@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { Exercise, RepData, PoseData, RepState, CoachPersonality, WorkoutMode, ProcessorResult } from '@/lib/types';
@@ -116,6 +117,7 @@ export const useExerciseProcessor = ({
         } else {
             onFormFeedback("Stand in full view to calibrate for jumps.");
         }
+        if (isDebugMode) onPoseData({ keypoints });
         return;
     }
 

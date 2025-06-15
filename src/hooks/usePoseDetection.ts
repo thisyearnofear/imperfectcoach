@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { Exercise, RepData, PoseData, CoachPersonality, CameraStatus, WorkoutMode } from '@/lib/types';
@@ -19,6 +18,7 @@ interface UsePoseDetectionProps {
   onNewRepData: (data: RepData) => void;
   coachPersonality: CoachPersonality;
   workoutMode: WorkoutMode;
+  isWorkoutActive: boolean;
 }
 
 export const usePoseDetection = ({
@@ -34,6 +34,7 @@ export const usePoseDetection = ({
   onNewRepData,
   coachPersonality,
   workoutMode,
+  isWorkoutActive,
 }: UsePoseDetectionProps) => {
   const animationFrameId = useRef<number | null>(null);
   const keypointHistoryRef = useRef<posedetection.Keypoint[][]>([]);
@@ -98,7 +99,7 @@ export const usePoseDetection = ({
       animationFrameId.current = requestAnimationFrame(detect);
     };
 
-    if (modelStatus === 'ready') {
+    if (modelStatus === 'ready' && isWorkoutActive) {
       animationFrameId.current = requestAnimationFrame(detect);
     }
 
@@ -107,7 +108,7 @@ export const usePoseDetection = ({
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose]);
+  }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose, isWorkoutActive]);
 
   useEffect(() => {
     keypointHistoryRef.current = [];

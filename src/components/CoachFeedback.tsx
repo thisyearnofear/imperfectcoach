@@ -1,6 +1,7 @@
 
 import { CoachModel, WorkoutMode } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
+import { Timer } from "lucide-react";
 
 interface CoachFeedbackProps {
   reps: number;
@@ -8,9 +9,11 @@ interface CoachFeedbackProps {
   formScore: number;
   coachModel: CoachModel;
   workoutMode: WorkoutMode;
+  timeLeft?: number;
+  isWorkoutActive?: boolean;
 }
 
-const CoachFeedback = ({ reps, formFeedback, formScore, coachModel, workoutMode }: CoachFeedbackProps) => {
+const CoachFeedback = ({ reps, formFeedback, formScore, coachModel, workoutMode, timeLeft, isWorkoutActive }: CoachFeedbackProps) => {
   const getScoreColor = () => {
     if (formScore >= 80) return 'text-green-500';
     if (formScore >= 60) return 'text-yellow-500';
@@ -32,6 +35,12 @@ const CoachFeedback = ({ reps, formFeedback, formScore, coachModel, workoutMode 
     return `Coach ${coachName} says...`;
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
   return (
     <div className="bg-card p-4 rounded-lg border border-border/40 h-full flex flex-col">
       <h3 className="text-lg font-semibold mb-3 text-primary">{getTitle()}</h3>
@@ -43,7 +52,15 @@ const CoachFeedback = ({ reps, formFeedback, formScore, coachModel, workoutMode 
         </p>
       </div>
       <div className="mt-4 space-y-3">
-        <h4 className="font-semibold">Reps: <span className="text-primary font-bold text-2xl ml-2">{reps}</span></h4>
+        <div className="flex justify-between items-baseline">
+          <h4 className="font-semibold">Reps: <span className="text-primary font-bold text-2xl ml-2">{reps}</span></h4>
+          {isWorkoutActive && typeof timeLeft !== 'undefined' && timeLeft >= 0 && (
+            <div className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-primary" />
+                <span className="text-primary font-bold text-2xl">{formatTime(timeLeft)}</span>
+            </div>
+          )}
+        </div>
         <div>
           <div className="flex justify-between items-baseline mb-1">
             <h4 className="font-semibold">Form Score:</h4>

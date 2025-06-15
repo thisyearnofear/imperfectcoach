@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import VideoFeed from "@/components/VideoFeed";
 import ExerciseSelector from "@/components/ExerciseSelector";
 import CoachFeedback from "@/components/CoachFeedback";
 import { Button } from "@/components/ui/button";
-import { Bug, BarChart2 as AnalyticsIcon, Settings } from "lucide-react";
+import { Bug, BarChart2 as AnalyticsIcon, Settings, Timer } from "lucide-react";
 import DebugPanel from "@/components/DebugPanel";
 import { Exercise, RepData, PoseData, CoachPersonality, CoachModel, WorkoutMode } from "@/lib/types";
 import {
@@ -24,6 +23,7 @@ import MobileControls from "@/components/MobileControls";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
+const WORKOUT_DURATION = 120; // 2 minutes in seconds
 
 const Index = () => {
   const [selectedExercise, setSelectedExercise] = useState<Exercise>("pull-ups");
@@ -43,6 +43,8 @@ const Index = () => {
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
   const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState(false);
   const [isHighContrast, setIsHighContrast] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(WORKOUT_DURATION);
+  const [isWorkoutActive, setIsWorkoutActive] = useState(false);
 
   const { achievements } = useAchievements(reps, repHistory, formScore);
   const { speak } = useAudioFeedback();
@@ -53,6 +55,22 @@ const Index = () => {
       speak(formFeedback);
     }
   }, [formFeedback, isAudioFeedbackEnabled, speak]);
+  
+  useEffect(() => {
+    if (!isWorkoutActive || timeLeft <= 0) {
+      if (isWorkoutActive && timeLeft <= 0) {
+        setFormFeedback("Time's up! Great session!");
+        setIsWorkoutActive(false);
+      }
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setTimeLeft((prevTime) => prevTime - 1);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isWorkoutActive, timeLeft, setFormFeedback]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -63,16 +81,27 @@ const Index = () => {
     }
   }, [isHighContrast]);
 
+  const resetSession = () => {
+    setReps(0);
+    setFormScore(100);
+    setSessionStart(null);
+    setRepHistory([]);
+    setPoseData(null);
+    setIsWorkoutActive(false);
+    setTimeLeft(WORKOUT_DURATION);
+  }
+
   const handleExerciseChange = (exercise: Exercise) => {
     if (exercise !== selectedExercise) {
       setSelectedExercise(exercise);
-      // Reset stats for the new session
-      setReps(0);
-      setFormFeedback(`Switched to ${exercise}. Let's get to it!`);
-      setFormScore(100);
-      setSessionStart(null);
-      setRepHistory([]);
-      setPoseData(null);
+      resetSession();
+      let initialFeedback = `Switched to ${exercise}. Let's get to it!`;
+      if (exercise === 'pull-ups') {
+          initialFeedback = "To begin, hang from the bar with arms fully extended.";
+      } else if (exercise === 'jumps') {
+          initialFeedback = "To begin, stand still in full view of the camera.";
+      }
+      setFormFeedback(initialFeedback);
     }
   };
 
@@ -80,22 +109,30 @@ const Index = () => {
     if (mode === workoutMode) return;
 
     setWorkoutMode(mode);
-    // Reset stats for the new session
-    setReps(0);
-    setFormFeedback(
-      mode === 'assessment'
-        ? "Assessment mode: Your form will be scored without coaching."
-        : `Training mode: Switched to ${selectedExercise}. Let's get to it!`
-    );
-    setFormScore(100);
-    setSessionStart(null);
-    setRepHistory([]);
-    setPoseData(null);
+    resetSession();
+    
+    let initialFeedback;
+    if (mode === 'assessment') {
+        initialFeedback = "Assessment mode: Your form will be scored without coaching.";
+    } else {
+        if (selectedExercise === 'pull-ups') {
+            initialFeedback = "To begin, hang from the bar with arms fully extended.";
+        } else if (selectedExercise === 'jumps') {
+            initialFeedback = "To begin, stand still in full view of the camera.";
+        } else {
+            initialFeedback = `Training mode: Switched to ${selectedExercise}. Let's get to it!`;
+        }
+    }
+    setFormFeedback(initialFeedback);
   };
 
   const handleNewRepData = (data: RepData) => {
     if (!sessionStart) {
       setSessionStart(Date.now() - 2000); // Start timer on first rep (with a small buffer)
+    }
+    if (!isWorkoutActive) {
+      setIsWorkoutActive(true);
+      setTimeLeft(WORKOUT_DURATION);
     }
     setRepHistory((prev) => [...prev, data]);
   };
@@ -124,10 +161,11 @@ const Index = () => {
               coachPersonality={coachPersonality}
               isRecordingEnabled={isRecordingEnabled}
               workoutMode={workoutMode}
+              isWorkoutActive={isWorkoutActive}
             />
             {/* Mobile-only coach feedback */}
             <div className="lg:hidden">
-                <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
+                <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} timeLeft={timeLeft} isWorkoutActive={isWorkoutActive} />
             </div>
             
             {/* Desktop-only controls */}
@@ -178,7 +216,7 @@ const Index = () => {
           <div className="lg:col-span-1 flex flex-col gap-4">
             {/* Desktop-only coach feedback */}
             <div className="hidden lg:block">
-              <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
+              <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} timeLeft={timeLeft} isWorkoutActive={isWorkoutActive} />
             </div>
             
             <Collapsible>

@@ -24,9 +24,10 @@ interface VideoFeedProps {
   coachPersonality: CoachPersonality;
   isRecordingEnabled: boolean;
   workoutMode: WorkoutMode;
+  isWorkoutActive: boolean;
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -71,6 +72,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     onNewRepData,
     coachPersonality,
     workoutMode,
+    isWorkoutActive,
   });
 
   return (
