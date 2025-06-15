@@ -1,4 +1,3 @@
-
 import { useRef } from "react";
 import {
   Card,
@@ -12,15 +11,16 @@ import { Button } from "@/components/ui/button";
 import { Download, LineChart as LineChartIcon, Share2, Image as ImageIcon, RotateCw } from "lucide-react";
 import {
   ResponsiveContainer,
-  LineChart,
+  ComposedChart,
   CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
   Legend,
   Line,
+  Bar,
 } from "recharts";
-import { RepData, Exercise, SessionSummaries, CoachModel } from "@/lib/types";
+import { RepData, Exercise, SessionSummaries, CoachModel, PullupRepDetails } from "@/lib/types";
 import { exportToCSV, shareCardImage, exportChartImage } from "@/lib/exportUtils";
 
 interface PerformanceAnalyticsProps {
@@ -49,10 +49,18 @@ const PerformanceAnalytics = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   
-  const chartData = repHistory.map((rep, index) => ({
-    name: `Rep ${index + 1}`,
-    score: rep.score,
-  }));
+  const isPullupSession = exercise === 'pull-ups' && repHistory.some(rep => rep.details);
+
+  const chartData = repHistory.map((rep, index) => {
+    const details = rep.details as PullupRepDetails | undefined;
+    return {
+      name: `Rep ${index + 1}`,
+      score: rep.score,
+      'Top ROM': details?.peakElbowFlexion,
+      'Bottom ROM': details?.bottomElbowExtension,
+      Asymmetry: details?.asymmetry,
+    };
+  });
 
   const coachName = (model: string) => model.charAt(0).toUpperCase() + model.slice(1);
 
@@ -87,22 +95,28 @@ const PerformanceAnalytics = ({
           </div>
         </div>
 
-        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Form Score Trend</h4>
-        <div className="h-48" ref={chartRef}>
+        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Rep Analysis</h4>
+        <div className="h-60" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <ComposedChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis domain={[0, 100]} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis yAxisId="left" domain={[0, 100]} stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} />
+              {isPullupSession && <YAxis yAxisId="right" orientation="right" domain={[0, 180]} stroke="hsl(var(--accent-foreground))" fontSize={12} tickLine={false} axisLine={false} />}
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--background))",
                   borderColor: "hsl(var(--border))",
+                  fontSize: "12px",
+                  padding: "6px 10px"
                 }}
+                labelStyle={{ fontWeight: "bold", marginBottom: "4px" }}
               />
-              <Legend wrapperStyle={{ fontSize: "14px" }} />
-              <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} animationDuration={800} />
-            </LineChart>
+              <Legend wrapperStyle={{ fontSize: "12px" }} />
+              <Bar yAxisId="left" dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} animationDuration={800} />
+              {isPullupSession && <Line yAxisId="right" type="monotone" dataKey="Top ROM" stroke="hsl(var(--green-500))" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
+              {isPullupSession && <Line yAxisId="right" type="monotone" dataKey="Bottom ROM" stroke="hsl(var(--yellow-500))" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </CardContent>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
-import { Exercise, RepData, PoseData, RepState, CoachPersonality, WorkoutMode, ProcessorResult } from '@/lib/types';
+import { Exercise, RepData, PoseData, RepState, CoachPersonality, WorkoutMode, ProcessorResult, PullupRepDetails } from '@/lib/types';
 import { useAudioFeedback } from './useAudioFeedback';
 import { processPullups } from '@/lib/exercise-processors/pullupProcessor';
 import { processJumps } from '@/lib/exercise-processors/jumpProcessor';
@@ -112,12 +112,14 @@ function handleProcessorResult(
         onFormScoreUpdate: (score: number) => void;
         repScores: React.MutableRefObject<number[]>;
         onNewRepData: (data: RepData) => void;
+        currentRepAngles: React.MutableRefObject<{ left: number[], right: number[] }>;
+        exercise: Exercise;
     }
 ) {
     const {
         workoutMode, isDebugMode, onPoseData, repState, onFormFeedback, speak,
         lastRepIssues, formIssuePulse, pulseTimeout, getAIFeedback, incrementReps,
-        internalReps, onFormScoreUpdate, repScores, onNewRepData
+        internalReps, onFormScoreUpdate, repScores, onNewRepData, currentRepAngles, exercise
     } = params;
     
     if (isDebugMode) onPoseData(result.poseData);
@@ -141,7 +143,20 @@ function handleProcessorResult(
         if (repScores.current.length > 5) repScores.current.shift();
         const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
         onFormScoreUpdate(avgScore);
-        onNewRepData({ timestamp: Date.now(), score });
+
+        let details: PullupRepDetails | undefined = undefined;
+        if (exercise === 'pull-ups') {
+            const { left, right } = currentRepAngles.current;
+            if (left.length > 0 && right.length > 0) {
+                const peakElbowFlexion = Math.min(...left, ...right);
+                const bottomElbowExtension = Math.max(result.poseData.leftElbowAngle!, result.poseData.rightElbowAngle!);
+                const asymmetry = Math.max(...left.map((l, i) => Math.abs(l - right[i])));
+                details = { peakElbowFlexion, bottomElbowExtension, asymmetry };
+            }
+        }
+        
+        onNewRepData({ timestamp: Date.now(), score, details });
+
         getAIFeedback({ 
             reps: internalReps + 1, 
             formIssues: lastRepIssues.current,
@@ -170,6 +185,7 @@ export const useExerciseProcessor = ({
   const formIssuePulse = useRef(false);
   const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const jumpGroundLevel = useRef<number | null>(null);
+  const currentRepAngles = useRef<{ left: number[], right: number[] }>({ left: [], right: [] });
 
   const { getAIFeedback } = useAIFeedback({
     exercise,
@@ -250,10 +266,21 @@ export const useExerciseProcessor = ({
     }
 
     if (result) {
+        if (exercise === 'pull-ups') {
+            if (result.newRepState === 'UP' && repState.current !== 'UP') {
+                currentRepAngles.current = { left: [], right: [] };
+            }
+            if ((repState.current === 'UP' || result.newRepState === 'UP') && result.poseData.leftElbowAngle && result.poseData.rightElbowAngle) {
+                currentRepAngles.current.left.push(result.poseData.leftElbowAngle);
+                currentRepAngles.current.right.push(result.poseData.rightElbowAngle);
+            }
+        }
+        
         handleProcessorResult(result, {
             workoutMode, isDebugMode, onPoseData, repState, onFormFeedback, speak,
             lastRepIssues, formIssuePulse, pulseTimeout, getAIFeedback, incrementReps,
-            internalReps, onFormScoreUpdate, repScores, onNewRepData
+            internalReps, onFormScoreUpdate, repScores, onNewRepData,
+            currentRepAngles, exercise
         });
     } else if (!isWorkoutActive) {
         // If processor gives no specific result and workout hasn't started, give pre-workout guidance.

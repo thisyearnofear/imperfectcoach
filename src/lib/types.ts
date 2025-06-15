@@ -7,9 +7,16 @@ export type RepState = 'DOWN' | 'UP' | 'GROUNDED' | 'AIRBORNE';
 
 export type CameraStatus = "idle" | "pending" | "granted" | "denied";
 
+export interface PullupRepDetails {
+  peakElbowFlexion: number; // Min angle at top
+  bottomElbowExtension: number; // Max angle at bottom
+  asymmetry: number; // Max difference between arm angles during rep
+}
+
 export interface RepData {
   timestamp: number;
   score: number;
+  details?: PullupRepDetails;
 }
 
 export interface PoseData {
