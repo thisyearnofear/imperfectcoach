@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, SwitchCamera, Loader2, Timer } from "lucide-react";
@@ -158,7 +159,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
           {cameraStatus === "denied" && <p className="text-destructive mb-4">Camera access denied. Please check your browser settings.</p>}
           <Button onClick={handleEnableCamera} disabled={cameraStatus === "pending"}>
             <Video className="mr-2 h-4 w-4" />
-            {cameraStatus === 'pending' ? 'Starting Camera...' : 'Enable Camera'}
+            {cameraStatus === 'pending' ? 'Starting Camera...' : 'Start'}
           </Button>
           <p className="text-xs text-muted-foreground mt-2">We need camera access to track your reps.</p>
         </div>

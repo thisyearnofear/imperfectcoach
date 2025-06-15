@@ -42,6 +42,9 @@ export const useIndexPage = () => {
     endSession,
   } = useWorkout();
 
+  const analyticsRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+
   // Other hooks
   const { repTimings, sessionDuration } = usePerformanceStats(repHistory, sessionStart);
   const { achievements } = useAchievements(reps, repHistory, formScore, repTimings.stdDev);
@@ -53,7 +56,12 @@ export const useIndexPage = () => {
     onFormFeedback: setFormFeedback
   });
   const wasWorkoutActive = useRef(isWorkoutActive);
-  const analyticsRef = useRef<HTMLDivElement>(null);
+
+  const handleTryAgain = () => {
+    resetSession();
+    setIsAnalyticsOpen(false);
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   // Effects
   useEffect(() => {
@@ -109,13 +117,13 @@ export const useIndexPage = () => {
     isMobileSettingsOpen, isAudioFeedbackEnabled, isHighContrast, isAnalyticsOpen,
     sessionSummaries, isSummaryLoading, selectedCoaches, selectedExercise, reps,
     formFeedback, formScore, repHistory, workoutMode, timeLeft, isWorkoutActive,
-    repTimings, sessionDuration, achievements, wasWorkoutActive, analyticsRef,
+    repTimings, sessionDuration, achievements, analyticsRef, topRef,
     // Setters
     setIsDebugMode, setIsRecordingEnabled, setPoseData, setCoachPersonality,
     setIsMobileSettingsOpen, setIsAudioFeedbackEnabled, setIsHighContrast, setIsAnalyticsOpen,
     setSelectedCoaches, setReps, setFormFeedback, setFormScore,
     // Handlers
     handleCoachModelChange, handleExerciseChange, handleWorkoutModeChange,
-    handleNewRepData, resetSession, endSession,
+    handleNewRepData, resetSession, endSession, handleTryAgain,
   };
 };

@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, LineChart as LineChartIcon, Share2, Image as ImageIcon } from "lucide-react";
+import { Download, LineChart as LineChartIcon, Share2, Image as ImageIcon, RotateCw } from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -32,6 +32,7 @@ interface PerformanceAnalyticsProps {
   repTimings: { avg: number; stdDev: number };
   sessionSummaries: SessionSummaries | null;
   isSummaryLoading: boolean;
+  onTryAgain: () => void;
 }
 
 const PerformanceAnalytics = ({
@@ -43,6 +44,7 @@ const PerformanceAnalytics = ({
   repTimings,
   sessionSummaries,
   isSummaryLoading,
+  onTryAgain,
 }: PerformanceAnalyticsProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -125,17 +127,21 @@ const PerformanceAnalytics = ({
           )}
         </CardFooter>
       )}
-      <CardFooter className="flex flex-col sm:flex-row gap-2 pt-6">
-        <Button onClick={() => shareCardImage(cardRef, exercise, totalReps, averageFormScore)} variant="default" size="sm" className="w-full" disabled={repHistory.length === 0}>
-          <Share2 className="mr-2 h-4 w-4" />
+      <CardFooter className="flex flex-wrap gap-2 pt-6">
+        <Button onClick={onTryAgain} variant="default" size="sm" className="flex-grow min-w-[calc(50%-0.25rem)]" disabled={repHistory.length === 0}>
+          <RotateCw />
+          Try Again
+        </Button>
+        <Button onClick={() => shareCardImage(cardRef, exercise, totalReps, averageFormScore)} variant="outline" size="sm" className="flex-grow min-w-[calc(50%-0.25rem)]" disabled={repHistory.length === 0}>
+          <Share2 />
           Share Summary
         </Button>
-        <Button onClick={() => exportChartImage(chartRef)} variant="outline" size="sm" className="w-full" disabled={repHistory.length === 0}>
-          <ImageIcon className="mr-2 h-4 w-4" />
+        <Button onClick={() => exportChartImage(chartRef)} variant="outline" size="sm" className="flex-grow min-w-[calc(50%-0.25rem)]" disabled={repHistory.length === 0}>
+          <ImageIcon />
           Export Chart
         </Button>
-        <Button onClick={() => exportToCSV(repHistory)} variant="outline" size="sm" className="w-full" disabled={repHistory.length === 0}>
-          <Download className="mr-2 h-4 w-4" />
+        <Button onClick={() => exportToCSV(repHistory)} variant="outline" size="sm" className="flex-grow min-w-[calc(50%-0.25rem)]" disabled={repHistory.length === 0}>
+          <Download />
           Export CSV
         </Button>
       </CardFooter>

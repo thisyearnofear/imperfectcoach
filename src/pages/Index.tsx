@@ -14,7 +14,7 @@ const Index = () => {
     <div className="min-h-screen bg-background text-foreground flex flex-col animate-fade-in">
       <Header coachModel={page.coachModel} onCoachModelChange={page.handleCoachModelChange} onSettingsClick={() => page.setIsMobileSettingsOpen(true)} />
       <main className="flex-grow container mx-auto p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+        <div ref={page.topRef} className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
           <LeftPanel
             exercise={page.selectedExercise}
             onRepCount={page.setReps}
@@ -66,6 +66,7 @@ const Index = () => {
             achievements={page.achievements}
             isDebugMode={page.isDebugMode}
             poseData={page.poseData}
+            onTryAgain={page.handleTryAgain}
           />
         </div>
       </main>

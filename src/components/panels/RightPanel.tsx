@@ -31,6 +31,7 @@ interface RightPanelProps {
     achievements: Achievement[];
     isDebugMode: boolean;
     poseData: PoseData | null;
+    onTryAgain: () => void;
 }
 
 export const RightPanel = (props: RightPanelProps) => {
@@ -71,6 +72,7 @@ export const RightPanel = (props: RightPanelProps) => {
                     repTimings={props.repTimings}
                     sessionSummaries={props.sessionSummaries}
                     isSummaryLoading={props.isSummaryLoading}
+                    onTryAgain={props.onTryAgain}
                   />
                   <UnlockedAchievements achievements={props.achievements} />
                 </CollapsibleContent>
