@@ -5,8 +5,16 @@ import VideoFeed from "@/components/VideoFeed";
 import ExerciseSelector from "@/components/ExerciseSelector";
 import CoachFeedback from "@/components/CoachFeedback";
 import { Button } from "@/components/ui/button";
-import { Bug } from "lucide-react";
-import DebugPanel, { PoseData } from "@/components/DebugPanel";
+import { Bug, BarChart2 as AnalyticsIcon } from "lucide-react";
+import DebugPanel from "@/components/DebugPanel";
+import PerformanceAnalytics from "@/components/PerformanceAnalytics";
+import { RepData } from "@/hooks/usePoseDetection";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+
 
 const Index = () => {
   const [reps, setReps] = useState(0);
@@ -16,6 +24,15 @@ const Index = () => {
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [poseData, setPoseData] = useState<PoseData | null>(null);
   const [formScore, setFormScore] = useState(100);
+  const [sessionStart, setSessionStart] = useState<number | null>(null);
+  const [repHistory, setRepHistory] = useState<RepData[]>([]);
+
+  const handleNewRepData = (data: RepData) => {
+    if (!sessionStart) {
+      setSessionStart(Date.now() - 2000); // Start timer on first rep (with a small buffer)
+    }
+    setRepHistory((prev) => [...prev, data]);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -30,6 +47,7 @@ const Index = () => {
               isDebugMode={isDebugMode}
               onPoseData={setPoseData}
               onFormScoreUpdate={setFormScore}
+              onNewRepData={handleNewRepData}
             />
             <div className="flex justify-between items-center">
               <ExerciseSelector />
@@ -45,8 +63,26 @@ const Index = () => {
           </div>
 
           {/* Right Panel: Coach Feedback & Stats */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 flex flex-col gap-4">
             <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} />
+            
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-start">
+                  <AnalyticsIcon className="mr-2 h-4 w-4" />
+                  Show Performance Analytics
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <PerformanceAnalytics
+                  repHistory={repHistory}
+                  sessionStart={sessionStart}
+                  totalReps={reps}
+                  averageFormScore={formScore}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+            
             {isDebugMode && <DebugPanel poseData={poseData} />}
           </div>
         </div>
@@ -56,3 +92,4 @@ const Index = () => {
 };
 
 export default Index;
+

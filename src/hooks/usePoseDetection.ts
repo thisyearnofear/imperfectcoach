@@ -8,6 +8,11 @@ import { supabase } from '@/integrations/supabase/client';
 type VideoStatus = "idle" | "pending" | "granted" | "denied";
 type RepState = 'DOWN' | 'UP';
 
+export interface RepData {
+  timestamp: number;
+  score: number;
+}
+
 export interface PoseData {
   keypoints: posedetection.Keypoint[];
   leftElbowAngle: number;
@@ -23,6 +28,7 @@ interface UsePoseDetectionProps {
   isDebugMode: boolean;
   onPoseData: (data: PoseData) => void;
   onFormScoreUpdate: (score: number) => void;
+  onNewRepData: (data: RepData) => void;
 }
 
 // Utility function to calculate angle between three points
@@ -66,7 +72,7 @@ const drawSkeleton = (keypoints: posedetection.Keypoint[], ctx: CanvasRenderingC
     });
 };
 
-export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate }: UsePoseDetectionProps) => {
+export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData }: UsePoseDetectionProps) => {
   const detectorRef = useRef<posedetection.PoseDetector | null>(null);
   const animationFrameId = useRef<number | null>(null);
   const [repState, setRepState] = useState<RepState>('DOWN');
@@ -194,12 +200,11 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
             };
 
             // State transitions for PULL-UP
-            if (repState === 'DOWN' && chinAboveWrists) {
-                // Just finished the UP part of the motion
+            if (repState === 'DOWN' && leftElbowAngle < 90 && rightElbowAngle < 90) {
+                // At the top of the movement, check form
                 setRepState('UP');
 
-                const shoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-                if (nose.y > wrist.y) { // Simplified: chin not above wrists
+                if (!chinAboveWrists) {
                     currentIssues.push('partial_top_rom');
                     onFormFeedback("Get your chin over the bar!");
                 }
@@ -222,11 +227,17 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
                 if (currentIssues.includes('partial_bottom_rom')) currentRepScore -= 25;
                 
                 lastRepIssues.current = [...new Set(currentIssues)];
-                repScores.current.push(Math.max(0, currentRepScore));
+                
+                const repScore = Math.max(0, currentRepScore);
+                repScores.current.push(repScore);
                 if (repScores.current.length > 5) repScores.current.shift(); // Keep last 5 scores
-
-                const avgScore = repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length;
+                
+                const avgScore = repScores.current.length > 0 
+                    ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length
+                    : 100; // Fix for NaN error
                 onFormScoreUpdate(avgScore);
+
+                onNewRepData({ timestamp: Date.now(), score: repScore });
 
                 getAIFeedback({ ...feedbackPayload, reps: internalReps + 1, formIssues: lastRepIssues.current });
             }
@@ -250,7 +261,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, onRepCount, onFormFee
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, internalReps]);
+  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, internalReps, onNewRepData]);
 
   // Cleanup detector on unmount
   useEffect(() => {
