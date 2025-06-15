@@ -32,14 +32,52 @@ const CoachFeedback = ({ reps, formFeedback, formScore, coachModel, workoutMode 
     return `Coach ${coachName} says...`;
   };
 
+  const getFeedbackStyle = () => {
+    const feedbackLower = formFeedback.toLowerCase();
+    
+    // Positive/ready states: bigger and green
+    if (
+        feedbackLower.includes('ready') || 
+        feedbackLower.includes('start position') || 
+        feedbackLower.includes('great') || 
+        feedbackLower.includes('nice')
+    ) {
+      return 'text-green-500 text-xl font-semibold';
+    }
+    
+    // Error/critical states: red
+    if (
+        feedbackLower.includes("can't see you") || 
+        feedbackLower.includes('trouble seeing') || 
+        feedbackLower.includes('denied') || 
+        feedbackLower.includes('poor form')
+    ) {
+      return 'text-destructive text-lg font-semibold';
+    }
+
+    // Corrective/warning states: yellow
+    if (
+        feedbackLower.includes('hang from') || 
+        feedbackLower.includes('pull evenly') || 
+        feedbackLower.includes('higher') || 
+        feedbackLower.includes('full extension') || 
+        feedbackLower.includes('chin over') || 
+        feedbackLower.includes('make sure') ||
+        feedbackLower.includes('evenly')
+    ) {
+      return 'text-yellow-500 text-lg font-medium';
+    }
+    
+    // Default/neutral
+    return 'text-muted-foreground text-lg';
+  };
+
   return (
     <div className="bg-card p-4 rounded-lg border border-border/40 h-full flex flex-col">
       <h3 className="text-lg font-semibold mb-3 text-primary">{getTitle()}</h3>
-      <div className="flex-grow flex items-center justify-center">
-        <p className="text-muted-foreground italic text-center">
-          {workoutMode === 'training' 
-            ? formFeedback 
-            : "Your form is being analyzed. Focus on your movements."}
+      <div className="flex-grow flex items-center justify-center p-2 min-h-[60px]">
+        <p className={`text-center transition-all duration-300 ${getFeedbackStyle()}`}>
+          {formFeedback}
         </p>
       </div>
       <div className="mt-4 space-y-3">

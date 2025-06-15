@@ -1,3 +1,4 @@
+
 import type { Keypoint } from '@tensorflow-models/pose-detection';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { Exercise } from './types';
@@ -34,7 +35,7 @@ const BODY_PART_COLORS: Record<string, string> = {
 };
 
 const EXERCISE_HIGHLIGHT_JOINTS: Record<Exercise, string[]> = {
-  'pull-ups': ['left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow'],
+  'pull-ups': ['left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist', 'nose'],
   'squats': ['left_hip', 'right_hip', 'left_knee', 'right_knee'],
   'jumps': ['left_hip', 'right_hip', 'left_knee', 'right_knee', 'left_ankle', 'right_ankle'],
 };
