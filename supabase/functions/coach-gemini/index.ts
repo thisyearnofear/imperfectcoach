@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import 'https://deno.land/x/xhr@0.1.0/mod.ts'; // Required for OpenAI library
 
@@ -20,20 +19,31 @@ const systemPrompts = {
   zen: `You are a mindful and calm fitness instructor. You focus on form, breath, and the mind-body connection. Your feedback is serene, observant, and insightful. You encourage finding peace in movement. Analyze the provided workout data.`
 };
 
+const getExerciseDataContext = (exercise) => {
+  if (exercise === 'pull-ups') {
+    return `For pull-ups, the rep data includes details: 'peakElbowFlexion' is the elbow angle at the top of the pull (a smaller angle means a higher pull, which is better), 'bottomElbowExtension' is the elbow angle at the bottom of the hang (a larger angle means fuller extension, which is better, >160 degrees is ideal), and 'asymmetry' is the difference in elbow angle between arms (lower is better, ideally close to 0). Use this detailed data to give specific feedback.`;
+  }
+  // Future context for other exercises can be added here.
+  return '';
+};
+
 const getSummaryPrompt = (data) => {
     const { exercise, personality, reps, averageFormScore, repHistory } = data;
     const systemPrompt = systemPrompts[personality] || systemPrompts.competitive;
+    const exerciseContext = getExerciseDataContext(exercise);
 
-    const cleanRepHistory = repHistory.map(r => ({ score: r.score, timestamp: r.timestamp }));
+    const detailedRepHistory = repHistory.map(r => {
+        return r.details ? { score: r.score, details: r.details } : { score: r.score };
+    });
 
     return {
-        system: `${systemPrompt} Your task is to provide a comprehensive, yet concise (2-3 sentences) summary of the user's workout session based on the data below. Focus on overall performance, consistency, and one key area for improvement.`,
+        system: `${systemPrompt} Your task is to provide a comprehensive, yet concise (2-3 sentences) summary of the user's workout session based on the data below. Focus on overall performance, consistency, and one key area for improvement. ${exerciseContext}`,
         user: `
         Workout Analysis Request:
         - Exercise: ${exercise}
         - Total Reps: ${reps}
         - Average Form Score: ${averageFormScore.toFixed(1)}%
-        - Session Data (rep scores): ${JSON.stringify(cleanRepHistory.map(r => r.score))}
+        - Rep-by-rep data: ${JSON.stringify(detailedRepHistory)}
         
         Please provide your expert summary.`
     };
@@ -42,17 +52,21 @@ const getSummaryPrompt = (data) => {
 const getChatPrompt = (data) => {
     const { exercise, personality, reps, averageFormScore, repHistory, chatHistory } = data;
     const systemPrompt = systemPrompts[personality] || systemPrompts.competitive;
-    const cleanRepHistory = repHistory.map(r => ({ score: r.score, timestamp: r.timestamp }));
+    const exerciseContext = getExerciseDataContext(exercise);
+
+    const detailedRepHistory = repHistory.map(r => {
+        return r.details ? { score: r.score, details: r.details } : { score: r.score };
+    });
     const userQuestion = chatHistory[chatHistory.length - 1]?.content || "What should I focus on?";
 
     return {
-        system: `${systemPrompt} You are answering a follow-up question about a workout session. Use the data below to give a direct, concise answer (1-2 sentences) to the user's question.`,
+        system: `${systemPrompt} You are answering a follow-up question about a workout session. Use the data below to give a direct, concise answer (1-2 sentences) to the user's question. ${exerciseContext}`,
         user: `
         Workout Context for Your Answer:
         - Exercise: ${exercise}
         - Total Reps: ${reps}
         - Average Form Score: ${averageFormScore.toFixed(1)}%
-        - Rep Scores: ${JSON.stringify(cleanRepHistory.map(r => r.score))}
+        - Rep-by-rep data: ${JSON.stringify(detailedRepHistory)}
 
         User's Question: "${userQuestion}"
         
