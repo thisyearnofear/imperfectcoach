@@ -1,6 +1,5 @@
-
 import { useEffect, useRef, useState } from 'react';
-import * as posedetection from '@tensorflow-models/movenet';
+import * as posedetection from '@tensorflow-models/pose-detection';
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
 
