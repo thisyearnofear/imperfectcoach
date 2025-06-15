@@ -1,5 +1,5 @@
 
-import { CoachModel } from "@/lib/types";
+import { CoachModel, WorkoutMode } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
 
 interface CoachFeedbackProps {
@@ -7,9 +7,10 @@ interface CoachFeedbackProps {
   formFeedback: string;
   formScore: number;
   coachModel: CoachModel;
+  workoutMode: WorkoutMode;
 }
 
-const CoachFeedback = ({ reps, formFeedback, formScore, coachModel }: CoachFeedbackProps) => {
+const CoachFeedback = ({ reps, formFeedback, formScore, coachModel, workoutMode }: CoachFeedbackProps) => {
   const getScoreColor = () => {
     if (formScore >= 80) return 'text-green-500';
     if (formScore >= 60) return 'text-yellow-500';
@@ -24,12 +25,21 @@ const CoachFeedback = ({ reps, formFeedback, formScore, coachModel }: CoachFeedb
 
   const coachName = coachModel.charAt(0).toUpperCase() + coachModel.slice(1);
 
+  const getTitle = () => {
+    if (workoutMode === 'assessment') {
+      return "Assessment Mode";
+    }
+    return `Coach ${coachName} says...`;
+  };
+
   return (
     <div className="bg-card p-4 rounded-lg border border-border/40 h-full flex flex-col">
-      <h3 className="text-lg font-semibold mb-3 text-primary">Coach {coachName} says...</h3>
+      <h3 className="text-lg font-semibold mb-3 text-primary">{getTitle()}</h3>
       <div className="flex-grow flex items-center justify-center">
         <p className="text-muted-foreground italic text-center">
-          {formFeedback}
+          {workoutMode === 'training' 
+            ? formFeedback 
+            : "Your form is being analyzed. Focus on your movements."}
         </p>
       </div>
       <div className="mt-4 space-y-3">

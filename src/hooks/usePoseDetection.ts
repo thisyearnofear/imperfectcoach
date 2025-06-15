@@ -4,7 +4,7 @@ import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Exercise, RepData, PoseData, RepState, CoachPersonality, CameraStatus } from '@/lib/types';
+import { Exercise, RepData, PoseData, RepState, CoachPersonality, CameraStatus, WorkoutMode } from '@/lib/types';
 import { drawPose } from '@/lib/drawing';
 import { useAudioFeedback } from './useAudioFeedback';
 
@@ -23,6 +23,7 @@ interface UsePoseDetectionProps {
   onFormScoreUpdate: (score: number) => void;
   onNewRepData: (data: RepData) => void;
   coachPersonality: CoachPersonality;
+  workoutMode: WorkoutMode;
 }
 
 // Utility function to calculate angle between three points
@@ -66,7 +67,7 @@ const drawSkeleton = (keypoints: posedetection.Keypoint[], ctx: CanvasRenderingC
     });
 };
 
-export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality }: UsePoseDetectionProps) => {
+export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, workoutMode }: UsePoseDetectionProps) => {
   const detectorRef = useRef<posedetection.PoseDetector | null>(null);
   const animationFrameId = useRef<number | null>(null);
   const [repState, setRepState] = useState<RepState>('DOWN');
@@ -93,7 +94,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
   }, [exercise]);
 
   const getAIFeedback = async (data: Record<string, any>) => {
-    if (aiFeedbackCooldown.current) return;
+    if (aiFeedbackCooldown.current || workoutMode === 'assessment') return;
     aiFeedbackCooldown.current = true;
     setTimeout(() => { aiFeedbackCooldown.current = false; }, 4000); // 4-second cooldown
 
@@ -185,132 +186,133 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
         if (poses && poses.length > 0) {
           const keypoints = poses[0].keypoints;
 
+          const handlePullups = (keypoints: posedetection.Keypoint[]) => {
+            const nose = keypoints.find(k => k.name === 'nose');
+            const leftWrist = keypoints.find(k => k.name === 'left_wrist');
+            const rightWrist = keypoints.find(k => k.name === 'right_wrist');
+            const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
+            const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
+            const leftElbow = keypoints.find(k => k.name === 'left_elbow');
+            const rightElbow = keypoints.find(k => k.name === 'right_elbow');
+
+            if (nose && leftWrist && rightWrist && leftShoulder && rightShoulder && leftElbow && rightElbow) {
+              if (nose.score < 0.5 || leftWrist.score < 0.5 || rightWrist.score < 0.5) {
+                  if (workoutMode === 'training') onFormFeedback("Make sure you're fully in view!");
+                  return;
+              }
+
+              const leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+              const rightElbowAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
+              
+              const poseData: PoseData = { keypoints, leftElbowAngle, rightElbowAngle };
+              if (isDebugMode) {
+                onPoseData(poseData);
+              }
+
+              const triggerPulse = (duration = 500) => {
+                  formIssuePulse.current = true;
+                  if (pulseTimeout.current) clearTimeout(pulseTimeout.current);
+                  pulseTimeout.current = setTimeout(() => {
+                      formIssuePulse.current = false;
+                  }, duration);
+              };
+
+              const formCheckSpeak = (issue: string, phrase: string) => {
+                  if (workoutMode === 'assessment') return;
+                  if (!lastRepIssues.current.includes(issue)) {
+                      speak(phrase);
+                      triggerPulse();
+                  }
+              };
+
+              // --- FORM ANALYSIS & REP COUNTING FOR PULL-UPS ---
+              let currentRepScore = 100;
+              const currentIssues: string[] = [];
+
+              // 1. Check for Asymmetry
+              const angleDifference = Math.abs(leftElbowAngle - rightElbowAngle);
+              if (angleDifference > 25) {
+                  currentIssues.push('asymmetry');
+                  if (workoutMode === 'training') onFormFeedback("Pull evenly with both arms!");
+                  formCheckSpeak('asymmetry', 'Pull evenly');
+              }
+
+              // Pull-up specific logic
+              const chinAboveWrists = nose.y < leftWrist.y && nose.y < rightWrist.y;
+              const armsFullyExtended = leftElbowAngle > 160 && rightElbowAngle > 160;
+
+              const feedbackPayload = {
+                reps: internalReps,
+                leftElbowAngle,
+                rightElbowAngle,
+                repState,
+                formIssues: lastRepIssues.current,
+              };
+
+              // State transitions for PULL-UP
+              if (repState === 'DOWN' && leftElbowAngle < 90 && rightElbowAngle < 90) {
+                  // At the top of the movement, check form
+                  setRepState('UP');
+
+                  if (!chinAboveWrists) {
+                      currentIssues.push('partial_top_rom');
+                      if (workoutMode === 'training') onFormFeedback("Get your chin over the bar!");
+                      formCheckSpeak('partial_top_rom', 'Higher');
+                  }
+                  
+                  getAIFeedback(feedbackPayload);
+
+              } else if (repState === 'UP' && armsFullyExtended) {
+                  // Just finished the DOWN part of the motion, completing a rep
+                  setRepState('DOWN');
+
+                  if (leftElbowAngle < 160 || rightElbowAngle < 160) {
+                      currentIssues.push('partial_bottom_rom');
+                      if (workoutMode === 'training') onFormFeedback("Full extension at the bottom!");
+                      formCheckSpeak('partial_bottom_rom', 'Full extension');
+                  }
+                  
+                  // Score the rep
+                  if (currentIssues.includes('asymmetry')) currentRepScore -= 30;
+                  if (currentIssues.includes('partial_top_rom')) currentRepScore -= 25;
+                  if (currentIssues.includes('partial_bottom_rom')) currentRepScore -= 25;
+                  
+                  incrementReps(); // Moved here to count after all checks
+
+                  lastRepIssues.current = [...new Set(currentIssues)];
+                  
+                  const repScore = Math.max(0, currentRepScore);
+                  repScores.current.push(repScore);
+                  if (repScores.current.length > 5) repScores.current.shift(); // Keep last 5 scores
+                    
+                  const avgScore = repScores.current.length > 0 
+                      ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length
+                      : 100; // Fix for NaN error
+                  onFormScoreUpdate(avgScore);
+
+                  onNewRepData({ timestamp: Date.now(), score: repScore });
+
+                  getAIFeedback({ ...feedbackPayload, reps: internalReps + 1, formIssues: lastRepIssues.current });
+              }
+            }
+          };
+
           switch (exercise) {
             case 'pull-ups':
               handlePullups(keypoints);
               break;
             case 'squats':
               // Placeholder for squat logic
-              onFormFeedback("Squat detection is not yet implemented.");
+              if (workoutMode === 'training') onFormFeedback("Squat detection is not yet implemented.");
               break;
             case 'jumps':
               // Placeholder for jump logic
-              onFormFeedback("Jump detection is not yet implemented.");
+              if (workoutMode === 'training') onFormFeedback("Jump detection is not yet implemented.");
               break;
           }
         }
       }
       animationFrameId.current = requestAnimationFrame(detectPose);
-    };
-
-    const handlePullups = (keypoints: posedetection.Keypoint[]) => {
-      const nose = keypoints.find(k => k.name === 'nose');
-      const leftWrist = keypoints.find(k => k.name === 'left_wrist');
-      const rightWrist = keypoints.find(k => k.name === 'right_wrist');
-      const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
-      const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
-      const leftElbow = keypoints.find(k => k.name === 'left_elbow');
-      const rightElbow = keypoints.find(k => k.name === 'right_elbow');
-
-      if (nose && leftWrist && rightWrist && leftShoulder && rightShoulder && leftElbow && rightElbow) {
-        if (nose.score < 0.5 || leftWrist.score < 0.5 || rightWrist.score < 0.5) {
-            onFormFeedback("Make sure you're fully in view!");
-            return;
-        }
-
-        const leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
-        const rightElbowAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
-        
-        const poseData: PoseData = { keypoints, leftElbowAngle, rightElbowAngle };
-        if (isDebugMode) {
-          onPoseData(poseData);
-        }
-
-        const triggerPulse = (duration = 500) => {
-            formIssuePulse.current = true;
-            if (pulseTimeout.current) clearTimeout(pulseTimeout.current);
-            pulseTimeout.current = setTimeout(() => {
-                formIssuePulse.current = false;
-            }, duration);
-        };
-
-        const formCheckSpeak = (issue: string, phrase: string) => {
-            if (!lastRepIssues.current.includes(issue)) {
-                speak(phrase);
-                triggerPulse();
-            }
-        };
-
-        // --- FORM ANALYSIS & REP COUNTING FOR PULL-UPS ---
-        let currentRepScore = 100;
-        const currentIssues: string[] = [];
-
-        // 1. Check for Asymmetry
-        const angleDifference = Math.abs(leftElbowAngle - rightElbowAngle);
-        if (angleDifference > 25) {
-            currentIssues.push('asymmetry');
-            onFormFeedback("Pull evenly with both arms!");
-            formCheckSpeak('asymmetry', 'Pull evenly');
-        }
-
-        // Pull-up specific logic
-        const chinAboveWrists = nose.y < leftWrist.y && nose.y < rightWrist.y;
-        const armsFullyExtended = leftElbowAngle > 160 && rightElbowAngle > 160;
-
-        const feedbackPayload = {
-          reps: internalReps,
-          leftElbowAngle,
-          rightElbowAngle,
-          repState,
-          formIssues: lastRepIssues.current,
-        };
-
-        // State transitions for PULL-UP
-        if (repState === 'DOWN' && leftElbowAngle < 90 && rightElbowAngle < 90) {
-            // At the top of the movement, check form
-            setRepState('UP');
-
-            if (!chinAboveWrists) {
-                currentIssues.push('partial_top_rom');
-                onFormFeedback("Get your chin over the bar!");
-                formCheckSpeak('partial_top_rom', 'Higher');
-            }
-            
-            getAIFeedback(feedbackPayload);
-
-        } else if (repState === 'UP' && armsFullyExtended) {
-            // Just finished the DOWN part of the motion, completing a rep
-            setRepState('DOWN');
-
-            if (leftElbowAngle < 160 || rightElbowAngle < 160) {
-                currentIssues.push('partial_bottom_rom');
-                onFormFeedback("Full extension at the bottom!");
-                formCheckSpeak('partial_bottom_rom', 'Full extension');
-            }
-            
-            // Score the rep
-            if (currentIssues.includes('asymmetry')) currentRepScore -= 30;
-            if (currentIssues.includes('partial_top_rom')) currentRepScore -= 25;
-            if (currentIssues.includes('partial_bottom_rom')) currentRepScore -= 25;
-            
-            incrementReps(); // Moved here to count after all checks
-
-            lastRepIssues.current = [...new Set(currentIssues)];
-            
-            const repScore = Math.max(0, currentRepScore);
-            repScores.current.push(repScore);
-            if (repScores.current.length > 5) repScores.current.shift(); // Keep last 5 scores
-            
-            const avgScore = repScores.current.length > 0 
-                ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length
-                : 100; // Fix for NaN error
-            onFormScoreUpdate(avgScore);
-
-            onNewRepData({ timestamp: Date.now(), score: repScore });
-
-            getAIFeedback({ ...feedbackPayload, reps: internalReps + 1, formIssues: lastRepIssues.current });
-        }
-      }
     };
 
     if (cameraStatus === 'granted' && detectorRef.current) {
@@ -327,7 +329,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, internalReps, onNewRepData, exercise, coachPersonality, playBeep, speak]);
+  }, [cameraStatus, videoRef, repState, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, internalReps, onNewRepData, exercise, coachPersonality, playBeep, speak, workoutMode]);
 
   // Cleanup detector on unmount
   useEffect(() => {

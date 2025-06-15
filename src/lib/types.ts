@@ -32,6 +32,8 @@ export type AchievementId =
   | "perfect_form_rep"
   | "great_form_session";
 
+export type WorkoutMode = "training" | "assessment";
+
 export interface Achievement {
   id: AchievementId;
   name: string;

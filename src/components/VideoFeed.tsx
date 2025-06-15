@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, SwitchCamera, Loader2 } from "lucide-react";
@@ -11,7 +10,7 @@ import {
 import { usePoseDetection } from "@/hooks/usePoseDetection";
 import { useCamera } from "@/hooks/useCamera";
 import { useRecording } from "@/hooks/useRecording";
-import { Exercise, PoseData, RepData, CoachPersonality, CameraStatus } from "@/lib/types";
+import { Exercise, PoseData, RepData, CoachPersonality, CameraStatus, WorkoutMode } from "@/lib/types";
 
 interface VideoFeedProps {
   exercise: Exercise;
@@ -23,9 +22,10 @@ interface VideoFeedProps {
   onNewRepData: (data: RepData) => void;
   coachPersonality: CoachPersonality;
   isRecordingEnabled: boolean;
+  workoutMode: WorkoutMode;
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -69,6 +69,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     onFormScoreUpdate,
     onNewRepData,
     coachPersonality,
+    workoutMode,
   });
 
   return (

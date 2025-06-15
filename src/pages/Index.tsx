@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import VideoFeed from "@/components/VideoFeed";
@@ -7,7 +6,7 @@ import CoachFeedback from "@/components/CoachFeedback";
 import { Button } from "@/components/ui/button";
 import { Bug, BarChart2 as AnalyticsIcon } from "lucide-react";
 import DebugPanel from "@/components/DebugPanel";
-import { Exercise, RepData, PoseData, CoachPersonality, CoachModel } from "@/lib/types";
+import { Exercise, RepData, PoseData, CoachPersonality, CoachModel, WorkoutMode } from "@/lib/types";
 import {
   Collapsible,
   CollapsibleContent,
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/collapsible";
 import PerformanceAnalytics from "@/components/PerformanceAnalytics";
 import CoachPersonalitySelector from "@/components/CoachPersonalitySelector";
+import WorkoutModeSelector from "@/components/WorkoutModeSelector";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAchievements } from "@/hooks/useAchievements";
@@ -35,6 +35,7 @@ const Index = () => {
   const [repHistory, setRepHistory] = useState<RepData[]>([]);
   const [coachPersonality, setCoachPersonality] = useState<CoachPersonality>("competitive");
   const [coachModel, setCoachModel] = useState<CoachModel>('gemini');
+  const [workoutMode, setWorkoutMode] = useState<WorkoutMode>('training');
 
   const { achievements } = useAchievements(reps, repHistory, formScore);
 
@@ -49,6 +50,23 @@ const Index = () => {
       setRepHistory([]);
       setPoseData(null);
     }
+  };
+
+  const handleWorkoutModeChange = (mode: WorkoutMode) => {
+    if (mode === workoutMode) return;
+
+    setWorkoutMode(mode);
+    // Reset stats for the new session
+    setReps(0);
+    setFormFeedback(
+      mode === 'assessment'
+        ? "Assessment mode: Your form will be scored without coaching."
+        : `Training mode: Switched to ${selectedExercise}. Let's get to it!`
+    );
+    setFormScore(100);
+    setSessionStart(null);
+    setRepHistory([]);
+    setPoseData(null);
   };
 
   const handleNewRepData = (data: RepData) => {
@@ -81,12 +99,19 @@ const Index = () => {
               onNewRepData={handleNewRepData}
               coachPersonality={coachPersonality}
               isRecordingEnabled={isRecordingEnabled}
+              workoutMode={workoutMode}
             />
-            <div className="flex justify-between items-center flex-wrap gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <WorkoutModeSelector
+                selectedMode={workoutMode}
+                onModeChange={handleWorkoutModeChange}
+              />
               <ExerciseSelector 
                 selectedExercise={selectedExercise}
                 onExerciseChange={handleExerciseChange}
               />
+            </div>
+            <div className="flex justify-between items-center flex-wrap gap-4 mt-2">
               <CoachPersonalitySelector
                 selectedPersonality={coachPersonality}
                 onPersonalityChange={setCoachPersonality}
@@ -110,7 +135,7 @@ const Index = () => {
 
           {/* Right Panel: Coach Feedback & Stats */}
           <div className="lg:col-span-1 flex flex-col gap-4">
-            <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} />
+            <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
             
             <Collapsible>
               <CollapsibleTrigger asChild>
