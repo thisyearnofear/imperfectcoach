@@ -5,7 +5,7 @@ import VideoFeed from "@/components/VideoFeed";
 import ExerciseSelector from "@/components/ExerciseSelector";
 import CoachFeedback from "@/components/CoachFeedback";
 import { Button } from "@/components/ui/button";
-import { Bug, BarChart2 as AnalyticsIcon } from "lucide-react";
+import { Bug, BarChart2 as AnalyticsIcon, Settings } from "lucide-react";
 import DebugPanel from "@/components/DebugPanel";
 import { Exercise, RepData, PoseData, CoachPersonality, CoachModel, WorkoutMode } from "@/lib/types";
 import {
@@ -38,6 +38,7 @@ const Index = () => {
   const [coachPersonality, setCoachPersonality] = useState<CoachPersonality>("competitive");
   const [coachModel, setCoachModel] = useState<CoachModel>('gemini');
   const [workoutMode, setWorkoutMode] = useState<WorkoutMode>('training');
+  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
 
   const { achievements } = useAchievements(reps, repHistory, formScore);
 
@@ -86,7 +87,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Header coachModel={coachModel} onCoachModelChange={handleCoachModelChange} />
+      <Header coachModel={coachModel} onCoachModelChange={handleCoachModelChange} onSettingsClick={() => setIsMobileSettingsOpen(true)} />
       <main className="flex-grow container mx-auto p-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
           {/* Left Panel: Video and Controls */}
@@ -174,7 +175,16 @@ const Index = () => {
         </div>
       </main>
       <div className="lg:hidden">
+        <Button
+          size="icon"
+          className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg z-50 animate-fade-in"
+          onClick={() => setIsMobileSettingsOpen(true)}
+        >
+          <Settings className="h-6 w-6" />
+        </Button>
         <MobileControls
+          open={isMobileSettingsOpen}
+          onOpenChange={setIsMobileSettingsOpen}
           workoutMode={workoutMode}
           onModeChange={handleWorkoutModeChange}
           selectedExercise={selectedExercise}

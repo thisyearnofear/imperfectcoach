@@ -5,11 +5,9 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
 import WorkoutModeSelector from "./WorkoutModeSelector";
 import ExerciseSelector from "./ExerciseSelector";
 import CoachPersonalitySelector from "./CoachPersonalitySelector";
@@ -28,6 +26,8 @@ interface MobileControlsProps {
   onRecordingChange: (enabled: boolean) => void;
   isDebugMode: boolean;
   onDebugChange: (enabled: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const MobileControls = ({
@@ -41,17 +41,11 @@ const MobileControls = ({
   onRecordingChange,
   isDebugMode,
   onDebugChange,
+  open,
+  onOpenChange,
 }: MobileControlsProps) => {
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button
-          size="icon"
-          className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg z-50 animate-fade-in"
-        >
-          <Settings className="h-6 w-6" />
-        </Button>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-lg">
         <SheetHeader>
           <SheetTitle>Workout Settings</SheetTitle>
