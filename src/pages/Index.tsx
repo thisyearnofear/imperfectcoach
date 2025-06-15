@@ -13,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import PerformanceAnalytics from "@/components/PerformanceAnalytics";
 
 
 const Index = () => {

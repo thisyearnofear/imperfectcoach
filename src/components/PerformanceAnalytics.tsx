@@ -1,4 +1,3 @@
-
 import { useMemo } from "react";
 import {
   Card,
@@ -20,7 +19,7 @@ import {
   Legend,
   Line,
 } from "recharts";
-import { RepData } from "@/hooks/usePoseDetection";
+import { RepData } from "@/lib/types";
 
 interface PerformanceAnalyticsProps {
   repHistory: RepData[];
@@ -152,4 +151,3 @@ const PerformanceAnalytics = ({
 };
 
 export default PerformanceAnalytics;
-
