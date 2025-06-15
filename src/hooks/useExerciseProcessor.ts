@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+
+import { useRef, useCallback } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
-import { Exercise, RepData, PoseData, RepState, CoachPersonality, WorkoutMode, ProcessorResult, PullupRepDetails, JumpRepDetails } from '@/lib/types';
+import { Exercise, PoseData, RepData, CoachPersonality, WorkoutMode, ProcessorResult } from '@/lib/types';
 import { useAudioFeedback } from './useAudioFeedback';
 import { processPullups } from '@/lib/exercise-processors/pullupProcessor';
 import { processJumps } from '@/lib/exercise-processors/jumpProcessor';
 import { useAIFeedback } from './useAIFeedback';
-import { calculateAngle } from '@/lib/poseUtils';
+import { useExerciseState } from './useExerciseState';
+import { getPullupReadyFeedback, getJumpReadyFeedback } from '@/lib/exerciseFeedbackUtils';
+import { handleProcessorResult } from '@/lib/processorResultHandler';
 
 interface UseExerciseProcessorProps {
   exercise: Exercise;
@@ -20,156 +23,6 @@ interface UseExerciseProcessorProps {
   isWorkoutActive: boolean;
 }
 
-const cachedFeedback: Record<string, string[]> = {
-    asymmetry: [
-        "Try to pull up with both arms equally.",
-        "Keep your body balanced during the pull-up.",
-        "Focus on an even pull."
-    ],
-    partial_top_rom: [
-        "Get that chin over the bar!",
-        "A little higher next time.",
-        "Almost there, pull all the way up!"
-    ],
-    partial_bottom_rom: [
-        "Go all the way down for a full rep.",
-        "Make sure to fully extend your arms at the bottom.",
-        "Full range of motion is key!"
-    ],
-    stiff_landing: [
-        "Softer landing next time!",
-        "Bend your knees to absorb the impact.",
-        "Try to land more quietly."
-    ],
-    general: [
-        "Keep up the great work!",
-        "Nice form!",
-        "You're doing great!"
-    ]
-};
-
-const getRandomFeedback = (issues: string[]): string => {
-    const relevantIssues = issues.filter(issue => issue in cachedFeedback);
-    const issue = relevantIssues.length > 0 ? relevantIssues[Math.floor(Math.random() * relevantIssues.length)] : 'general';
-    const messages = cachedFeedback[issue as keyof typeof cachedFeedback] || cachedFeedback.general;
-    return messages[Math.floor(Math.random() * messages.length)];
-}
-
-function getPullupReadyFeedback(keypoints: posedetection.Keypoint[]): string {
-    const leftWrist = keypoints.find(k => k.name === 'left_wrist');
-    const leftElbow = keypoints.find(k => k.name === 'left_elbow');
-    const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
-    const rightWrist = keypoints.find(k => k.name === 'right_wrist');
-    const rightElbow = keypoints.find(k => k.name === 'right_elbow');
-    const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
-
-    const allKeypointsVisible = leftWrist?.score > 0.4 && leftElbow?.score > 0.4 && leftShoulder?.score > 0.4 &&
-                                rightWrist?.score > 0.4 && rightElbow?.score > 0.4 && rightShoulder?.score > 0.4;
-
-    if (allKeypointsVisible) {
-        const leftElbowAngle = calculateAngle(leftShoulder!, leftElbow!, leftWrist!);
-        const rightElbowAngle = calculateAngle(rightShoulder!, rightElbow!, rightWrist!);
-        
-        if (leftElbowAngle > 140 && rightElbowAngle > 140) {
-            return "You're in the start position. Pull up to begin!";
-        } else {
-            return "Hang from the bar with arms fully extended to start.";
-        }
-    }
-    return "Get in view of the camera, ready to hang from the bar.";
-}
-
-function getJumpReadyFeedback(keypoints: posedetection.Keypoint[], jumpGroundLevel: React.MutableRefObject<number | null>): string {
-    if (jumpGroundLevel.current === null) {
-        const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
-        const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
-        if (leftAnkle && rightAnkle && leftAnkle.score > 0.5 && rightAnkle.score > 0.5) {
-            jumpGroundLevel.current = (leftAnkle.y + rightAnkle.y) / 2;
-            return "Crouch down, then jump as high as you can to start!";
-        } else {
-            return "Stand in full view of the camera to calibrate.";
-        }
-    } else {
-         return "Ready for your first jump! Start when you're ready.";
-    }
-}
-
-function handleProcessorResult(
-    result: (Omit<ProcessorResult, 'feedback'> & { feedback?: string }),
-    params: {
-        workoutMode: WorkoutMode;
-        isDebugMode: boolean;
-        onPoseData: (data: PoseData | null) => void;
-        repState: React.MutableRefObject<RepState>;
-        onFormFeedback: (message: string) => void;
-        speak: (phrase: string) => void;
-        lastRepIssues: React.MutableRefObject<string[]>;
-        formIssuePulse: React.MutableRefObject<boolean>;
-        pulseTimeout: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
-        getAIFeedback: (payload: any) => void;
-        incrementReps: () => void;
-        internalReps: number;
-        onFormScoreUpdate: (score: number) => void;
-        repScores: React.MutableRefObject<number[]>;
-        onNewRepData: (data: RepData) => void;
-        currentRepAngles: React.MutableRefObject<{ left: number[], right: number[] }>;
-        exercise: Exercise;
-        peakAirborneY: React.MutableRefObject<number | null>;
-    }
-) {
-    const {
-        workoutMode, isDebugMode, onPoseData, repState, onFormFeedback, speak,
-        lastRepIssues, formIssuePulse, pulseTimeout, getAIFeedback, incrementReps,
-        internalReps, onFormScoreUpdate, repScores, onNewRepData, currentRepAngles, exercise,
-        peakAirborneY
-    } = params;
-    
-    if (isDebugMode) onPoseData(result.poseData);
-    if (result.newRepState) repState.current = result.newRepState;
-    if (result.feedback && workoutMode === 'training') onFormFeedback(result.feedback);
-
-    if (result.formCheckSpeak && workoutMode === 'training' && !lastRepIssues.current.includes(result.formCheckSpeak.issue)) {
-        speak(result.formCheckSpeak.phrase);
-        formIssuePulse.current = true;
-        if (pulseTimeout.current) clearTimeout(pulseTimeout.current);
-        pulseTimeout.current = setTimeout(() => { formIssuePulse.current = false; }, 500);
-    }
-    
-    if (result.aiFeedbackPayload) getAIFeedback(result.aiFeedbackPayload);
-
-    if (result.isRepCompleted && result.repCompletionData) {
-        incrementReps();
-        const { score, issues, details: resultDetails } = result.repCompletionData;
-        lastRepIssues.current = [...new Set(issues)];
-        repScores.current.push(score);
-        if (repScores.current.length > 5) repScores.current.shift();
-        const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
-        onFormScoreUpdate(avgScore);
-
-        let details: PullupRepDetails | JumpRepDetails | undefined = resultDetails;
-        if (exercise === 'pull-ups') {
-            const { left, right } = currentRepAngles.current;
-            if (left.length > 0 && right.length > 0) {
-                const peakElbowFlexion = Math.min(...left, ...right);
-                const bottomElbowExtension = Math.max(result.poseData.leftElbowAngle!, result.poseData.rightElbowAngle!);
-                const asymmetry = Math.max(...left.map((l, i) => Math.abs(l - right[i])));
-                details = { peakElbowFlexion, bottomElbowExtension, asymmetry };
-            }
-        } else if (exercise === 'jumps') {
-            // Reset for next jump.
-            peakAirborneY.current = null;
-        }
-        
-        onNewRepData({ timestamp: Date.now(), score, details });
-
-        getAIFeedback({ 
-            reps: internalReps + 1, 
-            formIssues: lastRepIssues.current,
-            ...result.aiFeedbackPayload
-        });
-    }
-}
-
 export const useExerciseProcessor = ({
   exercise,
   workoutMode,
@@ -182,44 +35,16 @@ export const useExerciseProcessor = ({
   onPoseData,
   isWorkoutActive,
 }: UseExerciseProcessorProps) => {
-  const repState = useRef<RepState>('DOWN');
-  const [internalReps, setInternalReps] = useState(0);
-  const lastRepIssues = useRef<string[]>([]);
-  const repScores = useRef<number[]>([]);
-  const { playBeep, speak } = useAudioFeedback();
+  const { speak } = useAudioFeedback();
+  const { getAIFeedback } = useAIFeedback({ exercise, coachPersonality, workoutMode, onFormFeedback });
+  
+  const { 
+    repState, internalReps, lastRepIssues, repScores, 
+    jumpGroundLevel, peakAirborneY, currentRepAngles, incrementReps 
+  } = useExerciseState({ exercise, onRepCount });
+  
   const formIssuePulse = useRef(false);
   const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const jumpGroundLevel = useRef<number | null>(null);
-  const peakAirborneY = useRef<number | null>(null);
-  const currentRepAngles = useRef<{ left: number[], right: number[] }>({ left: [], right: [] });
-
-  const { getAIFeedback } = useAIFeedback({
-    exercise,
-    coachPersonality,
-    workoutMode,
-    onFormFeedback
-  });
-
-  // Reset state when exercise changes
-  useEffect(() => {
-    setInternalReps(0);
-    repScores.current = [];
-    lastRepIssues.current = [];
-    jumpGroundLevel.current = null;
-    peakAirborneY.current = null;
-
-    if (exercise === 'pull-ups' || exercise === 'squats') {
-      repState.current = 'DOWN';
-    } else { // For jumps and any future exercises starting from ground
-      repState.current = 'GROUNDED';
-    }
-  }, [exercise]);
-
-  const incrementReps = useCallback(() => {
-    onRepCount(prev => prev + 1);
-    setInternalReps(prev => prev + 1);
-    playBeep();
-  }, [onRepCount, playBeep]);
 
   const processPose = useCallback((pose: posedetection.Pose | null) => {
     if (!pose) {
@@ -298,8 +123,8 @@ export const useExerciseProcessor = ({
             }
         }
         
-        handleProcessorResult(result, {
-            workoutMode, isDebugMode, onPoseData, repState, onFormFeedback, speak,
+        handleProcessorResult({
+            result, workoutMode, isDebugMode, onPoseData, repState, onFormFeedback, speak,
             lastRepIssues, formIssuePulse, pulseTimeout, getAIFeedback, incrementReps,
             internalReps, onFormScoreUpdate, repScores, onNewRepData,
             currentRepAngles, exercise, peakAirborneY
@@ -318,7 +143,7 @@ export const useExerciseProcessor = ({
         if (isDebugMode) onPoseData({ keypoints });
     }
 
-  }, [isWorkoutActive, exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps, getAIFeedback]);
+  }, [isWorkoutActive, exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, getAIFeedback, repState, internalReps, lastRepIssues, repScores, jumpGroundLevel, peakAirborneY, currentRepAngles, incrementReps]);
 
   const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
 
