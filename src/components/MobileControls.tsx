@@ -26,6 +26,10 @@ interface MobileControlsProps {
   onRecordingChange: (enabled: boolean) => void;
   isDebugMode: boolean;
   onDebugChange: (enabled: boolean) => void;
+  isAudioFeedbackEnabled: boolean;
+  onAudioFeedbackChange: (enabled: boolean) => void;
+  isHighContrast: boolean;
+  onHighContrastChange: (enabled: boolean) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -41,6 +45,10 @@ const MobileControls = ({
   onRecordingChange,
   isDebugMode,
   onDebugChange,
+  isAudioFeedbackEnabled,
+  onAudioFeedbackChange,
+  isHighContrast,
+  onHighContrastChange,
   open,
   onOpenChange,
 }: MobileControlsProps) => {
@@ -63,6 +71,22 @@ const MobileControls = ({
             selectedPersonality={selectedPersonality}
             onPersonalityChange={onPersonalityChange}
           />
+          <div className="flex items-center justify-between">
+            <Label htmlFor="enable-high-contrast-mobile">High Contrast Mode</Label>
+            <Switch
+              id="enable-high-contrast-mobile"
+              checked={isHighContrast}
+              onCheckedChange={onHighContrastChange}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="enable-audio-mobile">Audio Feedback</Label>
+            <Switch
+              id="enable-audio-mobile"
+              checked={isAudioFeedbackEnabled}
+              onCheckedChange={onAudioFeedbackChange}
+            />
+          </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="enable-recording-mobile">Enable Recording</Label>
             <Switch

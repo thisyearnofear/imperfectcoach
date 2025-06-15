@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import VideoFeed from "@/components/VideoFeed";
 import ExerciseSelector from "@/components/ExerciseSelector";
@@ -21,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { useAchievements } from "@/hooks/useAchievements";
 import UnlockedAchievements from "@/components/UnlockedAchievements";
 import MobileControls from "@/components/MobileControls";
+import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 
 
 const Index = () => {
@@ -39,8 +39,27 @@ const Index = () => {
   const [coachModel, setCoachModel] = useState<CoachModel>('gemini');
   const [workoutMode, setWorkoutMode] = useState<WorkoutMode>('training');
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
+  const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState(false);
+  const [isHighContrast, setIsHighContrast] = useState(false);
 
   const { achievements } = useAchievements(reps, repHistory, formScore);
+  const { speak } = useAudioFeedback();
+
+  useEffect(() => {
+    if (isAudioFeedbackEnabled && formFeedback) {
+      if (formFeedback.includes("Enable your camera") || formFeedback.includes("Model loaded")) return;
+      speak(formFeedback);
+    }
+  }, [formFeedback, isAudioFeedbackEnabled, speak]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isHighContrast) {
+      root.classList.add('high-contrast');
+    } else {
+      root.classList.remove('high-contrast');
+    }
+  }, [isHighContrast]);
 
   const handleExerciseChange = (exercise: Exercise) => {
     if (exercise !== selectedExercise) {
@@ -126,7 +145,15 @@ const Index = () => {
                   selectedPersonality={coachPersonality}
                   onPersonalityChange={setCoachPersonality}
                 />
-                <div className="flex items-center gap-4 mt-2 sm:mt-0">
+                <div className="flex items-center gap-4 mt-2 sm:mt-0 flex-wrap">
+                  <div className="flex items-center space-x-2">
+                    <Switch id="enable-high-contrast" checked={isHighContrast} onCheckedChange={setIsHighContrast} />
+                    <Label htmlFor="enable-high-contrast">High Contrast</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch id="enable-audio" checked={isAudioFeedbackEnabled} onCheckedChange={setIsAudioFeedbackEnabled} />
+                    <Label htmlFor="enable-audio">Audio Feedback</Label>
+                  </div>
                   <div className="flex items-center space-x-2">
                     <Switch id="enable-recording" checked={isRecordingEnabled} onCheckedChange={setIsRecordingEnabled} />
                     <Label htmlFor="enable-recording">Enable Recording</Label>
@@ -195,6 +222,10 @@ const Index = () => {
           onRecordingChange={setIsRecordingEnabled}
           isDebugMode={isDebugMode}
           onDebugChange={setIsDebugMode}
+          isAudioFeedbackEnabled={isAudioFeedbackEnabled}
+          onAudioFeedbackChange={setIsAudioFeedbackEnabled}
+          isHighContrast={isHighContrast}
+          onHighContrastChange={setIsHighContrast}
         />
       </div>
     </div>
