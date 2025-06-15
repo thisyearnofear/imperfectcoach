@@ -123,13 +123,11 @@ export const useIndexPage = () => {
     if (!message.trim()) return;
 
     const newUserMessage: ChatMessage = { role: 'user', content: message };
-    setChatMessages(prev => [...prev, newUserMessage]);
+    setChatMessages([newUserMessage]);
     setIsChatLoading(true);
 
-    const fullHistory = [...chatMessages, newUserMessage];
-
     const response = await getAIChatResponse(
-        fullHistory,
+        [newUserMessage], // Only send the current question as history
         {
             reps,
             averageFormScore: formScore,
@@ -139,7 +137,7 @@ export const useIndexPage = () => {
     );
 
     const newAssistantMessage: ChatMessage = { role: 'assistant', content: response };
-    setChatMessages(prev => [...prev, newAssistantMessage]);
+    setChatMessages([newUserMessage, newAssistantMessage]);
     setIsChatLoading(false);
   };
 

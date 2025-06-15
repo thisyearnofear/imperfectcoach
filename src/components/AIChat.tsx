@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { CoachModel, SessionSummaries, ChatMessage } from '@/lib/types';
 import { Input } from '@/components/ui/input';
@@ -36,7 +35,7 @@ export function AIChat({ summaries, messages, isLoading, onSendMessage }: AIChat
             </h4>
             
             {messages.length > 0 && (
-                <div className="space-y-3 mb-3 max-h-48 overflow-y-auto pr-2">
+                <div className="space-y-3 mb-3">
                     {messages.map((msg, index) => (
                         <div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                            <div className={`rounded-lg px-3 py-2 max-w-[80%] text-sm break-words ${
