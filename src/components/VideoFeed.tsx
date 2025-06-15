@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, SwitchCamera, Loader2 } from "lucide-react";
 import {
@@ -9,7 +9,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { usePoseDetection } from "@/hooks/usePoseDetection";
-import { Exercise, PoseData, RepData, CoachPersonality } from "@/lib/types";
+import { useCamera } from "@/hooks/useCamera";
+import { useRecording } from "@/hooks/useRecording";
+import { Exercise, PoseData, RepData, CoachPersonality, CameraStatus } from "@/lib/types";
 
 interface VideoFeedProps {
   exercise: Exercise;
@@ -24,16 +26,27 @@ interface VideoFeedProps {
 }
 
 const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled }: VideoFeedProps) => {
-  const [cameraStatus, setCameraStatus] = useState<"idle" | "pending" | "granted" | "denied">("idle");
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [currentDeviceId, setCurrentDeviceId] = useState<string | undefined>(undefined);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
+
+  const onCameraStatusChange = (status: CameraStatus) => {
+    if (status === 'idle' || status === 'denied') {
+        setModelStatus('idle');
+    }
+  };
+
+  const { cameraStatus, devices, enableCamera, stopCamera, flipCamera } = useCamera({ 
+    videoRef, 
+    onCameraStatusChange,
+    onCameraError: onFormFeedback
+  });
+
+  const { isRecording, toggleRecording } = useRecording({ 
+    videoRef, 
+    canvasRef, 
+    onRecordingError: onFormFeedback 
+  });
 
   const handleModelFeedback = (message: string) => {
     if (message.includes('Loading')) {
@@ -58,132 +71,6 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     coachPersonality,
   });
 
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    setCameraStatus("idle");
-    setModelStatus("idle");
-    setDevices([]);
-    setCurrentDeviceId(undefined);
-  };
-
-  const enableCamera = async (deviceId?: string) => {
-    setCameraStatus("pending");
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-    }
-
-    try {
-      const constraints = { video: deviceId ? { deviceId: { exact: deviceId } } : true };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-
-      // The useEffect below now handles attaching the stream to the video element.
-      setCameraStatus("granted");
-
-      const allDevices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = allDevices.filter((d) => d.kind === "videoinput");
-      setDevices(videoDevices);
-      setCurrentDeviceId(stream.getVideoTracks()[0].getSettings().deviceId);
-    } catch (error) {
-      console.error("Error accessing camera:", error);
-      setCameraStatus("denied");
-      streamRef.current = null; // Clear stream ref on error
-      setModelStatus("idle");
-    }
-  };
-
-  const flipCamera = () => {
-    if (devices.length > 1 && currentDeviceId) {
-      const currentIndex = devices.findIndex(
-        (device) => device.deviceId === currentDeviceId
-      );
-      const nextDevice = devices[(currentIndex + 1) % devices.length];
-      enableCamera(nextDevice.deviceId);
-    }
-  };
-
-  const startRecording = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const videoStream = (videoRef.current as HTMLVideoElement & { captureStream: () => MediaStream }).captureStream();
-    const canvasStream = (canvasRef.current as HTMLCanvasElement & { captureStream: () => MediaStream }).captureStream();
-    
-    const combinedStream = new MediaStream([
-      ...videoStream.getVideoTracks(),
-      ...canvasStream.getVideoTracks(),
-    ]);
-    
-    recordedChunksRef.current = [];
-    // Use a common codec if available
-    const mimeType = ['video/webm; codecs=vp9', 'video/webm; codecs=vp8', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
-    if (!mimeType) {
-        onFormFeedback("Recording is not supported on your browser.");
-        return;
-    }
-    const options = { mimeType };
-    mediaRecorderRef.current = new MediaRecorder(combinedStream, options);
-
-    mediaRecorderRef.current.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        recordedChunksRef.current.push(event.data);
-      }
-    };
-
-    mediaRecorderRef.current.onstop = () => {
-      const blob = new Blob(recordedChunksRef.current, { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      document.body.appendChild(a);
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `workout-session-${new Date().toISOString().slice(0, 10)}.webm`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    };
-
-    mediaRecorderRef.current.start();
-    setIsRecording(true);
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const handleRecordClick = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  };
-
-  useEffect(() => {
-    if (cameraStatus === 'granted' && videoRef.current && streamRef.current) {
-      if (videoRef.current.srcObject !== streamRef.current) {
-        videoRef.current.srcObject = streamRef.current;
-        videoRef.current.play().catch(err => {
-          console.error("Video play failed:", err);
-          onFormFeedback("Could not play video feed. Please check browser settings.");
-        });
-      }
-    }
-  }, [cameraStatus, onFormFeedback]);
-
-  useEffect(() => {
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []);
-
   return (
     <div className="bg-card p-4 rounded-lg border border-border/40 flex flex-col items-center justify-center aspect-video w-full max-w-3xl mx-auto">
       {cameraStatus === "granted" ? (
@@ -201,7 +88,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
               {isRecordingEnabled && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button onClick={handleRecordClick} variant={isRecording ? "destructive" : "secondary"} size="icon">
+                    <Button onClick={toggleRecording} variant={isRecording ? "destructive" : "secondary"} size="icon">
                       {isRecording ? <div className="h-3 w-3 rounded-sm bg-white animate-pulse" /> : <Video className="h-4 w-4" />}
                       <span className="sr-only">{isRecording ? "Stop Recording" : "Start Recording"}</span>
                     </Button>

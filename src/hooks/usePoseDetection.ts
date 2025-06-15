@@ -1,17 +1,18 @@
+
 import { useEffect, useRef, useState } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Exercise, RepData, PoseData, RepState, CoachPersonality } from '@/lib/types';
+import { Exercise, RepData, PoseData, RepState, CoachPersonality, CameraStatus } from '@/lib/types';
 
 // Type definitions
-type VideoStatus = "idle" | "pending" | "granted" | "denied";
+// Removed VideoStatus type definition
 
 interface UsePoseDetectionProps {
   videoRef: React.RefObject<HTMLVideoElement>;
-  cameraStatus: VideoStatus;
+  cameraStatus: CameraStatus;
   exercise: Exercise;
   onRepCount: (count: (prevCount: number) => number) => void;
   onFormFeedback: (message: string) => void;
