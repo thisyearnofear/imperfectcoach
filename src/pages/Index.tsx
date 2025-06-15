@@ -95,10 +95,11 @@ const Index = () => {
               isRecordingEnabled={isRecordingEnabled}
               workoutMode={workoutMode}
               isWorkoutActive={isWorkoutActive}
+              timeLeft={timeLeft}
             />
             {/* Mobile-only coach feedback */}
             <div className="lg:hidden">
-                <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} timeLeft={timeLeft} isWorkoutActive={isWorkoutActive} />
+                <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
             </div>
             
             <DesktopControls
@@ -123,7 +124,7 @@ const Index = () => {
           <div className="lg:col-span-1 flex flex-col gap-4">
             {/* Desktop-only coach feedback */}
             <div className="hidden lg:block">
-              <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} timeLeft={timeLeft} isWorkoutActive={isWorkoutActive} />
+              <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
             </div>
             
             <Collapsible>

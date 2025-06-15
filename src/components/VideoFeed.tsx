@@ -1,7 +1,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Video, VideoOff, SwitchCamera, Loader2 } from "lucide-react";
+import { Video, VideoOff, SwitchCamera, Loader2, Timer } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -25,9 +25,10 @@ interface VideoFeedProps {
   isRecordingEnabled: boolean;
   workoutMode: WorkoutMode;
   isWorkoutActive: boolean;
+  timeLeft: number;
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -75,12 +76,24 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     isWorkoutActive,
   });
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
   return (
     <div className="bg-card p-4 rounded-lg border border-border/40 flex flex-col items-center justify-center aspect-[3/4] md:aspect-video w-full max-w-3xl mx-auto">
       {cameraStatus === "granted" ? (
         <div className="relative w-full h-full">
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full rounded-md object-cover" />
           <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full rounded-md" />
+          {isWorkoutActive && timeLeft >= 0 && (
+             <div className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-lg flex items-center gap-2 animate-fade-in">
+                <Timer className="h-5 w-5" />
+                <span className="font-mono text-lg font-semibold">{formatTime(timeLeft)}</span>
+            </div>
+          )}
           {modelStatus === 'loading' && (
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white rounded-md">
                 <Loader2 className="animate-spin h-8 w-8 mb-2" />
