@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, SwitchCamera, Loader2 } from "lucide-react";
@@ -7,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { usePoseDetection, RepData, PoseData } from "@/hooks/usePoseDetection";
+import { usePoseDetection, PoseData, RepData } from "@/hooks/usePoseDetection";
 
 interface VideoFeedProps {
   onRepCount: (update: (prev: number) => number) => void;
@@ -111,7 +110,7 @@ const VideoFeed = ({ onRepCount, onFormFeedback, isDebugMode, onPoseData, onForm
     <div className="bg-card p-4 rounded-lg border border-border/40 flex flex-col items-center justify-center aspect-video w-full max-w-3xl mx-auto">
       {cameraStatus === "granted" ? (
         <div className="relative w-full h-full">
-          <video ref={videoRef} autoPlay playsInline className="w-full h-full rounded-md object-cover" />
+          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full rounded-md object-cover" />
           <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full rounded-md" />
           {modelStatus === 'loading' && (
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white rounded-md">
