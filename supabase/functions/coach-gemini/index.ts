@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import 'https://deno.land/x/xhr@0.1.0/mod.ts'; // Required for OpenAI library
 
@@ -40,11 +39,32 @@ const getSummaryPrompt = (data) => {
     };
 };
 
+const getChatPrompt = (data) => {
+    const { exercise, personality, reps, averageFormScore, repHistory, chatHistory } = data;
+    const systemPrompt = systemPrompts[personality] || systemPrompts.competitive;
+    const cleanRepHistory = repHistory.map(r => ({ score: r.score, timestamp: r.timestamp }));
+    const userQuestion = chatHistory[chatHistory.length - 1]?.content || "What should I focus on?";
+
+    return {
+        system: `${systemPrompt} You are answering a follow-up question about a workout session. Use the data below to give a direct, concise answer (1-2 sentences) to the user's question.`,
+        user: `
+        Workout Context for Your Answer:
+        - Exercise: ${exercise}
+        - Total Reps: ${reps}
+        - Average Form Score: ${averageFormScore.toFixed(1)}%
+        - Rep Scores: ${JSON.stringify(cleanRepHistory.map(r => r.score))}
+
+        User's Question: "${userQuestion}"
+        
+        Provide your expert answer.`
+    };
+};
+
 // --- API HELPERS ---
 
 const generateGeminiFeedback = async (body) => {
-    const { personality } = body;
-    const { system, user } = getSummaryPrompt(body);
+    const { type = 'summary' } = body;
+    const { system, user } = type === 'summary' ? getSummaryPrompt(body) : getChatPrompt(body);
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
     
     const requestBody = {
@@ -64,7 +84,8 @@ const generateGeminiFeedback = async (body) => {
 };
 
 const generateOpenAIFeedback = async (body) => {
-    const { system, user } = getSummaryPrompt(body);
+    const { type = 'summary' } = body;
+    const { system, user } = type === 'summary' ? getSummaryPrompt(body) : getChatPrompt(body);
     const API_URL = 'https://api.openai.com/v1/chat/completions';
 
     const requestBody = {
@@ -92,7 +113,8 @@ const generateOpenAIFeedback = async (body) => {
 };
 
 const generateAnthropicFeedback = async (body) => {
-    const { system, user } = getSummaryPrompt(body);
+    const { type = 'summary' } = body;
+    const { system, user } = type === 'summary' ? getSummaryPrompt(body) : getChatPrompt(body);
     const API_URL = 'https://api.anthropic.com/v1/messages';
     
     const requestBody = {
@@ -129,12 +151,11 @@ serve(async (req) => {
     const body = await req.json();
     const { model = 'gemini', type } = body;
     
-    // This function now primarily handles summaries.
-    // Real-time feedback can be re-introduced if needed.
-    if (type !== 'summary') {
-        // Fallback for any non-summary calls
-        return new Response(JSON.stringify({ feedback: "Ready for your summary." }), {
+    if (type !== 'summary' && type !== 'chat') {
+        // Fallback for any other calls
+        return new Response(JSON.stringify({ feedback: "Request type not supported." }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
         });
     }
 
