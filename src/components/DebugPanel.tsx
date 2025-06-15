@@ -1,11 +1,4 @@
-
-import { Keypoint } from '@tensorflow-models/pose-detection';
-
-export interface PoseData {
-  keypoints: Keypoint[];
-  leftElbowAngle: number;
-  rightElbowAngle: number;
-}
+import { PoseData } from '@/hooks/usePoseDetection';
 
 interface DebugPanelProps {
   poseData: PoseData | null;

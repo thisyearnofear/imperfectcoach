@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Bug, BarChart2 as AnalyticsIcon } from "lucide-react";
 import DebugPanel from "@/components/DebugPanel";
 import PerformanceAnalytics from "@/components/PerformanceAnalytics";
-import { RepData } from "@/hooks/usePoseDetection";
+import { RepData, PoseData } from "@/hooks/usePoseDetection";
 import {
   Collapsible,
   CollapsibleContent,

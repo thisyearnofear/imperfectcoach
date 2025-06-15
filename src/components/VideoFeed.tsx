@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, SwitchCamera, Loader2 } from "lucide-react";
@@ -6,8 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { usePoseDetection, RepData } from "@/hooks/usePoseDetection";
-import { PoseData } from "@/components/DebugPanel";
+import { usePoseDetection, RepData, PoseData } from "@/hooks/usePoseDetection";
 
 interface VideoFeedProps {
   onRepCount: (update: (prev: number) => number) => void;
