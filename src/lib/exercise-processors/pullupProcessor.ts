@@ -60,7 +60,7 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
 
     const chinAboveWrists = nose.y < leftWrist.y && nose.y < rightWrist.y;
     const armsFullyExtended = leftElbowAngle > 150 && rightElbowAngle > 150; // Relaxed from 160
-    const isPulledUp = leftShoulderAngle < 100 && rightShoulderAngle < 100;
+    const isPulledUp = leftShoulderAngle < 85 && rightShoulderAngle < 85 && leftElbowAngle < 130 && rightElbowAngle < 130;
     const aiFeedbackPayloadBase = { reps: internalReps, leftElbowAngle, rightElbowAngle, repState, formIssues: lastRepIssues, leftShoulderAngle, rightShoulderAngle };
 
     if (repState === 'DOWN' && isPulledUp) {

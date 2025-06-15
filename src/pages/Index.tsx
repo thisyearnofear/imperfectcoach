@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Header from "@/components/Header";
 import VideoFeed from "@/components/VideoFeed";
 import CoachFeedback from "@/components/CoachFeedback";
@@ -29,6 +29,7 @@ const Index = () => {
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
   const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState(false);
   const [isHighContrast, setIsHighContrast] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
 
   // Workout state managed by custom hook
   const {
@@ -47,13 +48,24 @@ const Index = () => {
     handleExerciseChange,
     handleWorkoutModeChange,
     handleNewRepData,
+    resetSession,
   } = useWorkout();
 
   // Other hooks
   const { achievements } = useAchievements(reps, repHistory, formScore);
   const { speak } = useAudioFeedback();
+  const wasWorkoutActive = useRef(isWorkoutActive);
 
   // Effects
+  useEffect(() => {
+    // When workout ends, open analytics if reps were done
+    if (wasWorkoutActive.current && !isWorkoutActive && repHistory.length > 0) {
+      setFormFeedback("Time's up! Great session. Here's your summary.");
+      setIsAnalyticsOpen(true);
+    }
+    wasWorkoutActive.current = isWorkoutActive;
+  }, [isWorkoutActive, repHistory.length, setFormFeedback]);
+
   useEffect(() => {
     if (isAudioFeedbackEnabled && formFeedback) {
       if (formFeedback.includes("Enable your camera") || formFeedback.includes("Model loaded")) return;
@@ -96,6 +108,7 @@ const Index = () => {
               workoutMode={workoutMode}
               isWorkoutActive={isWorkoutActive}
               timeLeft={timeLeft}
+              onSessionReset={resetSession}
             />
             {/* Mobile-only coach feedback */}
             <div className="lg:hidden">
@@ -127,7 +140,7 @@ const Index = () => {
               <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
             </div>
             
-            <Collapsible>
+            <Collapsible open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" className="w-full justify-start">
                   <AnalyticsIcon className="mr-2 h-4 w-4" />

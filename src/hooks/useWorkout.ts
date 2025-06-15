@@ -19,7 +19,6 @@ export const useWorkout = () => {
     useEffect(() => {
         if (!isWorkoutActive || timeLeft <= 0) {
             if (isWorkoutActive && timeLeft <= 0) {
-                setFormFeedback("Time's up! Great session!");
                 setIsWorkoutActive(false);
             }
             return;
@@ -30,7 +29,7 @@ export const useWorkout = () => {
         }, 1000);
 
         return () => clearInterval(intervalId);
-    }, [isWorkoutActive, timeLeft, setFormFeedback]);
+    }, [isWorkoutActive, timeLeft]);
 
     const resetSession = useCallback(() => {
         setReps(0);
@@ -90,6 +89,7 @@ export const useWorkout = () => {
         setFormScore,
         handleExerciseChange,
         handleWorkoutModeChange,
-        handleNewRepData
+        handleNewRepData,
+        resetSession,
     };
 };

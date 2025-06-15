@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, SwitchCamera, Loader2, Timer } from "lucide-react";
@@ -26,9 +25,10 @@ interface VideoFeedProps {
   workoutMode: WorkoutMode;
   isWorkoutActive: boolean;
   timeLeft: number;
+  onSessionReset: () => void;
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionReset }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -50,6 +50,11 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     canvasRef, 
     onRecordingError: onFormFeedback 
   });
+
+  const handleStopCamera = () => {
+    stopCamera();
+    onSessionReset();
+  };
 
   const handleModelFeedback = (message: string) => {
     if (message.includes('Loading')) {
@@ -117,7 +122,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
               )}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={stopCamera} variant="destructive" size="icon">
+                  <Button onClick={handleStopCamera} variant="destructive" size="icon">
                     <VideoOff />
                     <span className="sr-only">Stop Camera</span>
                   </Button>
