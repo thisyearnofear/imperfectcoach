@@ -10,7 +10,7 @@ import {
 
 const exercises: { name: Exercise; enabled: boolean }[] = [
   { name: "pull-ups", enabled: true },
-  { name: "jumps", enabled: false },
+  { name: "jumps", enabled: true },
   { name: "squats", enabled: false },
 ];
 

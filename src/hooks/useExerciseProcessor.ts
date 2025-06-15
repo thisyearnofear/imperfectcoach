@@ -33,6 +33,11 @@ const cachedFeedback: Record<string, string[]> = {
         "Make sure to fully extend your arms at the bottom.",
         "Full range of motion is key!"
     ],
+    stiff_landing: [
+        "Softer landing next time!",
+        "Bend your knees to absorb the impact.",
+        "Try to land more quietly."
+    ],
     general: [
         "Keep up the great work!",
         "Nice form!",
@@ -66,15 +71,18 @@ export const useExerciseProcessor = ({
   const { playBeep, speak } = useAudioFeedback();
   const formIssuePulse = useRef(false);
   const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const jumpGroundLevel = useRef<number | null>(null);
 
   // Reset state when exercise changes
   useEffect(() => {
     setInternalReps(0);
     repScores.current = [];
     lastRepIssues.current = [];
+    jumpGroundLevel.current = null;
+
     if (exercise === 'pull-ups' || exercise === 'squats') {
       setRepState('DOWN');
-    } else {
+    } else { // For jumps and any future exercises starting from ground
       setRepState('GROUNDED');
     }
   }, [exercise]);
@@ -188,10 +196,68 @@ export const useExerciseProcessor = ({
         }
       }
     };
+
+    const handleJumps = (keypoints: posedetection.Keypoint[]) => {
+      const leftHip = keypoints.find(k => k.name === 'left_hip');
+      const rightHip = keypoints.find(k => k.name === 'right_hip');
+      const leftKnee = keypoints.find(k => k.name === 'left_knee');
+      const rightKnee = keypoints.find(k => k.name === 'right_knee');
+      const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
+      const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
+
+      if (!leftHip || !rightHip || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle ||
+          [leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle].some(k => k.score < 0.5)) {
+          if (workoutMode === 'training') onFormFeedback("Make sure your full body is in view!");
+          return;
+      }
+      
+      const avgAnkleY = (leftAnkle.y + rightAnkle.y) / 2;
+      const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
+      const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
+      const poseData: PoseData = { keypoints, leftKneeAngle, rightKneeAngle };
+      if (isDebugMode) onPoseData(poseData);
+      
+      if (jumpGroundLevel.current === null) {
+          jumpGroundLevel.current = avgAnkleY;
+          onFormFeedback("Crouch down, then jump as high as you can!");
+          return;
+      }
+
+      const isAirborne = avgAnkleY < jumpGroundLevel.current - 30; // 30px threshold
+
+      if (repState === 'GROUNDED' && isAirborne) {
+          setRepState('AIRBORNE');
+          if (workoutMode === 'training') onFormFeedback("Up!");
+      } else if (repState === 'AIRBORNE' && !isAirborne) {
+          setRepState('GROUNDED');
+          incrementReps();
+          
+          let currentRepScore = 100;
+          const currentIssues: string[] = [];
+
+          if (leftKneeAngle > 160 || rightKneeAngle > 160) {
+              currentIssues.push('stiff_landing');
+              if (workoutMode === 'training') onFormFeedback("Bend your knees when you land!");
+              currentRepScore -= 40;
+          } else {
+              if (workoutMode === 'training') onFormFeedback("Nice landing!");
+          }
+
+          lastRepIssues.current = [...new Set(currentIssues)];
+          const repScore = Math.max(0, currentRepScore);
+          repScores.current.push(repScore);
+          if (repScores.current.length > 5) repScores.current.shift();
+          const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
+          onFormScoreUpdate(avgScore);
+          onNewRepData({ timestamp: Date.now(), score: repScore });
+          getAIFeedback({ reps: internalReps, formIssues: lastRepIssues.current });
+      }
+    };
+
     switch (exercise) {
       case 'pull-ups': handlePullups(keypoints); break;
       case 'squats': if (workoutMode === 'training') onFormFeedback("Squat detection is not yet implemented."); break;
-      case 'jumps': if (workoutMode === 'training') onFormFeedback("Jump detection is not yet implemented."); break;
+      case 'jumps': handleJumps(keypoints); break;
     }
   }, [exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps, getAIFeedback]);
 
