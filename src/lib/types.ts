@@ -1,4 +1,3 @@
-
 import type { Keypoint } from '@tensorflow-models/pose-detection';
 
 export type Exercise = "pull-ups" | "jumps" | "squats";
@@ -20,6 +19,8 @@ export interface PoseData {
   rightKneeAngle?: number;
   leftHipAngle?: number;
   rightHipAngle?: number;
+  leftShoulderAngle?: number;
+  rightShoulderAngle?: number;
 }
 
 export interface ProcessorResult {

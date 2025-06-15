@@ -1,4 +1,3 @@
-
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { calculateAngle } from '@/lib/poseUtils';
 import { RepState, WorkoutMode, PoseData, ProcessorResult } from '@/lib/types';
@@ -18,12 +17,14 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
     const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
     const leftElbow = keypoints.find(k => k.name === 'left_elbow');
     const rightElbow = keypoints.find(k => k.name === 'right_elbow');
+    const leftHip = keypoints.find(k => k.name === 'left_hip');
+    const rightHip = keypoints.find(k => k.name === 'right_hip');
 
-    if (!nose || !leftWrist || !rightWrist || !leftShoulder || !rightShoulder || !leftElbow || !rightElbow) {
+    if (!nose || !leftWrist || !rightWrist || !leftShoulder || !rightShoulder || !leftElbow || !rightElbow || !leftHip || !rightHip) {
         return null;
     }
 
-    if (nose.score < 0.5 || leftWrist.score < 0.5 || rightWrist.score < 0.5) {
+    if (nose.score < 0.5 || leftWrist.score < 0.5 || rightWrist.score < 0.5 || leftShoulder.score < 0.5 || rightShoulder.score < 0.5 || leftElbow.score < 0.5 || rightElbow.score < 0.5 || leftHip.score < 0.5 || rightHip.score < 0.5) {
         return {
             feedback: "Make sure you're fully in view!",
             isRepCompleted: false,
@@ -33,7 +34,9 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
 
     const leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
     const rightElbowAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
-    const poseData: PoseData = { keypoints, leftElbowAngle, rightElbowAngle };
+    const leftShoulderAngle = calculateAngle(leftHip, leftShoulder, leftElbow);
+    const rightShoulderAngle = calculateAngle(rightHip, rightShoulder, rightElbow);
+    const poseData: PoseData = { keypoints, leftElbowAngle, rightElbowAngle, leftShoulderAngle, rightShoulderAngle };
 
     const baseResult = { isRepCompleted: false, poseData };
     
