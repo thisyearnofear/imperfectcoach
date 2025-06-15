@@ -19,3 +19,5 @@ export interface PoseData {
   leftHipAngle?: number;
   rightHipAngle?: number;
 }
+
+export type CoachPersonality = "competitive" | "supportive" | "zen";

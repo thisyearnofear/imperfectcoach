@@ -4,7 +4,7 @@ import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Exercise, RepData, PoseData, RepState } from '@/lib/types';
+import { Exercise, RepData, PoseData, RepState, CoachPersonality } from '@/lib/types';
 
 // Type definitions
 type VideoStatus = "idle" | "pending" | "granted" | "denied";
@@ -20,6 +20,7 @@ interface UsePoseDetectionProps {
   onPoseData: (data: PoseData) => void;
   onFormScoreUpdate: (score: number) => void;
   onNewRepData: (data: RepData) => void;
+  coachPersonality: CoachPersonality;
 }
 
 // Utility function to calculate angle between three points
@@ -63,7 +64,7 @@ const drawSkeleton = (keypoints: posedetection.Keypoint[], ctx: CanvasRenderingC
     });
 };
 
-export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData }: UsePoseDetectionProps) => {
+export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount, onFormFeedback, canvasRef, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality }: UsePoseDetectionProps) => {
   const detectorRef = useRef<posedetection.PoseDetector | null>(null);
   const animationFrameId = useRef<number | null>(null);
   const [repState, setRepState] = useState<RepState>('DOWN');
@@ -93,6 +94,7 @@ export const usePoseDetection = ({ videoRef, cameraStatus, exercise, onRepCount,
       const { data: responseData, error } = await supabase.functions.invoke('coach-gemini', {
         body: {
           exercise, // Pass exercise to function
+          personality: coachPersonality,
           ...data,
         }
       });

@@ -7,13 +7,14 @@ import CoachFeedback from "@/components/CoachFeedback";
 import { Button } from "@/components/ui/button";
 import { Bug, BarChart2 as AnalyticsIcon } from "lucide-react";
 import DebugPanel from "@/components/DebugPanel";
-import { Exercise, RepData, PoseData } from "@/lib/types";
+import { Exercise, RepData, PoseData, CoachPersonality } from "@/lib/types";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import PerformanceAnalytics from "@/components/PerformanceAnalytics";
+import CoachPersonalitySelector from "@/components/CoachPersonalitySelector";
 
 
 const Index = () => {
@@ -27,6 +28,7 @@ const Index = () => {
   const [formScore, setFormScore] = useState(100);
   const [sessionStart, setSessionStart] = useState<number | null>(null);
   const [repHistory, setRepHistory] = useState<RepData[]>([]);
+  const [coachPersonality, setCoachPersonality] = useState<CoachPersonality>("competitive");
 
   const handleExerciseChange = (exercise: Exercise) => {
     if (exercise !== selectedExercise) {
@@ -63,16 +65,22 @@ const Index = () => {
               onPoseData={setPoseData}
               onFormScoreUpdate={setFormScore}
               onNewRepData={handleNewRepData}
+              coachPersonality={coachPersonality}
             />
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-4">
               <ExerciseSelector 
                 selectedExercise={selectedExercise}
                 onExerciseChange={handleExerciseChange}
+              />
+              <CoachPersonalitySelector
+                selectedPersonality={coachPersonality}
+                onPersonalityChange={setCoachPersonality}
               />
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsDebugMode((prev) => !prev)}
+                className="mt-2 sm:mt-0"
               >
                 <Bug className="mr-2 h-4 w-4" />
                 {isDebugMode ? "Hide" : "Show"} Debug
@@ -97,6 +105,7 @@ const Index = () => {
                   sessionStart={sessionStart}
                   totalReps={reps}
                   averageFormScore={formScore}
+                  exercise={selectedExercise}
                 />
               </CollapsibleContent>
             </Collapsible>

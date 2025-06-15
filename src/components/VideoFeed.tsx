@@ -4,10 +4,11 @@ import { Video, VideoOff, SwitchCamera, Loader2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { usePoseDetection } from "@/hooks/usePoseDetection";
-import { Exercise, PoseData, RepData } from "@/lib/types";
+import { Exercise, PoseData, RepData, CoachPersonality } from "@/lib/types";
 
 interface VideoFeedProps {
   exercise: Exercise;
@@ -17,9 +18,10 @@ interface VideoFeedProps {
   onPoseData: (data: PoseData) => void;
   onFormScoreUpdate: (score: number) => void;
   onNewRepData: (data: RepData) => void;
+  coachPersonality: CoachPersonality;
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality }: VideoFeedProps) => {
   const [cameraStatus, setCameraStatus] = useState<"idle" | "pending" | "granted" | "denied">("idle");
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
@@ -27,6 +29,9 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
 
   const handleModelFeedback = (message: string) => {
     if (message.includes('Loading')) {
@@ -48,6 +53,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     onPoseData,
     onFormScoreUpdate,
     onNewRepData,
+    coachPersonality,
   });
 
   const stopCamera = () => {
@@ -101,6 +107,65 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     }
   };
 
+  const startRecording = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const videoStream = videoRef.current.captureStream();
+    const canvasStream = canvasRef.current.captureStream();
+    
+    const combinedStream = new MediaStream([
+      ...videoStream.getVideoTracks(),
+      ...canvasStream.getVideoTracks(),
+    ]);
+    
+    recordedChunksRef.current = [];
+    // Use a common codec if available
+    const mimeType = ['video/webm; codecs=vp9', 'video/webm; codecs=vp8', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
+    if (!mimeType) {
+        onFormFeedback("Recording is not supported on your browser.");
+        return;
+    }
+    const options = { mimeType };
+    mediaRecorderRef.current = new MediaRecorder(combinedStream, options);
+
+    mediaRecorderRef.current.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        recordedChunksRef.current.push(event.data);
+      }
+    };
+
+    mediaRecorderRef.current.onstop = () => {
+      const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      document.body.appendChild(a);
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `workout-session-${new Date().toISOString().slice(0, 10)}.webm`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    };
+
+    mediaRecorderRef.current.start();
+    setIsRecording(true);
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleRecordClick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (streamRef.current) {
@@ -122,30 +187,43 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
             </div>
           )}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={stopCamera} variant="destructive" size="icon">
-                  <VideoOff />
-                  <span className="sr-only">Stop Camera</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Stop Camera</p>
-              </TooltipContent>
-            </Tooltip>
-            {devices.length > 1 && (
+            <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={flipCamera} variant="secondary" size="icon">
-                    <SwitchCamera />
-                    <span className="sr-only">Flip Camera</span>
+                  <Button onClick={handleRecordClick} variant={isRecording ? "destructive" : "secondary"} size="icon">
+                    {isRecording ? <div className="h-3 w-3 rounded-sm bg-white animate-pulse" /> : <Video className="h-4 w-4" />}
+                    <span className="sr-only">{isRecording ? "Stop Recording" : "Start Recording"}</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Flip Camera</p>
+                  <p>{isRecording ? "Stop Recording" : "Start Recording"}</p>
                 </TooltipContent>
               </Tooltip>
-            )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={stopCamera} variant="destructive" size="icon">
+                    <VideoOff />
+                    <span className="sr-only">Stop Camera</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Stop Camera</p>
+                </TooltipContent>
+              </Tooltip>
+              {devices.length > 1 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={flipCamera} variant="secondary" size="icon">
+                      <SwitchCamera />
+                      <span className="sr-only">Flip Camera</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Flip Camera</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </TooltipProvider>
           </div>
         </div>
       ) : (
