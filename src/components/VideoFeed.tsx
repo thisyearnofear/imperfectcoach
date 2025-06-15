@@ -18,7 +18,7 @@ interface VideoFeedProps {
   onRepCount: (update: (prev: number) => number) => void;
   onFormFeedback: (message: string) => void;
   isDebugMode: boolean;
-  onPoseData: (data: PoseData) => void;
+  onPoseData: (data: PoseData | null) => void;
   onFormScoreUpdate: (score: number) => void;
   onNewRepData: (data: RepData) => void;
   coachPersonality: CoachPersonality;

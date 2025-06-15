@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
+import '@tensorflow/tfjs-backend-cpu';
 import { toast } from 'sonner';
 
 export type ModelStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -22,7 +23,16 @@ export const useModelLoader = (enabled: boolean) => {
             
             setModelStatus('loading');
             try {
-                await tf.setBackend('webgl');
+                try {
+                    await tf.setBackend('webgl');
+                } catch (e) {
+                    console.warn("WebGL backend not available, falling back to CPU.", e);
+                    toast.info("AI Coach may run slower", {
+                        description: "3D acceleration (WebGL) is not available, using CPU instead.",
+                    });
+                    await tf.setBackend('cpu');
+                }
+
                 const detectorConfig = { modelType: posedetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
                 const detector = await posedetection.createDetector(posedetection.SupportedModels.MoveNet, detectorConfig);
                 detectorRef.current = detector;

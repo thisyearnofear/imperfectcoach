@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { Exercise, RepData, PoseData, CoachPersonality, CameraStatus, WorkoutMode } from '@/lib/types';
@@ -13,7 +14,7 @@ interface UsePoseDetectionProps {
   onFormFeedback: (message: string) => void;
   canvasRef: React.RefObject<HTMLCanvasElement>;
   isDebugMode: boolean;
-  onPoseData: (data: PoseData) => void;
+  onPoseData: (data: PoseData | null) => void;
   onFormScoreUpdate: (score: number) => void;
   onNewRepData: (data: RepData) => void;
   coachPersonality: CoachPersonality;

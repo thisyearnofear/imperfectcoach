@@ -15,7 +15,7 @@ interface UseExerciseProcessorProps {
   onNewRepData: (data: RepData) => void;
   coachPersonality: CoachPersonality;
   isDebugMode: boolean;
-  onPoseData: (data: PoseData) => void;
+  onPoseData: (data: PoseData | null) => void;
   isWorkoutActive: boolean;
 }
 
@@ -103,10 +103,21 @@ export const useExerciseProcessor = ({
   }, [onRepCount, playBeep]);
 
   const processPose = useCallback((pose: posedetection.Pose | null) => {
-    if (!pose) return;
-    const { keypoints } = pose;
-
     if (!isWorkoutActive) {
+        if (!pose) {
+            onFormFeedback("I can't see you. Please step in front of the camera and make sure you're well-lit.");
+            if (isDebugMode) onPoseData(null);
+            return;
+        }
+
+        const { keypoints, score } = pose;
+        if (isDebugMode) onPoseData({ keypoints });
+
+        if (score < 0.4) {
+            onFormFeedback("I'm having trouble seeing you clearly. Try improving the lighting or adjusting your camera angle.");
+            return;
+        }
+
         // Pre-workout positioning guidance
         if (workoutMode === 'assessment') {
             onFormFeedback("Get into starting position. The assessment will begin with your first rep.");
@@ -142,10 +153,12 @@ export const useExerciseProcessor = ({
                  onFormFeedback("Get in view of the camera, ready to hang from the bar.");
             }
         }
-
-        if (isDebugMode) onPoseData({ keypoints });
         return; // Stop here if workout is not active
     }
+
+    if (!pose) return;
+    
+    const { keypoints } = pose;
 
     let result: (Omit<ProcessorResult, 'feedback'> & { feedback?: string }) | null = null;
     
@@ -213,7 +226,7 @@ export const useExerciseProcessor = ({
         });
     }
 
-  }, [exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps, getAIFeedback, isWorkoutActive]);
+  }, [exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, repState, internalReps, incrementReps, getAIFeedback, isWorkoutActive, jumpGroundLevel]);
 
   const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
 
