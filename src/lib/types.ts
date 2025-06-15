@@ -21,3 +21,5 @@ export interface PoseData {
 }
 
 export type CoachPersonality = "competitive" | "supportive" | "zen";
+
+export type CoachModel = "gemini" | "openai" | "anthropic";

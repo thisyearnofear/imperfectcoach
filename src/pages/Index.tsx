@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import VideoFeed from "@/components/VideoFeed";
@@ -7,7 +6,7 @@ import CoachFeedback from "@/components/CoachFeedback";
 import { Button } from "@/components/ui/button";
 import { Bug, BarChart2 as AnalyticsIcon } from "lucide-react";
 import DebugPanel from "@/components/DebugPanel";
-import { Exercise, RepData, PoseData, CoachPersonality } from "@/lib/types";
+import { Exercise, RepData, PoseData, CoachPersonality, CoachModel } from "@/lib/types";
 import {
   Collapsible,
   CollapsibleContent,
@@ -29,6 +28,7 @@ const Index = () => {
   const [sessionStart, setSessionStart] = useState<number | null>(null);
   const [repHistory, setRepHistory] = useState<RepData[]>([]);
   const [coachPersonality, setCoachPersonality] = useState<CoachPersonality>("competitive");
+  const [coachModel, setCoachModel] = useState<CoachModel>('gemini');
 
   const handleExerciseChange = (exercise: Exercise) => {
     if (exercise !== selectedExercise) {
@@ -50,9 +50,15 @@ const Index = () => {
     setRepHistory((prev) => [...prev, data]);
   };
 
+  const handleCoachModelChange = (model: CoachModel) => {
+    setCoachModel(model);
+    const modelName = model.charAt(0).toUpperCase() + model.slice(1);
+    setFormFeedback(`Switched to Coach ${modelName}. Ready when you are!`);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Header />
+      <Header coachModel={coachModel} onCoachModelChange={handleCoachModelChange} />
       <main className="flex-grow container mx-auto p-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
           {/* Left Panel: Video and Controls */}
@@ -90,7 +96,7 @@ const Index = () => {
 
           {/* Right Panel: Coach Feedback & Stats */}
           <div className="lg:col-span-1 flex flex-col gap-4">
-            <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} />
+            <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} />
             
             <Collapsible>
               <CollapsibleTrigger asChild>

@@ -1,19 +1,26 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CoachModel } from "@/lib/types";
 
-const Header = () => {
+interface HeaderProps {
+  coachModel: CoachModel;
+  onCoachModelChange: (model: CoachModel) => void;
+}
+
+const Header = ({ coachModel, onCoachModelChange }: HeaderProps) => {
   return (
     <header className="p-4 border-b border-border/40">
       <div className="container mx-auto flex justify-between items-center">
         <h1 className="text-2xl font-bold text-primary">Imperfect Coach</h1>
-        <div className="w-[180px]">
-          <Select defaultValue="gemini">
+        <div className="w-[200px]">
+          <Select value={coachModel} onValueChange={onCoachModelChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select Coach" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="gemini">Coach Gemini</SelectItem>
-              <SelectItem value="future-coach" disabled>More coaches soon</SelectItem>
+              <SelectItem value="openai">Coach OpenAI</SelectItem>
+              <SelectItem value="anthropic">Coach Anthropic</SelectItem>
             </SelectContent>
           </Select>
         </div>
