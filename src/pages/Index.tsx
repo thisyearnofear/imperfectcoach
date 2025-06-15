@@ -1,241 +1,99 @@
-import { useState, useEffect, useRef } from "react";
+
 import Header from "@/components/Header";
-import VideoFeed from "@/components/VideoFeed";
-import CoachFeedback from "@/components/CoachFeedback";
 import { Button } from "@/components/ui/button";
-import { BarChart2 as AnalyticsIcon, Settings } from "lucide-react";
-import DebugPanel from "@/components/DebugPanel";
-import { PoseData, CoachPersonality, CoachModel, SessionSummaries } from "@/lib/types";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import PerformanceAnalytics from "@/components/PerformanceAnalytics";
-import { useAchievements } from "@/hooks/useAchievements";
-import UnlockedAchievements from "@/components/UnlockedAchievements";
+import { Settings } from "lucide-react";
 import MobileControls from "@/components/MobileControls";
-import { useAudioFeedback } from "@/hooks/useAudioFeedback";
-import { useWorkout } from "@/hooks/useWorkout";
-import DesktopControls from "@/components/DesktopControls";
-import { usePerformanceStats } from "@/hooks/usePerformanceStats";
-import { useAIFeedback } from "@/hooks/useAIFeedback";
-import { CoachSummarySelector } from "@/components/CoachSummarySelector";
+import { useIndexPage } from "@/hooks/useIndexPage";
+import { LeftPanel } from "@/components/panels/LeftPanel";
+import { RightPanel } from "@/components/panels/RightPanel";
 
 const Index = () => {
-  // UI and settings state
-  const [isDebugMode, setIsDebugMode] = useState(false);
-  const [isRecordingEnabled, setIsRecordingEnabled] = useState(false);
-  const [poseData, setPoseData] = useState<PoseData | null>(null);
-  const [coachPersonality, setCoachPersonality] = useState<CoachPersonality>("competitive");
-  const [coachModel, setCoachModel] = useState<CoachModel>('gemini');
-  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
-  const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState(false);
-  const [isHighContrast, setIsHighContrast] = useState(false);
-  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
-  const [sessionSummaries, setSessionSummaries] = useState<SessionSummaries | null>(null);
-  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-  const [selectedCoaches, setSelectedCoaches] = useState<CoachModel[]>(['gemini']);
-
-  // Workout state managed by custom hook
-  const {
-    selectedExercise,
-    reps,
-    formFeedback,
-    formScore,
-    sessionStart,
-    repHistory,
-    workoutMode,
-    timeLeft,
-    isWorkoutActive,
-    setReps,
-    setFormFeedback,
-    setFormScore,
-    handleExerciseChange,
-    handleWorkoutModeChange,
-    handleNewRepData,
-    resetSession,
-    endSession,
-  } = useWorkout();
-
-  // Other hooks
-  const { repTimings, sessionDuration } = usePerformanceStats(repHistory, sessionStart);
-  const { achievements } = useAchievements(reps, repHistory, formScore, repTimings.stdDev);
-  const { speak } = useAudioFeedback();
-  const { getAISessionSummary } = useAIFeedback({
-    exercise: selectedExercise,
-    coachPersonality,
-    workoutMode,
-    onFormFeedback: setFormFeedback
-  });
-  const wasWorkoutActive = useRef(isWorkoutActive);
-  const analyticsRef = useRef<HTMLDivElement>(null);
-
-  const scrollToAnalytics = () => {
-    analyticsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  // Effects
-  useEffect(() => {
-    // When workout ends, open analytics if reps were done
-    if (wasWorkoutActive.current && !isWorkoutActive && repHistory.length > 0) {
-      setFormFeedback("Time's up! Great session. Here's your summary.");
-      setIsAnalyticsOpen(true);
-      
-      setIsSummaryLoading(true);
-      setSessionSummaries(null);
-      getAISessionSummary({
-        reps,
-        averageFormScore: formScore,
-        repHistory,
-      }, selectedCoaches).then(summaries => {
-          setSessionSummaries(summaries);
-          setIsSummaryLoading(false);
-      });
-
-      setTimeout(() => scrollToAnalytics(), 300);
-    } else if (!isWorkoutActive && repHistory.length === 0) {
-      setSessionSummaries(null);
-      setIsSummaryLoading(false);
-    }
-    wasWorkoutActive.current = isWorkoutActive;
-  }, [isWorkoutActive, repHistory.length, setFormFeedback, getAISessionSummary, reps, formScore, endSession, selectedCoaches]);
-
-  useEffect(() => {
-    if (isAudioFeedbackEnabled && formFeedback) {
-      if (formFeedback.includes("Enable your camera") || formFeedback.includes("Model loaded")) return;
-      speak(formFeedback);
-    }
-  }, [formFeedback, isAudioFeedbackEnabled, speak]);
-  
-  useEffect(() => {
-    const root = document.documentElement;
-    if (isHighContrast) {
-      root.classList.add('high-contrast');
-    } else {
-      root.classList.remove('high-contrast');
-    }
-  }, [isHighContrast]);
-
-  const handleCoachModelChange = (model: CoachModel) => {
-    setCoachModel(model);
-    const modelName = model.charAt(0).toUpperCase() + model.slice(1);
-    setFormFeedback(`Switched to Coach ${modelName}. Ready when you are!`);
-  };
+  const page = useIndexPage();
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col animate-fade-in">
-      <Header coachModel={coachModel} onCoachModelChange={handleCoachModelChange} onSettingsClick={() => setIsMobileSettingsOpen(true)} />
+      <Header coachModel={page.coachModel} onCoachModelChange={page.handleCoachModelChange} onSettingsClick={() => page.setIsMobileSettingsOpen(true)} />
       <main className="flex-grow container mx-auto p-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-          {/* Left Panel: Video and Controls */}
-          <div className="lg:col-span-2 flex flex-col gap-4">
-            <VideoFeed
-              exercise={selectedExercise}
-              onRepCount={setReps}
-              onFormFeedback={setFormFeedback}
-              isDebugMode={isDebugMode}
-              onPoseData={setPoseData}
-              onFormScoreUpdate={setFormScore}
-              onNewRepData={handleNewRepData}
-              coachPersonality={coachPersonality}
-              isRecordingEnabled={isRecordingEnabled}
-              workoutMode={workoutMode}
-              isWorkoutActive={isWorkoutActive}
-              timeLeft={timeLeft}
-              onSessionEnd={endSession}
-              onSessionReset={resetSession}
-            />
-            {/* Mobile-only coach feedback */}
-            <div className="lg:hidden">
-                <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
-            </div>
-            
-            <DesktopControls
-              workoutMode={workoutMode}
-              onWorkoutModeChange={handleWorkoutModeChange}
-              selectedExercise={selectedExercise}
-              onExerciseChange={handleExerciseChange}
-              coachPersonality={coachPersonality}
-              onCoachPersonalityChange={setCoachPersonality}
-              isHighContrast={isHighContrast}
-              onHighContrastChange={setIsHighContrast}
-              isAudioFeedbackEnabled={isAudioFeedbackEnabled}
-              onAudioFeedbackChange={setIsAudioFeedbackEnabled}
-              isRecordingEnabled={isRecordingEnabled}
-              onRecordingChange={setIsRecordingEnabled}
-              isDebugMode={isDebugMode}
-              onDebugChange={setIsDebugMode}
-            />
-          </div>
+          <LeftPanel
+            exercise={page.selectedExercise}
+            onRepCount={page.setReps}
+            onFormFeedback={page.setFormFeedback}
+            isDebugMode={page.isDebugMode}
+            onPoseData={page.setPoseData}
+            onFormScoreUpdate={page.setFormScore}
+            onNewRepData={page.handleNewRepData}
+            coachPersonality={page.coachPersonality}
+            isRecordingEnabled={page.isRecordingEnabled}
+            workoutMode={page.workoutMode}
+            isWorkoutActive={page.isWorkoutActive}
+            timeLeft={page.timeLeft}
+            onSessionEnd={page.endSession}
+            onSessionReset={page.resetSession}
+            reps={page.reps}
+            formScore={page.formScore}
+            formFeedback={page.formFeedback}
+            coachModel={page.coachModel}
+            onWorkoutModeChange={page.handleWorkoutModeChange}
+            onExerciseChange={page.handleExerciseChange}
+            onCoachPersonalityChange={page.setCoachPersonality}
+            isHighContrast={page.isHighContrast}
+            onHighContrastChange={page.setIsHighContrast}
+            isAudioFeedbackEnabled={page.isAudioFeedbackEnabled}
+            onAudioFeedbackChange={page.setIsAudioFeedbackEnabled}
+            onRecordingChange={page.setIsRecordingEnabled}
+            onDebugChange={page.setIsDebugMode}
+          />
 
-          {/* Right Panel: Coach Feedback & Stats */}
-          <div className="lg:col-span-1 flex flex-col gap-4">
-            {/* Desktop-only coach feedback */}
-            <div className="hidden lg:block">
-              <CoachFeedback reps={reps} formFeedback={formFeedback} formScore={formScore} coachModel={coachModel} workoutMode={workoutMode} />
-            </div>
-            
-            <div ref={analyticsRef}>
-              <Collapsible open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start">
-                    <AnalyticsIcon className="mr-2 h-4 w-4" />
-                    Show Performance &amp; Achievements
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2 space-y-4 animate-fade-in">
-                  <div className="bg-card p-4 rounded-lg border">
-                    <CoachSummarySelector 
-                      selectedCoaches={selectedCoaches}
-                      onSelectionChange={setSelectedCoaches}
-                      disabled={isWorkoutActive || isSummaryLoading}
-                    />
-                  </div>
-                  <PerformanceAnalytics
-                    repHistory={repHistory}
-                    totalReps={reps}
-                    averageFormScore={formScore}
-                    exercise={selectedExercise}
-                    sessionDuration={sessionDuration}
-                    repTimings={repTimings}
-                    sessionSummaries={sessionSummaries}
-                    isSummaryLoading={isSummaryLoading}
-                  />
-                  <UnlockedAchievements achievements={achievements} />
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
-            
-            {isDebugMode && <DebugPanel poseData={poseData} />}
-          </div>
+          <RightPanel
+            reps={page.reps}
+            formFeedback={page.formFeedback}
+            formScore={page.formScore}
+            coachModel={page.coachModel}
+            workoutMode={page.workoutMode}
+            analyticsRef={page.analyticsRef}
+            isAnalyticsOpen={page.isAnalyticsOpen}
+            setIsAnalyticsOpen={page.setIsAnalyticsOpen}
+            selectedCoaches={page.selectedCoaches}
+            setSelectedCoaches={page.setSelectedCoaches}
+            isWorkoutActive={page.isWorkoutActive}
+            isSummaryLoading={page.isSummaryLoading}
+            repHistory={page.repHistory}
+            exercise={page.selectedExercise}
+            sessionDuration={page.sessionDuration}
+            repTimings={page.repTimings}
+            sessionSummaries={page.sessionSummaries}
+            achievements={page.achievements}
+            isDebugMode={page.isDebugMode}
+            poseData={page.poseData}
+          />
         </div>
       </main>
       <div className="lg:hidden">
         <Button
           size="icon"
           className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg z-50 animate-fade-in"
-          onClick={() => setIsMobileSettingsOpen(true)}
+          onClick={() => page.setIsMobileSettingsOpen(true)}
         >
           <Settings className="h-6 w-6" />
         </Button>
         <MobileControls
-          open={isMobileSettingsOpen}
-          onOpenChange={setIsMobileSettingsOpen}
-          workoutMode={workoutMode}
-          onModeChange={handleWorkoutModeChange}
-          selectedExercise={selectedExercise}
-          onExerciseChange={handleExerciseChange}
-          selectedPersonality={coachPersonality}
-          onPersonalityChange={setCoachPersonality}
-          isRecordingEnabled={isRecordingEnabled}
-          onRecordingChange={setIsRecordingEnabled}
-          isDebugMode={isDebugMode}
-          onDebugChange={setIsDebugMode}
-          isAudioFeedbackEnabled={isAudioFeedbackEnabled}
-          onAudioFeedbackChange={setIsAudioFeedbackEnabled}
-          isHighContrast={isHighContrast}
-          onHighContrastChange={setIsHighContrast}
+          open={page.isMobileSettingsOpen}
+          onOpenChange={page.setIsMobileSettingsOpen}
+          workoutMode={page.workoutMode}
+          onModeChange={page.handleWorkoutModeChange}
+          selectedExercise={page.selectedExercise}
+          onExerciseChange={page.handleExerciseChange}
+          selectedPersonality={page.coachPersonality}
+          onPersonalityChange={page.setCoachPersonality}
+          isRecordingEnabled={page.isRecordingEnabled}
+          onRecordingChange={page.setIsRecordingEnabled}
+          isDebugMode={page.isDebugMode}
+          onDebugChange={page.setIsDebugMode}
+          isAudioFeedbackEnabled={page.isAudioFeedbackEnabled}
+          onAudioFeedbackChange={page.setIsAudioFeedbackEnabled}
+          isHighContrast={page.isHighContrast}
+          onHighContrastChange={page.setIsHighContrast}
         />
       </div>
     </div>
