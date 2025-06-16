@@ -26,7 +26,18 @@ export const cachedFeedback: Record<string, string[]> = {
     low_jump: [
         "Explode upwards!",
         "Try to jump higher.",
-        "Push the ground away!"
+        "Push the ground away!",
+        "Drive through your legs!"
+    ],
+    asymmetric_landing: [
+        "Land with both feet evenly.",
+        "Keep your landing balanced.",
+        "Focus on symmetrical form."
+    ],
+    power_endurance: [
+        "Maintain that power!",
+        "Keep the intensity up!",
+        "Strong finish!"
     ],
     general: [
         "Keep up the great work!",
@@ -130,12 +141,14 @@ export function getJumpReadyFeedback(
     const rightKneeAngle = calculateAngle(rightHip!, rightKnee!, rightAnkle!);
     const avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
 
-    // Check if user is in jumping position (crouched)
-    if (avgKneeAngle < 120) {
-        return "Perfect crouch! Now explode upward as high as you can!";
+    // Enhanced feedback based on crouch depth and preparation
+    if (avgKneeAngle < 90) {
+        return "Perfect deep crouch! Now explode upward with maximum power!";
+    } else if (avgKneeAngle < 120) {
+        return "Great crouch! Drive through your legs and jump as high as you can!";
     } else if (avgKneeAngle < 150) {
-        return "Good preparation! Crouch a bit more, then jump up explosively!";
+        return "Good preparation! Crouch a bit deeper, then explode upward!";
     } else {
-        return "Ready to jump! Crouch down first, then explode upward!";
+        return "Ready to jump! Crouch down first, then explode upward for maximum height!";
     }
 }

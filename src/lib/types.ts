@@ -1,8 +1,9 @@
+
 import type { Keypoint } from '@tensorflow-models/pose-detection';
 
 export type Exercise = "pull-ups" | "jumps" | "squats";
 
-export type RepState = 'DOWN' | 'UP' | 'GROUNDED' | 'AIRBORNE';
+export type RepState = 'DOWN' | 'UP' | 'GROUNDED' | 'AIRBORNE' | 'READY';
 
 export type CameraStatus = "idle" | "pending" | "granted" | "denied";
 

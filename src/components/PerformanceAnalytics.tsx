@@ -20,6 +20,8 @@ import {
   Legend,
   Line,
   Bar,
+  Area,
+  AreaChart,
 } from "recharts";
 import { RepData, Exercise, SessionSummaries, CoachModel, PullupRepDetails, JumpRepDetails, ChatMessage } from "@/lib/types";
 import { exportToCSV, shareCardImage, exportChartImage } from "@/lib/exportUtils";
@@ -60,17 +62,36 @@ const PerformanceAnalytics = ({
   const isPullupSession = exercise === 'pull-ups' && repHistory.some(rep => rep.details && 'peakElbowFlexion' in rep.details);
   const isJumpSession = exercise === 'jumps' && repHistory.some(rep => rep.details && 'jumpHeight' in rep.details);
 
+  // Calculate jump-specific analytics
+  const jumpAnalytics = isJumpSession ? (() => {
+    const jumpDetails = repHistory.map(rep => rep.details as JumpRepDetails).filter(Boolean);
+    const jumpHeights = jumpDetails.map(d => d.jumpHeight);
+    const landingFlexions = jumpDetails.map(d => d.landingKneeFlexion);
+    
+    const avgHeight = jumpHeights.length > 0 ? jumpHeights.reduce((a, b) => a + b, 0) / jumpHeights.length : 0;
+    const maxHeight = jumpHeights.length > 0 ? Math.max(...jumpHeights) : 0;
+    const heightConsistency = jumpHeights.length > 1 ? 
+      100 - Math.sqrt(jumpHeights.map(h => Math.pow(h - avgHeight, 2)).reduce((a, b) => a + b, 0) / jumpHeights.length) : 100;
+    const avgLandingForm = landingFlexions.length > 0 ? landingFlexions.reduce((a, b) => a + b, 0) / landingFlexions.length : 0;
+    const goodLandings = landingFlexions.filter(f => f < 160).length;
+    const landingSuccessRate = landingFlexions.length > 0 ? (goodLandings / landingFlexions.length) * 100 : 0;
+    
+    return { avgHeight, maxHeight, heightConsistency, avgLandingForm, landingSuccessRate };
+  })() : null;
+
   const chartData = repHistory.map((rep, index) => {
     const pullupDetails = isPullupSession ? (rep.details as PullupRepDetails) : undefined;
     const jumpDetails = isJumpSession ? (rep.details as JumpRepDetails) : undefined;
     return {
       name: `Rep ${index + 1}`,
+      rep: index + 1,
       score: rep.score,
       'Top ROM': pullupDetails?.peakElbowFlexion,
       'Bottom ROM': pullupDetails?.bottomElbowExtension,
       Asymmetry: pullupDetails?.asymmetry,
       'Jump Height': jumpDetails?.jumpHeight,
-      'Landing Flexion': jumpDetails?.landingKneeFlexion,
+      'Landing Quality': jumpDetails?.landingKneeFlexion ? (jumpDetails.landingKneeFlexion < 160 ? 100 : 60) : undefined,
+      'Raw Landing Flexion': jumpDetails?.landingKneeFlexion,
     };
   });
 
@@ -84,7 +105,7 @@ const PerformanceAnalytics = ({
           Performance Analytics
         </CardTitle>
         <CardDescription>
-          A summary of your current workout session.
+          A comprehensive analysis of your {exercise.replace('-', ' ')} session.
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
@@ -107,30 +128,79 @@ const PerformanceAnalytics = ({
           </div>
         </div>
 
-        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Rep Analysis</h4>
+        {/* Jump-specific metrics */}
+        {isJumpSession && jumpAnalytics && (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-6 p-3 bg-muted/30 rounded-lg">
+            <div>
+              <span className="font-semibold text-foreground">Avg Height:</span>
+              <span className="ml-2 text-muted-foreground">{jumpAnalytics.avgHeight.toFixed(0)}px</span>
+            </div>
+            <div>
+              <span className="font-semibold text-foreground">Max Height:</span>
+              <span className="ml-2 text-muted-foreground">{jumpAnalytics.maxHeight.toFixed(0)}px</span>
+            </div>
+            <div>
+              <span className="font-semibold text-foreground">Height Consistency:</span>
+              <span className="ml-2 text-muted-foreground">{jumpAnalytics.heightConsistency.toFixed(0)}%</span>
+            </div>
+            <div>
+              <span className="font-semibold text-foreground">Landing Success:</span>
+              <span className="ml-2 text-muted-foreground">{jumpAnalytics.landingSuccessRate.toFixed(0)}%</span>
+            </div>
+          </div>
+        )}
+
+        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">
+          {isJumpSession ? "Jump Performance Analysis" : "Rep Analysis"}
+        </h4>
         <div className="h-60" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis yAxisId="left" domain={[0, 100]} stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} />
-              {(isPullupSession || isJumpSession) && <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--accent-foreground))" fontSize={12} tickLine={false} axisLine={false} />}
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  borderColor: "hsl(var(--border))",
-                  fontSize: "12px",
-                  padding: "6px 10px"
-                }}
-                labelStyle={{ fontWeight: "bold", marginBottom: "4px" }}
-              />
-              <Legend wrapperStyle={{ fontSize: "12px" }} />
-              <Bar yAxisId="left" dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} animationDuration={800} />
-              {isPullupSession && <Line yAxisId="right" type="monotone" dataKey="Top ROM" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
-              {isPullupSession && <Line yAxisId="right" type="monotone" dataKey="Bottom ROM" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
-              {isJumpSession && <Line yAxisId="right" type="monotone" dataKey="Jump Height" stroke="#38bdf8" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
-              {isJumpSession && <Line yAxisId="right" type="monotone" dataKey="Landing Flexion" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
-            </ComposedChart>
+            {isJumpSession ? (
+              <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" domain={[0, 100]} stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--accent-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--background))",
+                    borderColor: "hsl(var(--border))",
+                    fontSize: "12px",
+                    padding: "6px 10px"
+                  }}
+                  labelStyle={{ fontWeight: "bold", marginBottom: "4px" }}
+                  formatter={(value, name) => {
+                    if (name === 'Jump Height') return [`${value}px`, 'Height'];
+                    if (name === 'Landing Quality') return [`${value === 100 ? 'Good' : 'Stiff'}`, 'Landing'];
+                    return [value, name];
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: "12px" }} />
+                <Bar yAxisId="left" dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} animationDuration={800} />
+                <Line yAxisId="right" type="monotone" dataKey="Jump Height" stroke="#22c55e" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line yAxisId="left" type="monotone" dataKey="Landing Quality" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+              </ComposedChart>
+            ) : (
+              <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" domain={[0, 100]} stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} />
+                {(isPullupSession) && <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--accent-foreground))" fontSize={12} tickLine={false} axisLine={false} />}
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--background))",
+                    borderColor: "hsl(var(--border))",
+                    fontSize: "12px",
+                    padding: "6px 10px"
+                  }}
+                  labelStyle={{ fontWeight: "bold", marginBottom: "4px" }}
+                />
+                <Legend wrapperStyle={{ fontSize: "12px" }} />
+                <Bar yAxisId="left" dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} animationDuration={800} />
+                {isPullupSession && <Line yAxisId="right" type="monotone" dataKey="Top ROM" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
+                {isPullupSession && <Line yAxisId="right" type="monotone" dataKey="Bottom ROM" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />}
+              </ComposedChart>
+            )}
           </ResponsiveContainer>
         </div>
       </CardContent>
