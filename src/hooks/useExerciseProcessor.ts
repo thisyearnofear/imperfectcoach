@@ -40,7 +40,7 @@ export const useExerciseProcessor = ({
   
   const { 
     repState, internalReps, lastRepIssues, repScores, 
-    jumpGroundLevel, peakAirborneY, currentRepAngles, incrementReps 
+    jumpGroundLevel, peakAirborneY, currentRepAngles, calibrationFrames, incrementReps 
   } = useExerciseState({ exercise, onRepCount });
   
   const formIssuePulse = useRef(false);
@@ -65,11 +65,14 @@ export const useExerciseProcessor = ({
 
     let result: (Omit<ProcessorResult, 'feedback'> & { feedback?: string }) | null = null;
     
-    if (exercise === 'jumps' && jumpGroundLevel.current === null) {
-        const feedback = getJumpReadyFeedback(keypoints, jumpGroundLevel);
-        if (!isWorkoutActive) onFormFeedback(feedback);
-        if (isDebugMode) onPoseData({ keypoints });
-        return;
+    // Enhanced jump feedback that works both during calibration and after
+    if (exercise === 'jumps') {
+        const feedback = getJumpReadyFeedback(keypoints, jumpGroundLevel, calibrationFrames);
+        if (!isWorkoutActive || jumpGroundLevel.current === null) {
+            onFormFeedback(feedback);
+            if (isDebugMode) onPoseData({ keypoints });
+            if (jumpGroundLevel.current === null) return; // Don't process jumps until calibrated
+        }
     }
 
     switch (exercise) {
@@ -137,13 +140,13 @@ export const useExerciseProcessor = ({
         } else if (exercise === 'pull-ups') {
             feedback = getPullupReadyFeedback(keypoints);
         } else if (exercise === 'jumps') {
-            feedback = getJumpReadyFeedback(keypoints, jumpGroundLevel);
+            feedback = getJumpReadyFeedback(keypoints, jumpGroundLevel, calibrationFrames);
         }
         onFormFeedback(feedback);
         if (isDebugMode) onPoseData({ keypoints });
     }
 
-  }, [isWorkoutActive, exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, getAIFeedback, repState, internalReps, lastRepIssues, repScores, jumpGroundLevel, peakAirborneY, currentRepAngles, incrementReps]);
+  }, [isWorkoutActive, exercise, workoutMode, coachPersonality, isDebugMode, onFormFeedback, onFormScoreUpdate, onNewRepData, onPoseData, speak, getAIFeedback, repState, internalReps, lastRepIssues, repScores, jumpGroundLevel, peakAirborneY, currentRepAngles, calibrationFrames, incrementReps]);
 
   const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
 

@@ -66,17 +66,76 @@ export function getPullupReadyFeedback(keypoints: posedetection.Keypoint[]): str
     return "Get in view of the camera, ready to hang from the bar.";
 }
 
-export function getJumpReadyFeedback(keypoints: posedetection.Keypoint[], jumpGroundLevel: React.MutableRefObject<number | null>): string {
+export function getJumpReadyFeedback(
+    keypoints: posedetection.Keypoint[], 
+    jumpGroundLevel: React.MutableRefObject<number | null>,
+    calibrationFrames: React.MutableRefObject<number>
+): string {
+    const leftHip = keypoints.find(k => k.name === 'left_hip');
+    const rightHip = keypoints.find(k => k.name === 'right_hip');
+    const leftKnee = keypoints.find(k => k.name === 'left_knee');
+    const rightKnee = keypoints.find(k => k.name === 'right_knee');
+    const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
+    const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
+    const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
+    const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
+
+    // Check if all essential keypoints are visible
+    const allKeypointsVisible = leftHip?.score > 0.5 && rightHip?.score > 0.5 && 
+                               leftKnee?.score > 0.5 && rightKnee?.score > 0.5 &&
+                               leftAnkle?.score > 0.5 && rightAnkle?.score > 0.5 &&
+                               leftShoulder?.score > 0.5 && rightShoulder?.score > 0.5;
+
+    if (!allKeypointsVisible) {
+        return "Stand in full view of the camera. Make sure your whole body is visible.";
+    }
+
+    // If not calibrated yet, start calibration process
     if (jumpGroundLevel.current === null) {
-        const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
-        const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
-        if (leftAnkle && rightAnkle && leftAnkle.score > 0.5 && rightAnkle.score > 0.5) {
-            jumpGroundLevel.current = (leftAnkle.y + rightAnkle.y) / 2;
-            return "Crouch down, then jump as high as you can to start!";
-        } else {
-            return "Stand in full view of the camera to calibrate.";
+        // Calculate body angles for posture analysis
+        const leftKneeAngle = calculateAngle(leftHip!, leftKnee!, leftAnkle!);
+        const rightKneeAngle = calculateAngle(rightHip!, rightKnee!, leftAnkle!);
+        const avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
+
+        // Check for good standing posture
+        if (avgKneeAngle < 160) {
+            calibrationFrames.current = 0;
+            return "Stand up straight with your legs extended to calibrate your starting position.";
         }
+
+        // Check foot positioning
+        const footDistance = Math.abs(leftAnkle!.x - rightAnkle!.x);
+        const shoulderDistance = Math.abs(leftShoulder!.x - rightShoulder!.x);
+        
+        if (footDistance < shoulderDistance * 0.7) {
+            calibrationFrames.current = 0;
+            return "Spread your feet to about shoulder-width apart for better stability.";
+        }
+
+        // Good posture detected, start calibration countdown
+        calibrationFrames.current += 1;
+        
+        if (calibrationFrames.current < 30) { // ~1 second at 30fps
+            return "Hold this position while I calibrate your ground level...";
+        }
+
+        // Calibration complete
+        jumpGroundLevel.current = (leftAnkle!.y + rightAnkle!.y) / 2;
+        return "Calibration complete! You're ready to jump. Crouch down and explode upward!";
+    }
+
+    // Already calibrated - provide jump preparation feedback
+    const currentAnkleY = (leftAnkle!.y + rightAnkle!.y) / 2;
+    const leftKneeAngle = calculateAngle(leftHip!, leftKnee!, leftAnkle!);
+    const rightKneeAngle = calculateAngle(rightHip!, rightKnee!, rightAnkle!);
+    const avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
+
+    // Check if user is in jumping position (crouched)
+    if (avgKneeAngle < 120) {
+        return "Perfect crouch! Now explode upward as high as you can!";
+    } else if (avgKneeAngle < 150) {
+        return "Good preparation! Crouch a bit more, then jump up explosively!";
     } else {
-         return "Ready for your first jump! Start when you're ready.";
+        return "Ready to jump! Crouch down first, then explode upward!";
     }
 }

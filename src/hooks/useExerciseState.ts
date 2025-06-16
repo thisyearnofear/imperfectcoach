@@ -16,6 +16,7 @@ export const useExerciseState = ({ exercise, onRepCount }: UseExerciseStateProps
     const jumpGroundLevel = useRef<number | null>(null);
     const peakAirborneY = useRef<number | null>(null);
     const currentRepAngles = useRef<{ left: number[], right: number[] }>({ left: [], right: [] });
+    const calibrationFrames = useRef<number>(0);
 
     const { playBeep } = useAudioFeedback();
 
@@ -26,6 +27,7 @@ export const useExerciseState = ({ exercise, onRepCount }: UseExerciseStateProps
         jumpGroundLevel.current = null;
         peakAirborneY.current = null;
         currentRepAngles.current = { left: [], right: [] };
+        calibrationFrames.current = 0;
 
         if (exercise === 'pull-ups' || exercise === 'squats') {
             repState.current = 'DOWN';
@@ -48,6 +50,7 @@ export const useExerciseState = ({ exercise, onRepCount }: UseExerciseStateProps
         jumpGroundLevel,
         peakAirborneY,
         currentRepAngles,
+        calibrationFrames,
         incrementReps
     };
 };
