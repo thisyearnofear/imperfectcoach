@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { Exercise, RepData, PoseData, CoachPersonality, CameraStatus, WorkoutMode } from '@/lib/types';
@@ -52,7 +51,7 @@ export const usePoseDetection = ({
     }
   }, [modelStatus, onFormFeedback]);
 
-  const { processPose, formIssuePulse, avgScore } = useExerciseProcessor({
+  const { processPose, formIssuePulse, avgScore, currentJumpHeight, jumpGroundLevel } = useExerciseProcessor({
     exercise,
     workoutMode,
     onRepCount,
@@ -62,7 +61,7 @@ export const usePoseDetection = ({
     coachPersonality,
     isDebugMode,
     onPoseData,
-    isWorkoutActive, // Pass workout status to processor
+    isWorkoutActive,
   });
 
   useEffect(() => {
@@ -80,7 +79,7 @@ export const usePoseDetection = ({
         if (ctx) {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
-          ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas at the beginning of each frame.
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
 
           if (pose) {
             if (isDebugMode) {
@@ -89,11 +88,19 @@ export const usePoseDetection = ({
                 keypointHistoryRef.current.shift();
               }
             }
-            // Always draw the pose if one is detected.
-            // Pass history only in debug mode.
-            drawPose(ctx, pose, exercise, avgScore, isDebugMode ? keypointHistoryRef.current : [], formIssuePulse);
+            
+            // Enhanced drawing with jump-specific features
+            drawPose(
+              ctx, 
+              pose, 
+              exercise, 
+              avgScore, 
+              isDebugMode ? keypointHistoryRef.current : [], 
+              formIssuePulse,
+              jumpGroundLevel,
+              currentJumpHeight
+            );
           } else {
-            // If no pose is detected, clear the history.
             keypointHistoryRef.current = [];
           }
         }
@@ -101,7 +108,7 @@ export const usePoseDetection = ({
       animationFrameId.current = requestAnimationFrame(detect);
     };
 
-    if (modelStatus === 'ready') { // Start detection as soon as model is ready
+    if (modelStatus === 'ready') {
       animationFrameId.current = requestAnimationFrame(detect);
     }
 
@@ -110,9 +117,14 @@ export const usePoseDetection = ({
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose]);
+  }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose, jumpGroundLevel, currentJumpHeight]);
 
   useEffect(() => {
     keypointHistoryRef.current = [];
   }, [exercise]);
+
+  return {
+    currentJumpHeight,
+    jumpGroundLevel
+  };
 };

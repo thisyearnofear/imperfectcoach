@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, SwitchCamera, Loader2, Timer } from "lucide-react";
@@ -72,7 +71,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     onFormFeedback(message);
   }
 
-  usePoseDetection({
+  const { currentJumpHeight, jumpGroundLevel } = usePoseDetection({
     videoRef,
     cameraStatus,
     exercise,
@@ -100,18 +99,34 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
         <div className="relative w-full h-full">
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full rounded-md object-cover" />
           <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full rounded-md" />
+          
+          {/* Timer */}
           {isWorkoutActive && timeLeft >= 0 && (
              <div className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-lg flex items-center gap-2 animate-fade-in">
                 <Timer className="h-5 w-5" />
                 <span className="font-mono text-lg font-semibold">{formatTime(timeLeft)}</span>
             </div>
           )}
+
+          {/* Jump Height Display for Jumps Exercise */}
+          {exercise === 'jumps' && jumpGroundLevel && isWorkoutActive && (
+            <div className="absolute top-2 left-2 bg-black/50 text-white p-2 rounded-lg animate-fade-in">
+              <div className="text-xs text-gray-300">Jump Height</div>
+              <div className={`text-lg font-bold ${currentJumpHeight > 0 ? 'text-green-400 animate-pulse' : 'text-white'}`}>
+                {Math.round(currentJumpHeight)}px
+              </div>
+            </div>
+          )}
+
+          {/* Loading overlay */}
           {modelStatus === 'loading' && (
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white rounded-md">
                 <Loader2 className="animate-spin h-8 w-8 mb-2" />
                 <p className="font-semibold">Loading AI Coach...</p>
             </div>
           )}
+
+          {/* Controls */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
             <TooltipProvider>
               {isRecordingEnabled && (

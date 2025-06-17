@@ -45,6 +45,7 @@ export const useExerciseProcessor = ({
   
   const formIssuePulse = useRef(false);
   const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentJumpHeight = useRef(0);
 
   const processPose = useCallback((pose: posedetection.Pose | null) => {
     if (!pose) {
@@ -95,6 +96,13 @@ export const useExerciseProcessor = ({
             if (leftAnkle?.score > 0.5 && rightAnkle?.score > 0.5) {
                 const avgAnkleY = (leftAnkle.y + rightAnkle.y) / 2;
                 const isAirborne = avgAnkleY < jumpGroundLevel.current - 30;
+
+                // Update current jump height for real-time display
+                if (isAirborne) {
+                    currentJumpHeight.current = jumpGroundLevel.current - avgAnkleY;
+                } else {
+                    currentJumpHeight.current = 0;
+                }
 
                 if (repState.current === 'GROUNDED' && isAirborne) {
                     peakAirborneY.current = avgAnkleY;
@@ -150,5 +158,11 @@ export const useExerciseProcessor = ({
 
   const avgScore = repScores.current.length > 0 ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length : 100;
 
-  return { processPose, formIssuePulse: formIssuePulse.current, avgScore };
+  return { 
+    processPose, 
+    formIssuePulse: formIssuePulse.current, 
+    avgScore,
+    currentJumpHeight: currentJumpHeight.current,
+    jumpGroundLevel: jumpGroundLevel.current
+  };
 }
