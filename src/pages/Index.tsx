@@ -1,4 +1,3 @@
-
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
@@ -12,7 +11,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col animate-fade-in">
-      <Header coachModel={page.coachModel} onCoachModelChange={page.handleCoachModelChange} onSettingsClick={() => page.setIsMobileSettingsOpen(true)} />
+      <Header 
+        coachModel={page.coachModel} 
+        onCoachModelChange={page.handleCoachModelChange} 
+        onSettingsClick={() => page.setIsMobileSettingsOpen(true)}
+        exercise={page.selectedExercise}
+        coachPersonality={page.coachPersonality}
+        isAudioFeedbackEnabled={page.isAudioFeedbackEnabled}
+        isRecordingEnabled={page.isRecordingEnabled}
+        workoutMode={page.workoutMode}
+      />
       <main className="flex-grow container mx-auto p-4">
         <div ref={page.topRef} className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
           <LeftPanel
