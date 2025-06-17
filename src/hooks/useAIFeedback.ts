@@ -34,7 +34,12 @@ export const useAIFeedback = ({
 
     try {
       const { data: responseData, error } = await supabase.functions.invoke('coach-gemini', {
-        body: { exercise, personality: coachPersonality, ...data }
+        body: { 
+          type: 'feedback',
+          exercise, 
+          personality: coachPersonality, 
+          ...data 
+        }
       });
       if (error) throw error;
       if (responseData.feedback) {
