@@ -2,7 +2,7 @@
 import VideoFeed from "@/components/VideoFeed";
 import DesktopControls from "@/components/DesktopControls";
 import CoachFeedback from "@/components/CoachFeedback";
-import { Exercise, CoachPersonality, WorkoutMode, PoseData, RepData, CoachModel } from "@/lib/types";
+import { Exercise, CoachPersonality, WorkoutMode, PoseData, RepData, CoachModel, HeightUnit } from "@/lib/types";
 
 interface LeftPanelProps {
     // VideoFeed props
@@ -20,6 +20,7 @@ interface LeftPanelProps {
     timeLeft: number;
     onSessionEnd: () => void;
     onSessionReset: () => void;
+    heightUnit: HeightUnit;
     
     // DesktopControls props
     onWorkoutModeChange: (mode: WorkoutMode) => void;
@@ -57,6 +58,7 @@ export const LeftPanel = (props: LeftPanelProps) => {
                 timeLeft={props.timeLeft}
                 onSessionEnd={props.onSessionEnd}
                 onSessionReset={props.onSessionReset}
+                heightUnit={props.heightUnit}
             />
             <div className="lg:hidden">
                 <CoachFeedback 

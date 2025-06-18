@@ -1,6 +1,6 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CoachModel, Exercise, CoachPersonality, WorkoutMode } from "@/lib/types";
+import { CoachModel, Exercise, CoachPersonality, WorkoutMode, HeightUnit } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 import SettingsStatusBar from "@/components/SettingsStatusBar";
@@ -14,6 +14,7 @@ interface HeaderProps {
   isAudioFeedbackEnabled: boolean;
   isRecordingEnabled: boolean;
   workoutMode: WorkoutMode;
+  heightUnit: HeightUnit;
 }
 
 const Header = ({ 
@@ -25,6 +26,7 @@ const Header = ({
   isAudioFeedbackEnabled,
   isRecordingEnabled,
   workoutMode,
+  heightUnit,
 }: HeaderProps) => {
   return (
     <header className="p-4 border-b border-border/40">
@@ -38,6 +40,7 @@ const Header = ({
             isAudioFeedbackEnabled={isAudioFeedbackEnabled}
             isRecordingEnabled={isRecordingEnabled}
             workoutMode={workoutMode}
+            heightUnit={heightUnit}
           />
           
           <div className="flex items-center gap-2">

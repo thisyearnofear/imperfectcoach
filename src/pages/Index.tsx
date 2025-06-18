@@ -1,3 +1,4 @@
+
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
@@ -20,6 +21,7 @@ const Index = () => {
         isAudioFeedbackEnabled={page.isAudioFeedbackEnabled}
         isRecordingEnabled={page.isRecordingEnabled}
         workoutMode={page.workoutMode}
+        heightUnit={page.heightUnit}
       />
       <main className="flex-grow container mx-auto p-4">
         <div ref={page.topRef} className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
@@ -38,6 +40,7 @@ const Index = () => {
             timeLeft={page.timeLeft}
             onSessionEnd={page.endSession}
             onSessionReset={page.resetSession}
+            heightUnit={page.heightUnit}
             reps={page.reps}
             formScore={page.formScore}
             formFeedback={page.formFeedback}
