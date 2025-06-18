@@ -85,9 +85,7 @@ export const useExerciseProcessor = ({
           lastRepIssues: lastRepIssues.current
         });
         break;
-      case 'squats': 
-        if (workoutMode === 'training') onFormFeedback("Squat detection is not yet implemented."); 
-        break;
+
       case 'jumps': 
         if (jumpGroundLevel.current !== null) {
             const leftAnkle = keypoints.find(k => k.name === 'left_ankle');

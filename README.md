@@ -1,73 +1,175 @@
-# Welcome to your Lovable project
+# 🏋️ Imperfect Coach
 
-## Project info
+**AI-Powered Fitness Form Analysis & Coaching Platform**
 
-**URL**: https://lovable.dev/projects/3770762a-43ae-41b5-a46c-d436616133ca
+Transform your workouts with real-time AI coaching that analyzes your form, counts your reps, and provides personalized feedback to help you achieve perfect technique.
 
-## How can I edit this code?
+## 🎯 What is Imperfect Coach?
 
-There are several ways of editing your application.
+Imperfect Coach is an advanced web-based fitness application that uses computer vision and AI to provide real-time form analysis and coaching for your workouts. Simply use your camera, and our AI coaches will guide you through exercises with instant feedback.
 
-**Use Lovable**
+### 🚀 Key Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/3770762a-43ae-41b5-a46c-d436616133ca) and start prompting.
+- **🎥 Real-Time Form Analysis**: Advanced pose detection analyzes your movement patterns
+- **🤖 Multiple AI Coaches**: Choose from Gemini, OpenAI, or Anthropic-powered coaching personalities
+- **📊 Detailed Performance Analytics**: Track your progress with comprehensive metrics
+- **🎯 Exercise Support**: Currently supports pull-ups and jumps with detailed form scoring
+- **📱 Cross-Platform**: Works on desktop and mobile devices
+- **🎨 Multiple Coach Personalities**: Competitive, Supportive, or Zen coaching styles
+- **⏱️ Training & Assessment Modes**: Practice with feedback or test yourself silently
 
-Changes made via Lovable will be committed automatically to this repo.
+### 💪 Supported Exercises
 
-**Use your preferred IDE**
+**Pull-ups**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Elbow angle analysis
+- Range of motion tracking
+- Asymmetry detection
+- Chin-over-bar verification
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+**Jumps**
 
-Follow these steps:
+- Jump height measurement
+- Landing technique analysis
+- Power scoring
+- Consistency tracking
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🛠️ Technology Stack
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **Frontend**: React + TypeScript + Vite
+- **UI**: Tailwind CSS + shadcn/ui components
+- **AI/ML**: TensorFlow.js + MediaPipe Pose Detection
+- **AI Coaching**: Integration with Gemini, OpenAI, and Anthropic APIs
+- **Backend**: Supabase Edge Functions (Deno runtime)
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🚀 Getting Started
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Prerequisites
+
+- Node.js 18+ or Bun
+- Modern web browser with camera access
+- Optional: AI API keys for enhanced coaching
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd imperfecthigher
+
+# Install dependencies
+bun install
+# or
+npm install
+
+# Start development server
+bun run dev
+# or
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Environment Setup
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Create a `.env.local` file for API keys (optional):
 
-**Use GitHub Codespaces**
+```env
+VITE_GEMINI_API_KEY=your_gemini_key
+VITE_OPENAI_API_KEY=your_openai_key
+VITE_ANTHROPIC_API_KEY=your_anthropic_key
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🎮 How to Use
 
-## What technologies are used for this project?
+1. **Grant Camera Access**: Allow the app to use your camera
+2. **Choose Exercise**: Select pull-ups or jumps
+3. **Select Coach**: Pick your AI coach and personality
+4. **Choose Mode**: Training (with feedback) or Assessment (silent testing)
+5. **Start Working Out**: Follow the real-time guidance and form analysis
 
-This project is built with:
+## 📊 Features in Detail
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Real-Time Analysis
 
-## How can I deploy this project?
+- **Pose Detection**: 17-point body tracking
+- **Form Scoring**: 0-100% accuracy rating
+- **Rep Counting**: Automatic repetition detection
+- **Issue Detection**: Identifies form problems instantly
 
-Simply open [Lovable](https://lovable.dev/projects/3770762a-43ae-41b5-a46c-d436616133ca) and click on Share -> Publish.
+### AI Coaching
 
-## Can I connect a custom domain to my Lovable project?
+- **Personalized Feedback**: Tailored to your performance
+- **Multiple Personalities**: Choose coaching style that motivates you
+- **Progress Tracking**: Session summaries and improvement suggestions
+- **Interactive Chat**: Ask questions about your performance
 
-Yes, you can!
+### Performance Analytics
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- **Session Statistics**: Detailed breakdowns of each workout
+- **Progress Charts**: Visual representation of improvement
+- **Achievement System**: Unlock milestones as you progress
+- **Export Data**: Download your performance history
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 🔧 Development
+
+### Project Structure
+
+```
+src/
+├── components/          # React components
+│   ├── sections/       # Layout sections
+│   └── ui/            # Reusable UI components
+├── hooks/              # Custom React hooks
+├── lib/               # Utilities and processors
+│   ├── exercise-processors/  # Exercise-specific logic
+│   └── types.ts       # TypeScript definitions
+└── pages/             # Main application pages
+
+supabase/
+└── functions/         # Edge functions for AI processing
+```
+
+### Key Components
+
+- **VideoFeed**: Camera integration and pose detection
+- **ExerciseProcessor**: Movement analysis and rep counting
+- **AIFeedback**: Integration with AI coaching APIs
+- **PerformanceAnalytics**: Data visualization and statistics
+
+### Build Commands
+
+```bash
+# Development
+bun run dev
+
+# Build for production
+bun run build
+
+# Preview production build
+bun run preview
+
+# Lint code
+bun run lint
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please feel free to submit issues and pull requests.
+
+### Development Guidelines
+
+1. Follow TypeScript best practices
+2. Use the existing component patterns
+3. Add proper error handling
+4. Test on both desktop and mobile
+5. Ensure camera permissions work correctly
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🙏 Acknowledgments
+
+- TensorFlow.js team for pose detection capabilities
+- MediaPipe for computer vision models
+- The AI providers (Google, OpenAI, Anthropic) for coaching intelligence
+- shadcn/ui for beautiful component library

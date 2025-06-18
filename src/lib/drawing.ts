@@ -35,7 +35,6 @@ const BODY_PART_COLORS: Record<string, string> = {
 
 const EXERCISE_HIGHLIGHT_JOINTS: Record<Exercise, string[]> = {
   'pull-ups': ['left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist', 'nose'],
-  'squats': ['left_hip', 'right_hip', 'left_knee', 'right_knee'],
   'jumps': ['left_hip', 'right_hip', 'left_knee', 'right_knee', 'left_ankle', 'right_ankle'],
 };
 
@@ -74,7 +73,7 @@ function drawFormZone(ctx: CanvasRenderingContext2D, keypoints: Keypoint[], exer
       ctx.setLineDash([]); // Reset line dash
     }
   }
-  // TODO: Add form zones for squats and jumps
+  // TODO: Add form zones for jumps
 }
 
 function drawFormQualityOverlay(ctx: CanvasRenderingContext2D, score: number, pulse: boolean) {

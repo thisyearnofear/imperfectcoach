@@ -29,9 +29,9 @@ export const useExerciseState = ({ exercise, onRepCount }: UseExerciseStateProps
         currentRepAngles.current = { left: [], right: [] };
         calibrationFrames.current = 0;
 
-        if (exercise === 'pull-ups' || exercise === 'squats') {
+        if (exercise === 'pull-ups') {
             repState.current = 'DOWN';
-        } else { // For jumps and any future exercises starting from ground
+        } else if (exercise === 'jumps') {
             repState.current = 'GROUNDED';
         }
     }, [exercise]);

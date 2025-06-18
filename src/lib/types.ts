@@ -1,7 +1,7 @@
 
 import type { Keypoint } from '@tensorflow-models/pose-detection';
 
-export type Exercise = "pull-ups" | "jumps" | "squats";
+export type Exercise = "pull-ups" | "jumps";
 
 export type RepState = 'DOWN' | 'UP' | 'GROUNDED' | 'AIRBORNE' | 'READY';
 

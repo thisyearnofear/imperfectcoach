@@ -1,32 +1,37 @@
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CoachModel, Exercise, CoachPersonality, WorkoutMode, HeightUnit } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
+import { Exercise, CoachPersonality, WorkoutMode, HeightUnit } from "@/lib/types";
 import SettingsStatusBar from "@/components/SettingsStatusBar";
+import SettingsModal from "@/components/SettingsModal";
 
 interface HeaderProps {
-  coachModel: CoachModel;
-  onCoachModelChange: (model: CoachModel) => void;
-  onSettingsClick: () => void;
   exercise: Exercise;
   coachPersonality: CoachPersonality;
   isAudioFeedbackEnabled: boolean;
   isRecordingEnabled: boolean;
   workoutMode: WorkoutMode;
   heightUnit: HeightUnit;
+  // Desktop settings modal props
+  isHighContrast?: boolean;
+  onHighContrastChange?: (enabled: boolean) => void;
+  onAudioFeedbackChange?: (enabled: boolean) => void;
+  onRecordingChange?: (enabled: boolean) => void;
+  isDebugMode?: boolean;
+  onDebugChange?: (enabled: boolean) => void;
 }
 
 const Header = ({ 
-  coachModel, 
-  onCoachModelChange, 
-  onSettingsClick,
   exercise,
   coachPersonality,
   isAudioFeedbackEnabled,
   isRecordingEnabled,
   workoutMode,
   heightUnit,
+  isHighContrast = false,
+  onHighContrastChange = () => {},
+  onAudioFeedbackChange = () => {},
+  onRecordingChange = () => {},
+  isDebugMode = false,
+  onDebugChange = () => {},
 }: HeaderProps) => {
   return (
     <header className="p-4 border-b border-border/40">
@@ -44,22 +49,21 @@ const Header = ({
           />
           
           <div className="flex items-center gap-2">
-            <div className="w-full max-w-[150px] sm:max-w-[200px]">
-              <Select value={coachModel} onValueChange={onCoachModelChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Coach" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gemini">Coach Gemini</SelectItem>
-                  <SelectItem value="openai">Coach OpenAI</SelectItem>
-                  <SelectItem value="anthropic">Coach Anthropic</SelectItem>
-                </SelectContent>
-              </Select>
+
+            
+            {/* Desktop Settings Modal */}
+            <div className="hidden lg:block">
+              <SettingsModal
+                isHighContrast={isHighContrast}
+                onHighContrastChange={onHighContrastChange}
+                isAudioFeedbackEnabled={isAudioFeedbackEnabled}
+                onAudioFeedbackChange={onAudioFeedbackChange}
+                isRecordingEnabled={isRecordingEnabled}
+                onRecordingChange={onRecordingChange}
+                isDebugMode={isDebugMode}
+                onDebugChange={onDebugChange}
+              />
             </div>
-            <Button variant="outline" onClick={onSettingsClick} className="lg:hidden">
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Button>
           </div>
         </div>
       </div>

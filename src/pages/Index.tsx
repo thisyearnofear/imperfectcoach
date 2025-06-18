@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 import MobileControls from "@/components/MobileControls";
 import { useIndexPage } from "@/hooks/useIndexPage";
-import { LeftPanel } from "@/components/panels/LeftPanel";
-import { RightPanel } from "@/components/panels/RightPanel";
+import { TopSection, BottomSection } from "@/components/sections";
 
 const Index = () => {
   const page = useIndexPage();
@@ -13,19 +12,23 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col animate-fade-in">
       <Header 
-        coachModel={page.coachModel} 
-        onCoachModelChange={page.handleCoachModelChange} 
-        onSettingsClick={() => page.setIsMobileSettingsOpen(true)}
         exercise={page.selectedExercise}
         coachPersonality={page.coachPersonality}
         isAudioFeedbackEnabled={page.isAudioFeedbackEnabled}
         isRecordingEnabled={page.isRecordingEnabled}
         workoutMode={page.workoutMode}
         heightUnit={page.heightUnit}
+        isHighContrast={page.isHighContrast}
+        onHighContrastChange={page.setIsHighContrast}
+        onAudioFeedbackChange={page.setIsAudioFeedbackEnabled}
+        onRecordingChange={page.setIsRecordingEnabled}
+        isDebugMode={page.isDebugMode}
+        onDebugChange={page.setIsDebugMode}
       />
       <main className="flex-grow container mx-auto p-4">
-        <div ref={page.topRef} className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-          <LeftPanel
+        <div ref={page.topRef} className="flex flex-col gap-8">
+          {/* Top Section: Hero VideoFeed + Controls */}
+          <TopSection
             exercise={page.selectedExercise}
             onRepCount={page.setReps}
             onFormFeedback={page.setFormFeedback}
@@ -44,19 +47,15 @@ const Index = () => {
             reps={page.reps}
             formScore={page.formScore}
             formFeedback={page.formFeedback}
-            coachModel={page.coachModel}
             onWorkoutModeChange={page.handleWorkoutModeChange}
             onExerciseChange={page.handleExerciseChange}
             onCoachPersonalityChange={page.setCoachPersonality}
-            isHighContrast={page.isHighContrast}
-            onHighContrastChange={page.setIsHighContrast}
-            isAudioFeedbackEnabled={page.isAudioFeedbackEnabled}
-            onAudioFeedbackChange={page.setIsAudioFeedbackEnabled}
-            onRecordingChange={page.setIsRecordingEnabled}
-            onDebugChange={page.setIsDebugMode}
+            coachModel={page.coachModel}
+            onCoachModelChange={page.handleCoachModelChange}
           />
 
-          <RightPanel
+          {/* Bottom Section: CoachFeedback + Analytics */}
+          <BottomSection
             reps={page.reps}
             formFeedback={page.formFeedback}
             formScore={page.formScore}
@@ -101,6 +100,8 @@ const Index = () => {
           onExerciseChange={page.handleExerciseChange}
           selectedPersonality={page.coachPersonality}
           onPersonalityChange={page.setCoachPersonality}
+          coachModel={page.coachModel}
+          onCoachModelChange={page.handleCoachModelChange}
           isRecordingEnabled={page.isRecordingEnabled}
           onRecordingChange={page.setIsRecordingEnabled}
           isDebugMode={page.isDebugMode}
