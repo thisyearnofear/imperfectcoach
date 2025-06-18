@@ -1,8 +1,8 @@
 
 import { 
   Dumbbell, 
-  AudioLines, 
-  AudioOff, 
+  Speaker, 
+  VolumeOff, 
   Video, 
   VideoOff, 
   Zap, 
@@ -100,9 +100,9 @@ const SettingsStatusBar = ({
         <TooltipTrigger asChild>
           <div className="flex items-center">
             {isAudioFeedbackEnabled ? (
-              <AudioLines className="h-4 w-4 text-green-500" />
+              <Speaker className="h-4 w-4 text-green-500" />
             ) : (
-              <AudioOff className="h-4 w-4 text-gray-400" />
+              <VolumeOff className="h-4 w-4 text-gray-400" />
             )}
           </div>
         </TooltipTrigger>
