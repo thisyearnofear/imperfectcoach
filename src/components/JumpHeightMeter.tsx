@@ -1,11 +1,14 @@
 
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
+import { HeightUnit } from '@/lib/types';
+import { formatHeight, convertHeight } from '@/lib/heightConversion';
 
 interface JumpHeightMeterProps {
   currentHeight: number;
   personalBest: number;
   isAirborne: boolean;
+  heightUnit: HeightUnit;
   className?: string;
 }
 
@@ -13,6 +16,7 @@ const JumpHeightMeter: React.FC<JumpHeightMeterProps> = ({
   currentHeight,
   personalBest,
   isAirborne,
+  heightUnit,
   className = ''
 }) => {
   const maxDisplayHeight = Math.max(personalBest * 1.2, 100);
@@ -35,7 +39,7 @@ const JumpHeightMeter: React.FC<JumpHeightMeterProps> = ({
             ? 'bg-green-100 text-green-800 animate-pulse' 
             : 'bg-gray-100 text-gray-600'
         }`}>
-          {Math.round(currentHeight)}px
+          {formatHeight(currentHeight, heightUnit)}
         </div>
       </div>
       
@@ -77,7 +81,7 @@ const JumpHeightMeter: React.FC<JumpHeightMeterProps> = ({
       </div>
       
       <div className="text-xs text-center mt-1 text-gray-500">
-        {Math.round(maxDisplayHeight)}px max
+        {formatHeight(maxDisplayHeight, heightUnit)} max
       </div>
     </div>
   );

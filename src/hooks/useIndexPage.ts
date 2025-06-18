@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useRef } from "react";
-import { PoseData, CoachPersonality, CoachModel, SessionSummaries, ChatMessage } from '@/lib/types';
+import { PoseData, CoachPersonality, CoachModel, SessionSummaries, ChatMessage, HeightUnit } from '@/lib/types';
 import { useAchievements } from "@/hooks/useAchievements";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 import { useWorkout } from "@/hooks/useWorkout";
@@ -23,6 +24,10 @@ export const useIndexPage = () => {
   const [sessionHasConcluded, setSessionHasConcluded] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [heightUnit, setHeightUnit] = useState<HeightUnit>(() => {
+    const saved = localStorage.getItem('heightUnit');
+    return (saved as HeightUnit) || 'cm';
+  });
 
   // Workout state managed by custom hook
   const {
@@ -66,6 +71,11 @@ export const useIndexPage = () => {
     setSessionHasConcluded(false);
     setChatMessages([]);
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleHeightUnitChange = (unit: HeightUnit) => {
+    setHeightUnit(unit);
+    localStorage.setItem('heightUnit', unit);
   };
 
   // Effects
@@ -148,11 +158,11 @@ export const useIndexPage = () => {
     sessionSummaries, isSummaryLoading, selectedCoaches, selectedExercise, reps,
     formFeedback, formScore, repHistory, workoutMode, timeLeft, isWorkoutActive,
     repTimings, sessionDuration, achievements, analyticsRef, topRef,
-    chatMessages, isChatLoading,
+    chatMessages, isChatLoading, heightUnit,
     // Setters
     setIsDebugMode, setIsRecordingEnabled, setPoseData, setCoachPersonality,
     setIsMobileSettingsOpen, setIsAudioFeedbackEnabled, setIsHighContrast, setIsAnalyticsOpen,
-    setSelectedCoaches, setReps, setFormFeedback, setFormScore,
+    setSelectedCoaches, setReps, setFormFeedback, setFormScore, handleHeightUnitChange,
     // Handlers
     handleCoachModelChange, handleExerciseChange, handleWorkoutModeChange,
     handleNewRepData, resetSession, endSession, handleTryAgain, handleSendMessage,

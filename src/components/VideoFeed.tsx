@@ -11,7 +11,8 @@ import {
 import { usePoseDetection } from "@/hooks/usePoseDetection";
 import { useCamera } from "@/hooks/useCamera";
 import { useRecording } from "@/hooks/useRecording";
-import { Exercise, PoseData, RepData, CoachPersonality, CameraStatus, WorkoutMode } from "@/lib/types";
+import { Exercise, PoseData, RepData, CoachPersonality, CameraStatus, WorkoutMode, HeightUnit } from "@/lib/types";
+import { formatHeight } from "@/lib/heightConversion";
 import AILoadingOverlay from "@/components/AILoadingOverlay";
 
 interface VideoFeedProps {
@@ -29,9 +30,10 @@ interface VideoFeedProps {
   timeLeft: number;
   onSessionEnd: () => void;
   onSessionReset: () => void;
+  heightUnit: HeightUnit;
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset, heightUnit }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -115,7 +117,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
             <div className="absolute top-2 left-2 bg-black/50 text-white p-2 rounded-lg animate-fade-in">
               <div className="text-xs text-gray-300">Jump Height</div>
               <div className={`text-lg font-bold ${currentJumpHeight > 0 ? 'text-green-400 animate-pulse' : 'text-white'}`}>
-                {Math.round(currentJumpHeight)}px
+                {formatHeight(currentJumpHeight, heightUnit)}
               </div>
             </div>
           )}

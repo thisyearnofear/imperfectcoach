@@ -9,10 +9,12 @@ import {
   Heart, 
   Brain,
   ClipboardCheck,
-  Activity
+  Activity,
+  Ruler
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Exercise, CoachPersonality, WorkoutMode } from "@/lib/types";
+import { Exercise, CoachPersonality, WorkoutMode, HeightUnit } from "@/lib/types";
+import { getUnitSymbol } from "@/lib/heightConversion";
 
 interface SettingsStatusBarProps {
   exercise: Exercise;
@@ -20,6 +22,7 @@ interface SettingsStatusBarProps {
   isAudioFeedbackEnabled: boolean;
   isRecordingEnabled: boolean;
   workoutMode: WorkoutMode;
+  heightUnit: HeightUnit;
 }
 
 const SettingsStatusBar = ({
@@ -28,6 +31,7 @@ const SettingsStatusBar = ({
   isAudioFeedbackEnabled,
   isRecordingEnabled,
   workoutMode,
+  heightUnit,
 }: SettingsStatusBarProps) => {
   const getExerciseIcon = () => {
     switch (exercise) {
@@ -95,6 +99,20 @@ const SettingsStatusBar = ({
           <p>Mode: {workoutMode}</p>
         </TooltipContent>
       </Tooltip>
+
+      {exercise === 'jumps' && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1">
+              <Ruler className="h-4 w-4 text-blue-500" />
+              <span className="text-xs font-medium text-blue-600">{getUnitSymbol(heightUnit)}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Height unit: {heightUnit}</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
 
       <Tooltip>
         <TooltipTrigger asChild>

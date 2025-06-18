@@ -7,6 +7,8 @@ export type RepState = 'DOWN' | 'UP' | 'GROUNDED' | 'AIRBORNE' | 'READY';
 
 export type CameraStatus = "idle" | "pending" | "granted" | "denied";
 
+export type HeightUnit = "cm" | "inches" | "feet" | "meters";
+
 export interface PullupRepDetails {
   peakElbowFlexion: number; // Min angle at top
   bottomElbowExtension: number; // Max angle at bottom

@@ -2,6 +2,8 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Zap, Target, TrendingUp } from 'lucide-react';
+import { HeightUnit } from '@/lib/types';
+import { formatHeight } from '@/lib/heightConversion';
 
 interface JumpStats {
   personalBest: number;
@@ -15,6 +17,7 @@ interface JumpGameificationProps {
   jumpStats: JumpStats;
   achievements: string[];
   showCelebration: boolean;
+  heightUnit: HeightUnit;
   className?: string;
 }
 
@@ -22,6 +25,7 @@ const JumpGameification: React.FC<JumpGameificationProps> = ({
   jumpStats,
   achievements,
   showCelebration,
+  heightUnit,
   className = ''
 }) => {
   const getPowerLevelColor = (level: string) => {
@@ -57,7 +61,7 @@ const JumpGameification: React.FC<JumpGameificationProps> = ({
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg">
           <div className="text-xs text-blue-600 font-medium">Personal Best</div>
-          <div className="text-lg font-bold text-blue-900">{Math.round(jumpStats.personalBest)}px</div>
+          <div className="text-lg font-bold text-blue-900">{formatHeight(jumpStats.personalBest, heightUnit)}</div>
         </div>
         
         <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg">
@@ -72,7 +76,7 @@ const JumpGameification: React.FC<JumpGameificationProps> = ({
         
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-3 rounded-lg">
           <div className="text-xs text-orange-600 font-medium">Avg Height</div>
-          <div className="text-lg font-bold text-orange-900">{Math.round(jumpStats.avgHeight)}px</div>
+          <div className="text-lg font-bold text-orange-900">{formatHeight(jumpStats.avgHeight, heightUnit)}</div>
         </div>
       </div>
 
