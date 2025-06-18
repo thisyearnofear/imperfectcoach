@@ -1,6 +1,7 @@
+
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Video, VideoOff, SwitchCamera, Loader2, Timer } from "lucide-react";
+import { Video, VideoOff, SwitchCamera, Timer } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -11,6 +12,7 @@ import { usePoseDetection } from "@/hooks/usePoseDetection";
 import { useCamera } from "@/hooks/useCamera";
 import { useRecording } from "@/hooks/useRecording";
 import { Exercise, PoseData, RepData, CoachPersonality, CameraStatus, WorkoutMode } from "@/lib/types";
+import AILoadingOverlay from "@/components/AILoadingOverlay";
 
 interface VideoFeedProps {
   exercise: Exercise;
@@ -118,12 +120,12 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
             </div>
           )}
 
-          {/* Loading overlay */}
+          {/* Enhanced Loading overlay */}
           {modelStatus === 'loading' && (
-            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white rounded-md">
-                <Loader2 className="animate-spin h-8 w-8 mb-2" />
-                <p className="font-semibold">Loading AI Coach...</p>
-            </div>
+            <AILoadingOverlay 
+              exercise={exercise}
+              coachPersonality={coachPersonality}
+            />
           )}
 
           {/* Controls */}
