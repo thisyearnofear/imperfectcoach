@@ -2,6 +2,7 @@ import VideoFeed from "@/components/VideoFeed";
 import WorkoutSidebar from "@/components/WorkoutSidebar";
 import CoachFeedback from "@/components/CoachFeedback";
 import CoreControls from "@/components/CoreControls";
+import Leaderboard from "@/components/Leaderboard";
 import { Exercise, CoachPersonality, WorkoutMode, PoseData, RepData, CoachModel, HeightUnit } from "@/lib/types";
 
 interface TopSectionProps {
@@ -38,8 +39,8 @@ export const TopSection = (props: TopSectionProps) => {
         <div className="w-full">
             {/* Desktop: Side-by-side layout, Mobile: Stacked */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left: VideoFeed - Optimal size for quality (~60% width) */}
-                <div className="lg:col-span-2">
+                {/* Left: VideoFeed + Leaderboard - Optimal size for quality (~60% width) */}
+                <div className="lg:col-span-2 space-y-4">
                     <VideoFeed
                         exercise={props.exercise}
                         onRepCount={props.onRepCount}
@@ -57,6 +58,11 @@ export const TopSection = (props: TopSectionProps) => {
                         onSessionReset={props.onSessionReset}
                         heightUnit={props.heightUnit}
                     />
+                    
+                    {/* Desktop Leaderboard - Below video, same width */}
+                    <div className="hidden lg:block">
+                        <Leaderboard timeframe="week" />
+                    </div>
                 </div>
 
                 {/* Right: Workout Sidebar - Controls + Live Feedback (~40% width) */}
@@ -97,6 +103,9 @@ export const TopSection = (props: TopSectionProps) => {
                         onCoachPersonalityChange={props.onCoachPersonalityChange}
                     />
                 </div>
+                
+                {/* Mobile Leaderboard - At bottom */}
+                <Leaderboard timeframe="week" />
             </div>
         </div>
     );

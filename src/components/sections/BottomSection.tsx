@@ -7,6 +7,7 @@ import PerformanceAnalytics from "@/components/PerformanceAnalytics";
 import UnlockedAchievements from "@/components/UnlockedAchievements";
 import DebugPanel from "@/components/DebugPanel";
 import { CoachSummarySelector } from "@/components/CoachSummarySelector";
+import Leaderboard from "@/components/Leaderboard";
 import { CoachModel, Exercise, RepData, SessionSummaries, Achievement, PoseData, WorkoutMode, ChatMessage } from '@/lib/types';
 
 interface BottomSectionProps {
@@ -40,9 +41,9 @@ export const BottomSection = (props: BottomSectionProps) => {
     return (
         <div className="w-full">
             {/* Analytics Section - Full width since CoachFeedback is now in sidebar */}
-            <div className="flex flex-col gap-4">
-                    {/* Performance Analytics */}
-                    <div ref={props.analyticsRef}>
+            <div className="flex flex-col gap-6">
+                {/* Performance Analytics */}
+                <div ref={props.analyticsRef}>
                         <Collapsible open={props.isAnalyticsOpen} onOpenChange={props.setIsAnalyticsOpen}>
                             <CollapsibleTrigger asChild>
                                 <Button variant="outline" className="w-full justify-start">
