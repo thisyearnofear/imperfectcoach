@@ -13,7 +13,12 @@ interface AuthState {
   error?: string;
 }
 
-export const useAuth = () => {
+interface UseAuthOptions {
+  requireSiwe?: boolean; // Default true - set to false for connection-only mode
+}
+
+export const useAuth = (options: UseAuthOptions = { requireSiwe: true }) => {
+  const { requireSiwe = true } = options;
   const [authState, setAuthState] = useState<AuthState>({
     isConnected: false,
     isAuthenticated: false,
@@ -26,7 +31,7 @@ export const useAuth = () => {
   const { disconnect } = useDisconnect();
   const { signMessage } = useSignMessage();
 
-  // Check if user is authenticated using SIWE
+  // Check if user is authenticated using SIWE or connection-only mode
   useEffect(() => {
     const checkAuth = () => {
       // Clean up legacy simple auth data
@@ -35,29 +40,46 @@ export const useAuth = () => {
         console.log("🧹 Cleaned up legacy simple-auth data");
       }
 
-      const siweAuth = localStorage.getItem("siwe-auth");
-      if (siweAuth && isConnected && address) {
-        try {
-          const authData = JSON.parse(siweAuth);
-          const isValid =
-            authData.address === address &&
-            authData.expiresAt > Date.now() &&
-            authData.domain === window.location.host;
+      // If SIWE is not required, consider connected as authenticated
+      if (!requireSiwe && isConnected && address) {
+        setAuthState((prev) => ({
+          ...prev,
+          isConnected,
+          isAuthenticated: true,
+          address,
+          isLoading: false,
+        }));
+        console.log("✅ Connection-only mode: authenticated");
+        setIsInitialized(true);
+        return;
+      }
 
-          if (isValid) {
-            setAuthState((prev) => ({
-              ...prev,
-              isConnected,
-              isAuthenticated: true,
-              address,
-              isLoading: false,
-            }));
-            console.log("✅ Valid SIWE authentication found");
-            return;
+      // SIWE mode - check for stored SIWE auth
+      if (requireSiwe) {
+        const siweAuth = localStorage.getItem("siwe-auth");
+        if (siweAuth && isConnected && address) {
+          try {
+            const authData = JSON.parse(siweAuth);
+            const isValid =
+              authData.address === address &&
+              authData.expiresAt > Date.now() &&
+              authData.domain === window.location.host;
+
+            if (isValid) {
+              setAuthState((prev) => ({
+                ...prev,
+                isConnected,
+                isAuthenticated: true,
+                address,
+                isLoading: false,
+              }));
+              console.log("✅ Valid SIWE authentication found");
+              return;
+            }
+          } catch (error) {
+            console.error("Error parsing SIWE auth:", error);
+            localStorage.removeItem("siwe-auth");
           }
-        } catch (error) {
-          console.error("Error parsing SIWE auth:", error);
-          localStorage.removeItem("siwe-auth");
         }
       }
 
@@ -65,7 +87,7 @@ export const useAuth = () => {
       setAuthState((prev) => ({
         ...prev,
         isConnected,
-        isAuthenticated: false,
+        isAuthenticated: requireSiwe ? false : isConnected,
         address,
         isLoading: false,
       }));
@@ -74,7 +96,7 @@ export const useAuth = () => {
     };
 
     checkAuth();
-  }, [isConnected, address]);
+  }, [isConnected, address, requireSiwe]);
 
   const connectWallet = useCallback(async () => {
     try {
@@ -178,7 +200,9 @@ export const useAuth = () => {
   }, [address, signMessage]);
 
   const signOut = useCallback(() => {
-    localStorage.removeItem("siwe-auth");
+    if (requireSiwe) {
+      localStorage.removeItem("siwe-auth");
+    }
     disconnect();
     setAuthState({
       isConnected: false,
@@ -186,13 +210,14 @@ export const useAuth = () => {
       isLoading: false,
     });
     toast.success("Signed out successfully");
-  }, [disconnect]);
+  }, [disconnect, requireSiwe]);
 
   const connectAndSignIn = useCallback(async () => {
     if (!isConnected) {
       await connectWallet();
-      // The useEffect will trigger signInWithEthereum once connected
-    } else if (!authState.isAuthenticated) {
+      // In connection-only mode, connecting is enough
+      // In SIWE mode, user will need to manually sign in after connecting
+    } else if (requireSiwe && !authState.isAuthenticated) {
       await signInWithEthereum();
     }
   }, [
@@ -200,6 +225,7 @@ export const useAuth = () => {
     authState.isAuthenticated,
     connectWallet,
     signInWithEthereum,
+    requireSiwe,
   ]);
 
   const resetAuth = useCallback(() => {
@@ -210,26 +236,8 @@ export const useAuth = () => {
     }));
   }, []);
 
-  // Auto-sign in after wallet connection
-  useEffect(() => {
-    if (
-      isConnected &&
-      address &&
-      !authState.isAuthenticated &&
-      !authState.isLoading
-    ) {
-      const timer = setTimeout(() => {
-        signInWithEthereum();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [
-    isConnected,
-    address,
-    authState.isAuthenticated,
-    authState.isLoading,
-    signInWithEthereum,
-  ]);
+  // Manual SIWE - no auto-signing to avoid popup blocking
+  // Users can click the "Sign In with Ethereum" button when ready
 
   return {
     ...authState,

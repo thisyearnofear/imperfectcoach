@@ -7,10 +7,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, LogOut, Clock, Trophy } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Wallet, LogOut, Clock, Trophy, Copy, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useBlockchainScores } from "@/hooks/useBlockchainScores";
 import { useBasename } from "@/hooks/useBasename";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface WalletConnectProps {
   compact?: boolean;
@@ -23,21 +31,23 @@ export const WalletConnect = ({ compact = false }: WalletConnectProps) => {
     address,
     isLoading,
     connectAndSignIn,
+    signInWithEthereum,
     signOut,
   } = useAuth();
 
   const { timeUntilNextSubmission, canSubmit } = useBlockchainScores();
   const { basename, isLoading: basenameLoading } = useBasename(address);
+  const [copied, setCopied] = useState(false);
 
-  // Quick debug check
-  if (isAuthenticated && address) {
-    console.log(
-      "✅ User is authenticated with address:",
-      address,
-      "basename:",
-      basename,
-    );
-  }
+  // Debug logging for state understanding
+  console.log("🔍 WalletConnect state:", {
+    isConnected,
+    isAuthenticated,
+    address,
+    isLoading,
+    basename,
+    compact,
+  });
 
   const formatAddress = (addr?: string) => {
     if (!addr) return "";
@@ -50,6 +60,19 @@ export const WalletConnect = ({ compact = false }: WalletConnectProps) => {
     return formatAddress(addr);
   };
 
+  const handleCopyAddress = async () => {
+    if (address) {
+      try {
+        await navigator.clipboard.writeText(address);
+        setCopied(true);
+        toast.success("Address copied to clipboard!");
+        setTimeout(() => setCopied(false), 2000);
+      } catch (error) {
+        toast.error("Failed to copy address");
+      }
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const minutes = Math.ceil(seconds / 60);
     return minutes > 1 ? `${minutes}m` : `${seconds}s`;
@@ -57,41 +80,80 @@ export const WalletConnect = ({ compact = false }: WalletConnectProps) => {
 
   if (compact) {
     return (
-      <div className="flex items-center gap-2">
-        {isAuthenticated ? (
-          <>
-            <Badge variant="secondary" className="text-xs">
-              <Trophy className="h-3 w-3 mr-1" />
-              <span>{getDisplayName(address)}</span>
-            </Badge>
-            {!canSubmit && timeUntilNextSubmission > 0 && (
-              <Badge variant="outline" className="text-xs">
-                <Clock className="h-3 w-3 mr-1" />
-                {formatTime(timeUntilNextSubmission)}
-              </Badge>
-            )}
+      <TooltipProvider>
+        <div className="flex items-center gap-2">
+          {isConnected ? (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="secondary"
+                    className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors"
+                    onClick={handleCopyAddress}
+                  >
+                    <Trophy className="h-3 w-3 mr-1 shrink-0" />
+                    <span>{getDisplayName(address)}</span>
+                    {copied ? (
+                      <Check className="h-3 w-3 ml-1" />
+                    ) : (
+                      <Copy className="h-3 w-3 ml-1 opacity-50" />
+                    )}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Click to copy address: {address}</p>
+                </TooltipContent>
+              </Tooltip>
+              {!isAuthenticated && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={signInWithEthereum}
+                      disabled={isLoading}
+                      className="h-7 px-2 text-xs shrink-0"
+                    >
+                      {isLoading ? "Signing..." : "SIWE"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      Sign-In with Ethereum for enhanced security and session
+                      management
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {!canSubmit && timeUntilNextSubmission > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {formatTime(timeUntilNextSubmission)}
+                </Badge>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={signOut}
+                className="h-8 px-2 shrink-0"
+              >
+                <LogOut className="h-3 w-3" />
+              </Button>
+            </>
+          ) : (
             <Button
-              variant="ghost"
+              onClick={connectAndSignIn}
+              disabled={isLoading}
               size="sm"
-              onClick={signOut}
-              className="h-8 px-2"
+              className="h-8 shrink-0"
+              data-wallet-connect
             >
-              <LogOut className="h-3 w-3" />
+              <Wallet className="h-3 w-3 mr-1 shrink-0" />
+              {isLoading ? "Connecting..." : "Connect"}
             </Button>
-          </>
-        ) : (
-          <Button
-            onClick={connectAndSignIn}
-            disabled={isLoading}
-            size="sm"
-            className="h-8"
-            data-wallet-connect
-          >
-            <Wallet className="h-3 w-3 mr-1" />
-            {isLoading ? "Signing..." : "Connect"}
-          </Button>
-        )}
-      </div>
+          )}
+        </div>
+      </TooltipProvider>
     );
   }
 
@@ -117,25 +179,54 @@ export const WalletConnect = ({ compact = false }: WalletConnectProps) => {
             <Wallet className="h-4 w-4 mr-2" />
             {isLoading ? "Connecting..." : "Connect Smart Wallet"}
           </Button>
-        ) : !isAuthenticated ? (
+        ) : isConnected && !isAuthenticated ? (
           <div className="space-y-3">
             <div className="text-center">
-              <Badge variant="outline">
-                Connected: <span>{getDisplayName(address)}</span>
-              </Badge>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={handleCopyAddress}
+                    >
+                      Connected: <span>{getDisplayName(address)}</span>
+                      {copied ? (
+                        <Check className="h-3 w-3 ml-1" />
+                      ) : (
+                        <Copy className="h-3 w-3 ml-1 opacity-50" />
+                      )}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Click to copy address: {address}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="space-y-2">
+              <Button
+                onClick={signInWithEthereum}
+                disabled={isLoading}
+                className="w-full"
+                variant="default"
+              >
+                {isLoading ? "Signing..." : "Sign In with Ethereum"}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                Optional: Sign in with SIWE for enhanced security and session
+                management
+              </p>
             </div>
             <Button
-              onClick={connectAndSignIn}
-              disabled={isLoading}
+              onClick={signOut}
+              variant="outline"
+              size="sm"
               className="w-full"
             >
-              {isLoading ? "Signing..." : "Sign In with Ethereum"}
+              <LogOut className="h-4 w-4 mr-2" />
+              Disconnect
             </Button>
-            {!isLoading && (
-              <p className="text-xs text-center text-muted-foreground">
-                Click to sign in with SIWE (Sign-In with Ethereum)
-              </p>
-            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -144,9 +235,26 @@ export const WalletConnect = ({ compact = false }: WalletConnectProps) => {
                 <Trophy className="h-3 w-3 mr-1" />
                 <span>Authenticated via SIWE</span>
               </Badge>
-              <p className="text-sm text-muted-foreground">
-                <span>{getDisplayName(address)}</span>
-              </p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p
+                      className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                      onClick={handleCopyAddress}
+                    >
+                      <span>{getDisplayName(address)}</span>
+                      {copied ? (
+                        <Check className="h-3 w-3 ml-1 inline" />
+                      ) : (
+                        <Copy className="h-3 w-3 ml-1 inline opacity-50" />
+                      )}
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Click to copy address: {address}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
 
             {!canSubmit && timeUntilNextSubmission > 0 && (

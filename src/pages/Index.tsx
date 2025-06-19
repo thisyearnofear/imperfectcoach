@@ -1,4 +1,3 @@
-
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
@@ -11,7 +10,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col animate-fade-in">
-      <Header 
+      <Header
         exercise={page.selectedExercise}
         coachPersonality={page.coachPersonality}
         isAudioFeedbackEnabled={page.isAudioFeedbackEnabled}
