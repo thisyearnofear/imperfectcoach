@@ -17,6 +17,8 @@ Imperfect Coach is an advanced web-based fitness application that uses computer 
 - **📱 Cross-Platform**: Works on desktop and mobile devices
 - **🎨 Multiple Coach Personalities**: Competitive, Supportive, or Zen coaching styles
 - **⏱️ Training & Assessment Modes**: Practice with feedback or test yourself silently
+- **🔗 Blockchain Leaderboard**: Connect Coinbase Smart Wallet to compete on Base Sepolia
+- **🏆 Permanent Score Tracking**: Your achievements are recorded forever on the blockchain
 
 ### 💪 Supported Exercises
 
@@ -41,6 +43,8 @@ Imperfect Coach is an advanced web-based fitness application that uses computer 
 - **AI/ML**: TensorFlow.js + MediaPipe Pose Detection
 - **AI Coaching**: Integration with Gemini, OpenAI, and Anthropic APIs
 - **Backend**: Supabase Edge Functions (Deno runtime)
+- **Blockchain**: Wagmi + Viem + Coinbase Smart Wallet
+- **Network**: Base Sepolia (Ethereum L2)
 
 ## 🚀 Getting Started
 
@@ -78,6 +82,14 @@ VITE_OPENAI_API_KEY=your_openai_key
 VITE_ANTHROPIC_API_KEY=your_anthropic_key
 ```
 
+### Blockchain Setup
+
+To enable blockchain features:
+
+1. Deploy the smart contract to Base Sepolia (see `BLOCKCHAIN_SETUP.md`)
+2. Update the contract address in `src/lib/contracts.ts`
+3. Users can then connect their Coinbase Smart Wallet to compete!
+
 ## 🎮 How to Use
 
 1. **Grant Camera Access**: Allow the app to use your camera
@@ -85,6 +97,8 @@ VITE_ANTHROPIC_API_KEY=your_anthropic_key
 3. **Select Coach**: Pick your AI coach and personality
 4. **Choose Mode**: Training (with feedback) or Assessment (silent testing)
 5. **Start Working Out**: Follow the real-time guidance and form analysis
+6. **Connect Wallet** (Optional): Link your Coinbase Smart Wallet to compete on the blockchain
+7. **Submit Scores**: After workouts, submit your performance to the permanent leaderboard
 
 ## 📊 Features in Detail
 
@@ -108,6 +122,8 @@ VITE_ANTHROPIC_API_KEY=your_anthropic_key
 - **Progress Charts**: Visual representation of improvement
 - **Achievement System**: Unlock milestones as you progress
 - **Export Data**: Download your performance history
+- **Blockchain Leaderboard**: Compete with others on a tamper-proof leaderboard
+- **Permanent Records**: Your best performances are stored forever on Base Sepolia
 
 ## 🔧 Development
 

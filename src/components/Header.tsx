@@ -2,6 +2,7 @@
 import { Exercise, CoachPersonality, WorkoutMode, HeightUnit } from "@/lib/types";
 import SettingsStatusBar from "@/components/SettingsStatusBar";
 import SettingsModal from "@/components/SettingsModal";
+import { WalletConnect } from "@/components/WalletConnect";
 
 interface HeaderProps {
   exercise: Exercise;
@@ -49,7 +50,8 @@ const Header = ({
           />
           
           <div className="flex items-center gap-2">
-
+            {/* Wallet Connection */}
+            <WalletConnect compact />
             
             {/* Desktop Settings Modal */}
             <div className="hidden lg:block">

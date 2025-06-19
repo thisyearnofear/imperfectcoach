@@ -80,3 +80,25 @@ export interface Achievement {
   description: string;
   icon: React.ComponentType<{ className?: string }>;
 }
+
+// Blockchain-related types
+export interface BlockchainScore {
+  user: string;
+  pullups: number;
+  jumps: number;
+  timestamp: number;
+}
+
+export interface UserProfile {
+  address: string;
+  username?: string;
+  totalPullups: number;
+  totalJumps: number;
+  lastSubmission: number;
+  rank?: number;
+}
+
+export interface ContractConfig {
+  address: string;
+  abi: readonly any[];
+}

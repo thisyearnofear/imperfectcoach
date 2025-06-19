@@ -7,7 +7,7 @@ import PerformanceAnalytics from "@/components/PerformanceAnalytics";
 import UnlockedAchievements from "@/components/UnlockedAchievements";
 import DebugPanel from "@/components/DebugPanel";
 import { CoachSummarySelector } from "@/components/CoachSummarySelector";
-import Leaderboard from "@/components/Leaderboard";
+import { BlockchainScoreSubmission } from "@/components/BlockchainScoreSubmission";
 import { CoachModel, Exercise, RepData, SessionSummaries, Achievement, PoseData, WorkoutMode, ChatMessage } from '@/lib/types';
 
 interface BottomSectionProps {
@@ -59,6 +59,14 @@ export const BottomSection = (props: BottomSectionProps) => {
                                         disabled={props.isWorkoutActive || props.isSummaryLoading}
                                     />
                                 </div>
+                                
+                                {/* Blockchain Score Submission */}
+                                <BlockchainScoreSubmission
+                                    exercise={props.exercise}
+                                    reps={props.reps}
+                                    repHistory={props.repHistory}
+                                    averageFormScore={props.formScore}
+                                />
                                 <PerformanceAnalytics
                                     repHistory={props.repHistory}
                                     totalReps={props.reps}
@@ -78,7 +86,6 @@ export const BottomSection = (props: BottomSectionProps) => {
                         </Collapsible>
                     </div>
 
-                    
                 {/* Debug Panel */}
                 {props.isDebugMode && <DebugPanel poseData={props.poseData} />}
             </div>

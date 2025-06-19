@@ -81,7 +81,7 @@ const Leaderboard = ({ timeframe = 'week' }: LeaderboardProps) => {
         
         {/* Coming Soon Notice - Compact */}
         <div className="mt-3 p-2 bg-muted/30 rounded border-dashed border text-center">
-          <p className="text-xs text-muted-foreground">🚀 Sign up to compete!</p>
+          <p className="text-xs text-muted-foreground">🚀 Connect wallet in header to compete on blockchain!</p>
         </div>
       </CardContent>
     </Card>

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, LineChart as LineChartIcon, Share2, Image as ImageIcon, RotateCw } from "lucide-react";
+import { BlockchainScoreSubmission } from "./BlockchainScoreSubmission";
 import {
   ResponsiveContainer,
   ComposedChart,
