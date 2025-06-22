@@ -85,3 +85,18 @@ We will use **Amazon Bedrock** as the "brain" for our premium, paid analysis, cr
 - **Justification:** This tiered approach makes our use of Bedrock a clear, premium service, justifying the monetization and making it a perfect fit for the bonus prize. The integration is deep, essential, and directly tied to the revenue model.
 
 This revised plan positions **Imperfect Coach** as a premier entry for the Agents in Action hackathon, with a clear user funnel and a powerful, differentiated value proposition.
+
+---
+
+potential paid extra
+
+Option 2: Track Key Metrics Throughout the Rep
+What to add: Instead of just sending the final angles, we could capture the minimum and maximum angles for the elbows and shoulders during the entire repetition. This would give the AI a much better sense of the user's full range of motion.
+Trade-offs:
+Pros: This provides a much more detailed picture of the user's movement, allowing for more precise feedback on range of motion.
+Cons: This is a more complex change, as it requires us to store and manage these values throughout the rep. It would also increase the size of the data payload.
+Option 3: Send the Full Pose Data
+What to add: We could send the complete set of 33 keypoints for the entire body at the top and bottom of the repetition. This would give the AI the most comprehensive possible view of the user's form.
+Trade-offs:
+Pros: This is the most powerful option, giving the AI complete freedom to analyze any aspect of the user's pose. It could lead to the most insightful and unexpected feedback.
+Cons: This is the most complex option to implement and would significantly increase the size of the data payload, which could have performance implications.

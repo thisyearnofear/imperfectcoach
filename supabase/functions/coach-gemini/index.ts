@@ -22,7 +22,7 @@ const systemPrompts = {
 
 const getExerciseDataContext = (exercise) => {
   if (exercise === 'pull-ups') {
-    return `For pull-ups, the rep data includes details: 'peakElbowFlexion' is the elbow angle at the top of the pull (a smaller angle means a higher pull, which is better), 'bottomElbowExtension' is the elbow angle at the bottom of the hang (a larger angle means fuller extension, which is better, >160 degrees is ideal), and 'asymmetry' is the difference in elbow angle between arms (lower is better, ideally close to 0). Use this detailed data to give specific feedback.`;
+    return `For pull-ups, the rep data includes details: 'peakElbowFlexion' is the elbow angle at the top of the pull (a smaller angle means a higher pull, which is better), 'bottomElbowExtension' is the elbow angle at the bottom of the hang (a larger angle means fuller extension, which is better, >155 degrees is ideal), 'asymmetry' is the difference in elbow angle between arms (lower is better, ideally close to 0), 'leftHipAngle', 'rightHipAngle', 'leftKneeAngle', and 'rightKneeAngle' provide insight into lower body form. Significant changes in these angles (e.g., angles less than 160 degrees) may indicate 'kipping' or using leg momentum, which is a form fault. Use this detailed data to give specific feedback, especially on kipping if detected.`;
   }
   if (exercise === 'jumps') {
     return `For jumps, the rep data includes detailed metrics: 'jumpHeight' is the vertical distance achieved in pixels (higher is better, 60+ is great, 40+ is good, <25 needs work), 'landingKneeFlexion' is the average knee angle upon landing (smaller angles <120° indicate excellent shock absorption and safer landings, >160° indicates stiff dangerous landings), 'asymmetry' measures landing balance (lower is better), 'powerScore' rates explosive power (70+ is high power, 50+ is medium, <50 is low), and 'landingScore' rates landing technique (85+ is excellent, 60+ is good, <60 needs improvement). Focus on height progression, landing safety, and power development.`;
@@ -178,7 +178,7 @@ const analyzeJumpSession = (repHistory) => {
     else powerTrend = 'consistent';
     
     // Common issues analysis
-    const issues = [];
+    const issues: string[] = [];
     if (avgHeight < 40) issues.push('low jump height');
     if (landingSuccessRate < 70) issues.push('stiff landings');
     if (consistency < 70) issues.push('inconsistent height');

@@ -19,8 +19,12 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
     const rightElbow = keypoints.find(k => k.name === 'right_elbow');
     const leftHip = keypoints.find(k => k.name === 'left_hip');
     const rightHip = keypoints.find(k => k.name === 'right_hip');
+    const leftKnee = keypoints.find(k => k.name === 'left_knee');
+    const rightKnee = keypoints.find(k => k.name === 'right_knee');
+    const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
+    const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
 
-    if (!nose || !leftWrist || !rightWrist || !leftShoulder || !rightShoulder || !leftElbow || !rightElbow || !leftHip || !rightHip) {
+    if (!nose || !leftWrist || !rightWrist || !leftShoulder || !rightShoulder || !leftElbow || !rightElbow || !leftHip || !rightHip || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) {
         return null;
     }
     
@@ -33,7 +37,7 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
         return null;
     }
 
-    if (nose.score < 0.5 || leftWrist.score < 0.5 || rightWrist.score < 0.5 || leftShoulder.score < 0.5 || rightShoulder.score < 0.5 || leftElbow.score < 0.5 || rightElbow.score < 0.5 || leftHip.score < 0.5 || rightHip.score < 0.5) {
+    if (nose.score < 0.5 || leftWrist.score < 0.5 || rightWrist.score < 0.5 || leftShoulder.score < 0.5 || rightShoulder.score < 0.5 || leftElbow.score < 0.5 || rightElbow.score < 0.5 || leftHip.score < 0.5 || rightHip.score < 0.5 || leftKnee.score < 0.5 || rightKnee.score < 0.5 || leftAnkle.score < 0.5 || rightAnkle.score < 0.5) {
         return {
             feedback: "Make sure you're fully in view!",
             isRepCompleted: false,
@@ -45,7 +49,11 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
     const rightElbowAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
     const leftShoulderAngle = calculateAngle(leftHip, leftShoulder, leftElbow);
     const rightShoulderAngle = calculateAngle(rightHip, rightShoulder, rightElbow);
-    const poseData: PoseData = { keypoints, leftElbowAngle, rightElbowAngle, leftShoulderAngle, rightShoulderAngle };
+    const leftHipAngle = calculateAngle(leftShoulder, leftHip, leftKnee);
+    const rightHipAngle = calculateAngle(rightShoulder, rightHip, rightKnee);
+    const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
+    const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
+    const poseData: PoseData = { keypoints, leftElbowAngle, rightElbowAngle, leftShoulderAngle, rightShoulderAngle, leftHipAngle, rightHipAngle, leftKneeAngle, rightKneeAngle };
 
     const baseResult = { isRepCompleted: false, poseData };
     
@@ -63,7 +71,7 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
     const chinAboveWrists = nose.y < avgWristY;
     const armsFullyExtended = leftElbowAngle > 150 && rightElbowAngle > 150; // Relaxed from 160
     const isPulledUp = leftShoulderAngle < 85 && rightShoulderAngle < 85 && leftElbowAngle < 130 && rightElbowAngle < 130;
-    const aiFeedbackPayloadBase = { reps: internalReps, leftElbowAngle, rightElbowAngle, repState, formIssues: lastRepIssues, leftShoulderAngle, rightShoulderAngle };
+    const aiFeedbackPayloadBase = { reps: internalReps, leftElbowAngle, rightElbowAngle, repState, formIssues: lastRepIssues, leftShoulderAngle, rightShoulderAngle, leftHipAngle, rightHipAngle, leftKneeAngle, rightKneeAngle };
 
     if (repState === 'DOWN' && isPulledUp) {
         if (!chinAboveWrists) {
