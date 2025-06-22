@@ -265,11 +265,9 @@ contract CoachOperator is Ownable, Pausable, ReentrancyGuard {
     }
 
     function _ensurePassportExists(address user) internal {
-        try passport.getPassportData(user) returns (ImperfectCoachPassport.PassportData memory) {
-            // User already has passport
-            return;
-        } catch {
-            // Mint new passport
+        // A user's passport is represented by a tokenId. If the tokenId is 0, it means they don't have one.
+        if (passport.getTokenId(user) == 0) {
+            // Mint a new passport by calling the function on the passport contract instance.
             passport.mint(user);
             uint256 tokenId = passport.getTokenId(user);
             emit PassportMinted(user, tokenId);

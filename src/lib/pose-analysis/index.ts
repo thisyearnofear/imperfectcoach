@@ -1,4 +1,3 @@
-
 import type { Keypoint } from '@tensorflow-models/pose-detection';
 
 /**

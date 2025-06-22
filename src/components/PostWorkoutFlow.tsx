@@ -27,6 +27,7 @@ import { Leaderboard } from "./Leaderboard";
 import { useUserAuth, useUserDisplay } from "@/hooks/useUserHooks";
 import { useFeatureGate } from "@/hooks/useFeatureGate";
 import { Exercise, RepData } from "@/lib/types";
+import PremiumAnalysisUpsell from "./PremiumAnalysisUpsell";
 import { cn } from "@/lib/utils";
 import { CoachSummarySelector } from "./CoachSummarySelector";
 import UnlockedAchievements from "./UnlockedAchievements";
@@ -55,6 +56,8 @@ export const PostWorkoutFlow = ({
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [isUpsellOpen, setIsUpsellOpen] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
 
   const canShowSummary = useFeatureGate("AI_SUMMARY");
   const canShowAchievements = useFeatureGate("ACHIEVEMENTS");
@@ -179,17 +182,39 @@ export const PostWorkoutFlow = ({
             )}
 
             {flowState === "ready" && (
-              <BlockchainScoreSubmission
-                exercise={exercise}
-                reps={reps}
-                repHistory={repHistory}
-                averageFormScore={averageFormScore}
-                onSubmissionComplete={onSubmissionComplete}
-              />
+              <div className="space-y-3">
+                <BlockchainScoreSubmission
+                  exercise={exercise}
+                  reps={reps}
+                  repHistory={repHistory}
+                  averageFormScore={averageFormScore}
+                  onSubmissionComplete={onSubmissionComplete}
+                />
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setIsUpsellOpen(true)}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Get Premium "Bedrock" Analysis
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
       )}
+
+      {/* Premium Analysis Modal */}
+      <PremiumAnalysisUpsell
+        isOpen={isUpsellOpen}
+        onOpenChange={setIsUpsellOpen}
+        workoutData={{ exercise, reps, repHistory, averageFormScore }}
+        onAnalysisComplete={(result) => {
+          setAnalysisResult(result);
+          // Optionally, display the analysis result in a new component or alert
+          console.log("Premium analysis complete:", result);
+        }}
+      />
 
       {/* Quick Leaderboard Preview - Only if connected */}
       {isConnected && (

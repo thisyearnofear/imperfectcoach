@@ -91,10 +91,18 @@ contract ImperfectCoachPassport is ERC721, Ownable, Pausable, Initializable {
     uint256 public constant LEVEL_10 = 32;
     uint256 public constant CONSISTENT_ATHLETE = 64; // 100 workout sessions
 
+    address public coachOperator;
+
     event PassportMinted(address indexed user, uint256 indexed tokenId);
     event PassportUpdated(uint256 indexed tokenId, PassportData data);
     event AchievementUnlocked(uint256 indexed tokenId, uint256 achievement);
     event StreakUpdated(uint256 indexed tokenId, uint32 newStreak, bool streakBroken);
+    event CoachOperatorSet(address indexed operator);
+
+    modifier onlyCoachOperator() {
+        require(msg.sender == coachOperator, "Caller is not the authorized operator");
+        _;
+    }
 
     constructor() ERC721("Imperfect Coach Passport", "ICP") Ownable(msg.sender) {}
 
@@ -102,7 +110,13 @@ contract ImperfectCoachPassport is ERC721, Ownable, Pausable, Initializable {
         // For future upgrades if needed
     }
 
-    function mint(address to) public onlyOwner whenNotPaused {
+    function setCoachOperator(address _operator) public onlyOwner {
+        require(_operator != address(0), "Invalid operator address");
+        coachOperator = _operator;
+        emit CoachOperatorSet(_operator);
+    }
+
+    function mint(address to) public onlyCoachOperator whenNotPaused {
         require(_addressToTokenId[to] == 0, "Passport already exists");
         
         uint256 tokenId = _nextTokenId++;
@@ -127,7 +141,7 @@ contract ImperfectCoachPassport is ERC721, Ownable, Pausable, Initializable {
         uint32 pullupPersonalBest,
         uint32 jumpPersonalBest,
         bool isNewWorkout
-    ) public onlyOwner whenNotPaused {
+    ) public onlyCoachOperator whenNotPaused {
         uint256 tokenId = _addressToTokenId[user];
         require(tokenId != 0, "Passport not found");
 

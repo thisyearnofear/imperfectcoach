@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["dom", "deno.ns"],
+    "module": "esnext",
+    "target": "esnext"
+  }
+}

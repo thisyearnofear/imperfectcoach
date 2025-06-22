@@ -1,5 +1,5 @@
 import * as posedetection from '@tensorflow-models/pose-detection';
-import { calculateAngle } from '@/lib/poseUtils';
+import { calculateAngle } from '@/lib/pose-analysis';
 
 export const cachedFeedback: Record<string, string[]> = {
     asymmetry: [
