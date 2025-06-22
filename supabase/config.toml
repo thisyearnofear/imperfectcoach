@@ -3,3 +3,6 @@ project_id = "bolosphrmagsddyppziz"
 
 [functions.coach-gemini]
 verify_jwt = false
+
+[functions.premium-analysis]
+verify_jwt = false

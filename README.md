@@ -175,6 +175,42 @@ Each leaderboard needs to authorize the CoachOperator to add scores.
 Call on each ExerciseLeaderboard contract:
 solidityaddOperator
 
+---
+
+## 💎 Premium Analysis & Payment Flow
+
+Unlock advanced AI-powered workout analysis with our premium tier:
+
+- **Premium Analysis Service:**
+  - Powered by AWS Lambda and Amazon Bedrock for deep-dive feedback
+  - Public API Gateway endpoint: `https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout`
+  - Accessed via the PremiumAnalysisUpsell component in the app
+- **On-Chain Payment:**
+  - Uses x402 payment protocol for secure, blockchain-based payments
+  - Payments are sent directly to the RevenueSplitter contract
+
+## 💸 RevenueSplitter Contract
+
+- **Address:** `0x3Daa73E9597DD13a3a8311E079C1406b1F52AF16`
+- **Payees:**
+  - `0x55A5705453Ee82c742274154136Fce8149597058` (70%)
+  - `0x3D86Ff165D8bEb8594AE05653249116a6d1fF3f1` (20%)
+  - `0xec4F3Ac60AE169fE27bed005F3C945A112De2c5A` (10%)
+- **Shares:** `[70, 20, 10]`
+- **Initial Owner:** `0xdEc2d60c9526106a8e4BBd01d70950f6694053A3`
+
+---
+
+## 🛣️ Roadmap & Future Plans
+
+- **Phase 1:** Core architecture, smart contracts, and blockchain leaderboard (complete)
+- **Phase 2:** Premium analysis, on-chain payments, and AWS integration (live)
+- **Phase 3:** Autonomous economic loop, referral payouts, and advanced analytics (planned)
+
+For full details, see `docs/PRODUCTION_ROADMAP.md` and `docs/ARCHITECTURE.md`.
+
+---
+
 ## 🔧 Development
 
 ### Project Structure

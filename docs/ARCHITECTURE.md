@@ -5,6 +5,7 @@ This document outlines the clean, DRY, and maintainable architecture implemented
 ## 📁 File Organization
 
 ### Core Architecture
+
 ```
 src/
 ├── contexts/
@@ -28,6 +29,7 @@ src/
 ## 🎯 Design Principles Applied
 
 ### 1. **DRY (Don't Repeat Yourself)**
+
 - **Before**: 3 separate wallet components (`WalletConnect`, `SmartWalletConnect`, `WalletCard`)
 - **After**: 1 unified `UnifiedWallet` with variants (`header`, `card`, `inline`, `minimal`)
 
@@ -35,6 +37,7 @@ src/
 - **After**: Single `UserContext` with specialized hooks (`useUserAuth`, `useUserBlockchain`, `useUserDisplay`)
 
 ### 2. **Single Responsibility Principle**
+
 - **UserContext**: Manages all user-related state (auth + blockchain + display)
 - **UnifiedWallet**: Handles all wallet UI variants
 - **SmartRefresh**: Manages refresh logic and UX
@@ -42,6 +45,7 @@ src/
 - **ErrorBoundary**: Performance monitoring and error handling
 
 ### 3. **Clean Code & Maintainability**
+
 - **Consistent naming**: `useUser*` hooks, `*Props` interfaces
 - **Type safety**: Proper TypeScript throughout
 - **Component composition**: Reusable building blocks
@@ -50,46 +54,49 @@ src/
 ## 🔄 State Management
 
 ### Unified User State
+
 ```typescript
 interface UserState {
   // Auth
-  isConnected: boolean
-  isAuthenticated: boolean
-  address?: string
-  isLoading: boolean
+  isConnected: boolean;
+  isAuthenticated: boolean;
+  address?: string;
+  isLoading: boolean;
 
   // Blockchain
-  leaderboard: BlockchainScore[]
-  canSubmit: boolean
-  timeUntilNextSubmission: number
-  
+  leaderboard: BlockchainScore[];
+  canSubmit: boolean;
+  timeUntilNextSubmission: number;
+
   // Smart Refresh
-  isRefreshing: boolean
-  dataStale: boolean
-  staleness: number
-  pendingUpdates: boolean
-  
+  isRefreshing: boolean;
+  dataStale: boolean;
+  staleness: number;
+  pendingUpdates: boolean;
+
   // Display
-  basename?: string
-  displayName: string
+  basename?: string;
+  displayName: string;
 }
 ```
 
 ### Specialized Hooks
+
 ```typescript
 // For authentication needs
-const { isConnected, signOut } = useUserAuth()
+const { isConnected, signOut } = useUserAuth();
 
-// For blockchain operations  
-const { leaderboard, submitScore } = useUserBlockchain()
+// For blockchain operations
+const { leaderboard, submitScore } = useUserBlockchain();
 
 // For display purposes
-const { displayName, copyAddress } = useUserDisplay()
+const { displayName, copyAddress } = useUserDisplay();
 ```
 
 ## 🎨 Component Architecture
 
 ### UnifiedWallet Variants
+
 ```typescript
 // Header usage
 <HeaderWallet size="sm" />
@@ -105,6 +112,7 @@ const { displayName, copyAddress } = useUserDisplay()
 ```
 
 ### Smart Refresh System
+
 ```typescript
 // Icon only
 <RefreshButton size="sm" />
@@ -119,11 +127,13 @@ const { refreshWithFeedback, shouldSuggestRefresh } = useSmartRefresh()
 ## 🚀 Performance Optimizations
 
 ### 1. **Manual Refresh Strategy**
+
 - **Before**: 30-second auto-refresh intervals
 - **After**: Smart manual refresh with visual indicators
 - **Benefit**: ~90% reduction in API calls
 
 ### 2. **Intelligent Caching**
+
 ```typescript
 // Smart cache configuration
 query: {
@@ -135,12 +145,14 @@ query: {
 ```
 
 ### 3. **Progressive Disclosure**
+
 - Fresh data (0-30%): Minimal indicators
 - Getting old (30-60%): Gentle nudges
 - Outdated (60%+): Clear action needed
 - New activity: Subtle notifications
 
 ### 4. **Request Deduplication**
+
 - Batched refresh calls
 - Single context managing all requests
 - Shared cache across components
@@ -148,17 +160,15 @@ query: {
 ## 🛡️ Error Handling & Reliability
 
 ### Error Boundary System
+
 ```typescript
-<ErrorBoundary
-  maxRetries={3}
-  resetTimeWindow={30000}
-  onError={reportError}
->
+<ErrorBoundary maxRetries={3} resetTimeWindow={30000} onError={reportError}>
   <App />
 </ErrorBoundary>
 ```
 
 ### Features:
+
 - **Auto-retry**: Smart retry with exponential backoff
 - **Performance monitoring**: Render time tracking
 - **Network awareness**: Online/offline handling
@@ -167,6 +177,7 @@ query: {
 ## 📱 Responsive Design
 
 ### Device-Adaptive Flows
+
 ```typescript
 // Mobile: Sheet from bottom
 <Sheet>
@@ -180,6 +191,7 @@ query: {
 ```
 
 ### Responsive Components
+
 - **Header**: "Imperfect Coach" → "IC" on mobile
 - **Wallet**: Progressive disclosure based on screen size
 - **Refresh**: Icon → Badge → Full panel based on space
@@ -187,6 +199,7 @@ query: {
 ## 🔧 Migration Strategy
 
 ### Completed Cleanups
+
 - ✅ Removed duplicate components (`WalletConnect`, `SmartWalletConnect`)
 - ✅ Consolidated hooks into specialized exports
 - ✅ Fixed TypeScript errors and warnings
@@ -194,10 +207,12 @@ query: {
 - ✅ Improved error handling
 
 ### Deprecated (Safe to Remove Later)
+
 - `useAuth.ts` → Use `useUserAuth()` instead
 - `useBlockchainScores.ts` → Use `useUserBlockchain()` instead
 
 ### Benefits Achieved
+
 1. **Performance**: 90% fewer API calls, better caching
 2. **Maintainability**: Single source of truth, consistent patterns
 3. **User Experience**: Smart refresh, progressive disclosure
@@ -207,15 +222,17 @@ query: {
 ## 🎯 Best Practices Established
 
 ### 1. Context Usage
+
 ```typescript
 // ✅ Good: Specialized hooks
-const { isConnected } = useUserAuth()
+const { isConnected } = useUserAuth();
 
 // ❌ Avoid: Direct context usage
-const { isConnected } = useContext(UserContext)
+const { isConnected } = useContext(UserContext);
 ```
 
 ### 2. Component Composition
+
 ```typescript
 // ✅ Good: Variant props
 <UnifiedWallet variant="header" size="sm" />
@@ -225,12 +242,32 @@ const { isConnected } = useContext(UserContext)
 ```
 
 ### 3. Refresh Patterns
+
 ```typescript
 // ✅ Good: User-initiated with feedback
-const { refreshWithFeedback } = useSmartRefresh()
+const { refreshWithFeedback } = useSmartRefresh();
 
 // ❌ Avoid: Silent auto-refresh
-setInterval(refetch, 30000)
+setInterval(refetch, 30000);
 ```
 
 This architecture provides a solid foundation for future development while maintaining excellent performance and user experience.
+
+---
+
+## Deployed Smart Contracts (June 2025)
+
+- **ImperfectCoachPassport.sol**: `0x7c95712a2bce65e723cE99C190f6bd6ff73c4212`
+- **CoachOperator.sol**: `0xdEc2d60c9526106a8e4BBd01d70950f6694053A3`
+- **RevenueSplitter.sol**: `0x3Daa73E9597DD13a3a8311E079C1406b1F52AF16`
+
+### RevenueSplitter Details
+
+- **Payees:**
+  - `0x55A5705453Ee82c742274154136Fce8149597058` (70%)
+  - `0x3D86Ff165D8bEb8594AE05653249116a6d1fF3f1` (20%)
+  - `0xec4F3Ac60AE169fE27bed005F3C945A112De2c5A` (10%)
+- **Shares:** `[70, 20, 10]`
+- **Initial Owner:** `0xdEc2d60c9526106a8e4BBd01d70950f6694053A3`
+
+---

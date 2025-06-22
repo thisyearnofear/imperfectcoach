@@ -122,3 +122,26 @@ This final phase brings the self-sustaining on-chain business to life.
 ### 3. On-Chain Referrals
 
 - **Action:** Extend the `RevenueSplitter.sol` to manage referrer addresses and their revenue shares, enabling automated, on-chain referral payouts.
+
+---
+
+## Deployed Contracts & Configuration (as of June 2025)
+
+### Contract Addresses
+
+- **ImperfectCoachPassport.sol**: `0x7c95712a2bce65e723cE99C190f6bd6ff73c4212`
+- **CoachOperator.sol**: `0xdEc2d60c9526106a8e4BBd01d70950f6694053A3`
+- **RevenueSplitter.sol**: `0x3Daa73E9597DD13a3a8311E079C1406b1F52AF16`
+
+### RevenueSplitter Configuration
+
+- **Payees:**
+  - `0x55A5705453Ee82c742274154136Fce8149597058` (70%)
+  - `0x3D86Ff165D8bEb8594AE05653249116a6d1fF3f1` (20%)
+  - `0xec4F3Ac60AE169fE27bed005F3C945A112De2c5A` (10%)
+- **Shares:** `[70, 20, 10]`
+- **Initial Owner:** `0xdEc2d60c9526106a8e4BBd01d70950f6694053A3`
+
+> These addresses and configuration are now live on Base Sepolia. Update any integration scripts or frontend contract configs accordingly.
+
+---

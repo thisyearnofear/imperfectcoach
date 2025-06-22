@@ -43,8 +43,10 @@ const PremiumAnalysisUpsell = ({
       // The x402-fetch library requires a viem WalletClient
       const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient);
 
-      // This is the new premium analysis endpoint we created the placeholder for
-      const response = await fetchWithPayment("/api/premium-analysis", {
+      const apiUrl =
+        "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
+
+      const response = await fetchWithPayment(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(workoutData),

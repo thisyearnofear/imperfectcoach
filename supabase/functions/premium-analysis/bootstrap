@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Ensure the script fails if any command fails
+set -e
+
+# Check if Deno is available, if not, download and install it
+if ! command -v deno &> /dev/null
+then
+    echo "Deno not found. Installing..."
+    curl -fsSL https://deno.land/x/install/install.sh | sh
+    # Add Deno to the path for the current execution
+    export PATH="/var/task/.deno/bin:$PATH"
+fi
+
+# Execute the Deno function
+exec deno run --allow-net --allow-env index.ts
