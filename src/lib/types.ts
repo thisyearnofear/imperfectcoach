@@ -18,6 +18,8 @@ export interface PullupRepDetails {
 export interface JumpRepDetails {
   jumpHeight: number; // In pixels, relative to ground level
   landingKneeFlexion: number; // Average knee angle on landing
+  explosiveness: number;
+  flightSymmetry: number;
 }
 
 export interface RepData {

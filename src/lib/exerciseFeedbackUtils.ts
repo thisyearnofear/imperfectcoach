@@ -1,4 +1,3 @@
-
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { calculateAngle } from '@/lib/poseUtils';
 
@@ -80,75 +79,82 @@ export function getPullupReadyFeedback(keypoints: posedetection.Keypoint[]): str
 export function getJumpReadyFeedback(
     keypoints: posedetection.Keypoint[], 
     jumpGroundLevel: React.MutableRefObject<number | null>,
-    calibrationFrames: React.MutableRefObject<number>
+    calibrationFrames: React.MutableRefObject<number>,
+    videoDimensions: { width: number, height: number }
 ): string {
-    const leftHip = keypoints.find(k => k.name === 'left_hip');
-    const rightHip = keypoints.find(k => k.name === 'right_hip');
-    const leftKnee = keypoints.find(k => k.name === 'left_knee');
-    const rightKnee = keypoints.find(k => k.name === 'right_knee');
-    const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
-    const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
-    const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
-    const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
+    const keypointsMap = new Map(keypoints.map(k => [k.name, k]));
 
-    // Check if all essential keypoints are visible
-    const allKeypointsVisible = leftHip?.score > 0.5 && rightHip?.score > 0.5 && 
-                               leftKnee?.score > 0.5 && rightKnee?.score > 0.5 &&
-                               leftAnkle?.score > 0.5 && rightAnkle?.score > 0.5 &&
-                               leftShoulder?.score > 0.5 && rightShoulder?.score > 0.5;
+    const requiredKeypoints = ['left_hip', 'right_hip', 'left_knee', 'right_knee', 'left_ankle', 'right_ankle', 'left_shoulder', 'right_shoulder'];
+    const visibleKeypoints = requiredKeypoints.filter(name => (keypointsMap.get(name)?.score ?? 0) > 0.5);
 
-    if (!allKeypointsVisible) {
-        return "Stand in full view of the camera. Make sure your whole body is visible.";
+    if (visibleKeypoints.length < requiredKeypoints.length) {
+        const missingKeypoints = requiredKeypoints.filter(name => !visibleKeypoints.includes(name));
+        return `Stand in full view. Missing: ${missingKeypoints.join(', ').replace(/_/g, ' ')}.`;
     }
 
-    // If not calibrated yet, start calibration process
+    const leftHip = keypointsMap.get('left_hip')!;
+    const rightHip = keypointsMap.get('right_hip')!;
+    const leftKnee = keypointsMap.get('left_knee')!;
+    const rightKnee = keypointsMap.get('right_knee')!;
+    const leftAnkle = keypointsMap.get('left_ankle')!;
+    const rightAnkle = keypointsMap.get('right_ankle')!;
+    const leftShoulder = keypointsMap.get('left_shoulder')!;
+    const rightShoulder = keypointsMap.get('right_shoulder')!;
+
+    // Centering and positioning feedback
+    const bodyCenterX = (leftShoulder.x + rightShoulder.x) / 2;
+    const frameCenterX = videoDimensions.width / 2;
+    const horizontalOffset = Math.abs(bodyCenterX - frameCenterX);
+
+    if (horizontalOffset > videoDimensions.width * 0.2) {
+        return `Move ${bodyCenterX < frameCenterX ? 'right' : 'left'} to center yourself in the frame.`;
+    }
+
+    const bodyHeight = Math.abs(leftShoulder.y - leftAnkle.y);
+    if (bodyHeight < videoDimensions.height * 0.5) {
+        return "Move closer to the camera so I can see you better.";
+    }
+
     if (jumpGroundLevel.current === null) {
-        // Calculate body angles for posture analysis
-        const leftKneeAngle = calculateAngle(leftHip!, leftKnee!, leftAnkle!);
-        const rightKneeAngle = calculateAngle(rightHip!, rightKnee!, leftAnkle!);
+        const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
+        const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
         const avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
 
-        // Check for good standing posture
-        if (avgKneeAngle < 160) {
+        if (avgKneeAngle < 165) {
             calibrationFrames.current = 0;
-            return "Stand up straight with your legs extended to calibrate your starting position.";
+            return "Stand up straighter to calibrate your starting position.";
         }
 
-        // Check foot positioning
-        const footDistance = Math.abs(leftAnkle!.x - rightAnkle!.x);
-        const shoulderDistance = Math.abs(leftShoulder!.x - rightShoulder!.x);
+        const footDistance = Math.abs(leftAnkle.x - rightAnkle.x);
+        const shoulderDistance = Math.abs(leftShoulder.x - rightShoulder.x);
         
-        if (footDistance < shoulderDistance * 0.7) {
+        if (footDistance < shoulderDistance * 0.6 || footDistance > shoulderDistance * 1.4) {
             calibrationFrames.current = 0;
-            return "Spread your feet to about shoulder-width apart for better stability.";
+            return "Place your feet about shoulder-width apart.";
         }
 
-        // Good posture detected, start calibration countdown
         calibrationFrames.current += 1;
+        const calibrationProgress = Math.round((calibrationFrames.current / 30) * 100);
         
-        if (calibrationFrames.current < 30) { // ~1 second at 30fps
-            return "Hold this position while I calibrate your ground level...";
+        if (calibrationFrames.current < 30) {
+            return `Hold still... Calibrating: ${calibrationProgress}%`;
         }
 
-        // Calibration complete
-        jumpGroundLevel.current = (leftAnkle!.y + rightAnkle!.y) / 2;
-        return "Calibration complete! You're ready to jump. Crouch down and explode upward!";
+        jumpGroundLevel.current = (leftAnkle.y + rightAnkle.y) / 2;
+        return "Calibrated! Crouch down and explode up!";
     }
 
-    // Already calibrated - provide jump preparation feedback
-    const currentAnkleY = (leftAnkle!.y + rightAnkle!.y) / 2;
-    const leftKneeAngle = calculateAngle(leftHip!, leftKnee!, leftAnkle!);
-    const rightKneeAngle = calculateAngle(rightHip!, rightKnee!, rightAnkle!);
+    const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
+    const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
     const avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
 
-    // Enhanced feedback based on crouch depth and preparation
     if (avgKneeAngle < 90) {
-        return "Perfect deep crouch! Now explode upward with maximum power!";
+        return "Perfect crouch! Explode up!";
     } else if (avgKneeAngle < 120) {
-        return "Great crouch! Drive through your legs and jump as high as you can!";
+        return "Good crouch! Jump!";
     } else if (avgKneeAngle < 150) {
-        return "Good preparation! Crouch a bit deeper, then explode upward!";
+        return "Crouch a bit deeper, then jump!";
     } else {
-        return "Ready to jump! Crouch down first, then explode upward for maximum height!";
+        return "Ready! Crouch, then explode upward!";
     }
 }

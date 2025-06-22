@@ -70,10 +70,11 @@ export const usePoseDetection = ({
       const canvas = canvasRef.current;
 
       if (detector && video && video.readyState === 4 && canvas) {
+        const videoDimensions = { width: video.videoWidth, height: video.videoHeight };
         const poses = await detector.estimatePoses(video);
         const pose = poses && poses.length > 0 ? poses[0] : null;
 
-        processPose(pose);
+        processPose(pose, videoDimensions);
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
