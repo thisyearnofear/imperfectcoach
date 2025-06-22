@@ -125,6 +125,56 @@ To enable blockchain features:
 - **Blockchain Leaderboard**: Compete with others on a tamper-proof leaderboard
 - **Permanent Records**: Your best performances are stored forever on Base Sepolia
 
+## Contracts
+
+deployed on base sepolia
+
+@/contracts/ImperfectCoachPassport.sol
+
+ImperfectCoachPassport.sol
+0x7ACE72cdD241e26be842381fF2AfAcBB9d969718
+
+@/contracts/CoachOperator.sol
+
+CoachOperator.sol
+0x11640405F7552124dB36195158e59Ff791Df47C2
+
+ExerciseLeaderboard.sol
+0xa946cF9253Fe3734F3ea794DaEB7D5Dd7fB81E03
+
+\_exercisename: jumps
+
+ExerciseLeaderboard.sol
+0xB6084cff5e0345432De6CE0d4a6EBdfDc7C4E82A
+
+\_exercisename: pullups
+
+config/tuple
+
+addLeaderboard
+exercise:
+0x58857c61e1c66c3364b0e545b626ef16ecce5b7b1b9ab12c0857bcb9ee9d12d5
+leaderboardAddress:
+0xB6084cff5e0345432De6CE0d4a6EBdfDc7C4E82A
+config:
+[50, 300, 10, true]
+
+addLeaderboard
+exercise:
+0x6b3e0e693d98ab1b983d1bfa5a9cbeb4004247dfd98cdb9ae7b2595f64132e41
+leaderboardAddress:
+0xa946cF9253Fe3734F3ea794DaEB7D5Dd7fB81E03
+config:
+[50, 300, 10, true]
+
+Transfeed Passport Ownership
+The CoachOperator needs to own the Passport contract to mint/update passports.
+
+Authorized Leaderboard Operators
+Each leaderboard needs to authorize the CoachOperator to add scores.
+Call on each ExerciseLeaderboard contract:
+solidityaddOperator
+
 ## 🔧 Development
 
 ### Project Structure

@@ -7,7 +7,9 @@ import { createThirdwebClient } from "thirdweb";
 import { base } from "thirdweb/chains";
 
 const client = createThirdwebClient({
-  clientId: "cd2fc16a6b59aa67ccaa3c76eaa421f3",
+  clientId:
+    import.meta.env.VITE_THIRDWEB_CLIENT_ID ||
+    "cd2fc16a6b59aa67ccaa3c76eaa421f3",
 });
 
 export const useBasename = (address?: string) => {

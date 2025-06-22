@@ -1,4 +1,3 @@
-
 import * as posedetection from '@tensorflow-models/pose-detection';
 import { calculateAngle } from '@/lib/poseUtils';
 import { RepState, WorkoutMode, PoseData, ProcessorResult } from '@/lib/types';
@@ -25,7 +24,10 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
         return null;
     }
     
-    const isHanging = leftWrist.y < leftShoulder.y && rightWrist.y < rightShoulder.y;
+    const avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+    const avgWristY = (leftWrist.y + rightWrist.y) / 2;
+
+    const isHanging = avgWristY < avgShoulderY;
     if (!isHanging) {
         // Not in a pull-up position, return null to allow pre-workout feedback to take over.
         return null;
@@ -58,24 +60,31 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
         formCheckSpeak = { issue: 'asymmetry', phrase: 'Pull evenly' };
     }
 
-    const chinAboveWrists = nose.y < leftWrist.y && nose.y < rightWrist.y;
+    const chinAboveWrists = nose.y < avgWristY;
     const armsFullyExtended = leftElbowAngle > 150 && rightElbowAngle > 150; // Relaxed from 160
     const isPulledUp = leftShoulderAngle < 85 && rightShoulderAngle < 85 && leftElbowAngle < 130 && rightElbowAngle < 130;
     const aiFeedbackPayloadBase = { reps: internalReps, leftElbowAngle, rightElbowAngle, repState, formIssues: lastRepIssues, leftShoulderAngle, rightShoulderAngle };
 
     if (repState === 'DOWN' && isPulledUp) {
         if (!chinAboveWrists) {
-            currentIssues.push('partial_top_rom');
-            feedback = "Get your chin over the bar!";
-            formCheckSpeak = { issue: 'partial_top_rom', phrase: 'Higher' };
+            // Partial rep: user is pulling up but chin is not over wrists.
+            // Provide feedback and keep them in the 'DOWN' state. This prevents 'cheating' with shallow reps.
+            return { 
+                ...baseResult, 
+                feedback: "Get your chin over the bar!", 
+                formCheckSpeak: { issue: 'partial_top_rom', phrase: 'Higher' } 
+            };
+        } else {
+            // Full rep: user has pulled up with chin over wrists.
+            // Transition to 'UP' state. The rep will be counted on the way down.
+            return {
+                ...baseResult,
+                newRepState: 'UP',
+                aiFeedbackPayload: aiFeedbackPayloadBase,
+                feedback, // Carry over any existing feedback (e.g., asymmetry)
+                formCheckSpeak
+            };
         }
-        return {
-            ...baseResult,
-            newRepState: 'UP',
-            aiFeedbackPayload: aiFeedbackPayloadBase,
-            feedback,
-            formCheckSpeak
-        };
     } else if (repState === 'UP' && armsFullyExtended) {
         // We count the rep if arms are extended beyond 150 degrees.
         // But we still check if they achieved "perfect" extension (160 degrees).

@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
 
 import { config } from "@/wagmi";
+import { UserProvider } from "@/contexts/UserContext";
 
 export function Web3Providers(props: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -12,7 +13,9 @@ export function Web3Providers(props: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        {props.children}
+        <UserProvider options={{ requireSiwe: true, enableSmartRefresh: true }}>
+          {props.children}
+        </UserProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

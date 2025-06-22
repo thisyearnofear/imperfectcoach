@@ -53,32 +53,14 @@ const Index = () => {
             onCoachModelChange={page.handleCoachModelChange}
           />
 
-          {/* Bottom Section: CoachFeedback + Analytics */}
+          {/* Bottom Section: Streamlined Post-Workout Flow */}
           <BottomSection
             reps={page.reps}
-            formFeedback={page.formFeedback}
             formScore={page.formScore}
-            coachModel={page.coachModel}
-            workoutMode={page.workoutMode}
-            analyticsRef={page.analyticsRef}
-            isAnalyticsOpen={page.isAnalyticsOpen}
-            setIsAnalyticsOpen={page.setIsAnalyticsOpen}
-            selectedCoaches={page.selectedCoaches}
-            setSelectedCoaches={page.setSelectedCoaches}
-            isWorkoutActive={page.isWorkoutActive}
-            isSummaryLoading={page.isSummaryLoading}
             repHistory={page.repHistory}
             exercise={page.selectedExercise}
-            sessionDuration={page.sessionDuration}
-            repTimings={page.repTimings}
-            sessionSummaries={page.sessionSummaries}
-            achievements={page.achievements}
             isDebugMode={page.isDebugMode}
             poseData={page.poseData}
-            onTryAgain={page.handleTryAgain}
-            chatMessages={page.chatMessages}
-            isChatLoading={page.isChatLoading}
-            onSendMessage={page.handleSendMessage}
           />
         </div>
       </main>

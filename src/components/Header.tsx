@@ -6,7 +6,8 @@ import {
 } from "@/lib/types";
 import SettingsStatusBar from "@/components/SettingsStatusBar";
 import SettingsModal from "@/components/SettingsModal";
-import { WalletConnect } from "@/components/WalletConnect";
+import { HeaderWallet } from "@/components/UnifiedWallet";
+import { NetworkStatus } from "@/components/NetworkStatus";
 
 interface HeaderProps {
   exercise: Exercise;
@@ -59,8 +60,11 @@ const Header = ({
           </div>
 
           <div className="flex items-center gap-1 md:gap-2 min-w-0">
+            {/* Network Status - Compact */}
+            <NetworkStatus variant="compact" showSwitchButton={true} />
+
             {/* Wallet Connection */}
-            <WalletConnect compact />
+            <HeaderWallet size="sm" />
 
             {/* Desktop Settings Modal */}
             <div className="hidden lg:block">
