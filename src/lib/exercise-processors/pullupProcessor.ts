@@ -88,7 +88,7 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
     } else if (repState === 'UP' && armsFullyExtended) {
         // We count the rep if arms are extended beyond 150 degrees.
         // But we still check if they achieved "perfect" extension (160 degrees).
-        if (leftElbowAngle < 160 || rightElbowAngle < 160) {
+        if (leftElbowAngle < 155 || rightElbowAngle < 155) { // Relaxed threshold from 160
             currentIssues.push('partial_bottom_rom');
             feedback = "Full extension at the bottom!";
             formCheckSpeak = { issue: 'partial_bottom_rom', phrase: 'Full extension' };
@@ -96,7 +96,9 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
 
         let currentRepScore = 100;
         if (currentIssues.includes('asymmetry')) currentRepScore -= 30;
-        if (currentIssues.includes('partial_top_rom')) currentRepScore -= 25;
+        // The 'partial_top_rom' check was flawed as it looked at the previous rep.
+        // The new logic correctly prevents reps without full top ROM from being counted at all,
+        // so a separate score penalty is redundant and confusing.
         if (currentIssues.includes('partial_bottom_rom')) currentRepScore -= 25;
         
         const repCompletionData = {
