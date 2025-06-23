@@ -61,6 +61,8 @@ const Index = () => {
             exercise={page.selectedExercise}
             isDebugMode={page.isDebugMode}
             poseData={page.poseData}
+            isWorkoutActive={page.isWorkoutActive}
+            hasWorkoutEnded={page.sessionHasConcluded}
           />
         </div>
       </main>

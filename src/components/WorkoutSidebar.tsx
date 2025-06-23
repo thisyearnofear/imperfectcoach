@@ -1,6 +1,6 @@
 import CoreControls from "@/components/CoreControls";
 import CoachFeedback from "@/components/CoachFeedback";
-import MyPassport from "@/components/MyPassport"; // Import the new component
+import MyPassport from "@/components/MyPassport";
 import {
   Select,
   SelectContent,
@@ -36,7 +36,7 @@ interface WorkoutSidebarProps {
 
 const WorkoutSidebar = (props: WorkoutSidebarProps) => {
   return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="flex flex-col gap-4 h-full">
       {/* Live Feedback - Moved to top so users can see feedback while positioning */}
       <div className="bg-card p-4 rounded-lg border flex-1">
         <h3 className="text-lg font-semibold mb-4">Live Feedback</h3>
@@ -48,6 +48,9 @@ const WorkoutSidebar = (props: WorkoutSidebarProps) => {
           workoutMode={props.workoutMode}
         />
       </div>
+
+      {/* Passport - both desktop and mobile */}
+      <MyPassport />
 
       {/* Workout Controls - Moved below feedback */}
       <div className="bg-card p-4 rounded-lg border">
@@ -81,9 +84,6 @@ const WorkoutSidebar = (props: WorkoutSidebarProps) => {
           </div>
         </div>
       </div>
-
-      {/* On-Chain Passport */}
-      <MyPassport />
     </div>
   );
 };

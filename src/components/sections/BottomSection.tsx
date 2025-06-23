@@ -10,6 +10,8 @@ interface BottomSectionProps {
   exercise: Exercise;
   isDebugMode: boolean;
   poseData: PoseData | null;
+  isWorkoutActive: boolean;
+  hasWorkoutEnded: boolean;
 }
 
 export const BottomSection = ({
@@ -19,6 +21,8 @@ export const BottomSection = ({
   exercise,
   isDebugMode,
   poseData,
+  isWorkoutActive,
+  hasWorkoutEnded,
 }: BottomSectionProps) => {
   return (
     <div className="w-full">
@@ -29,6 +33,8 @@ export const BottomSection = ({
           reps={reps}
           repHistory={repHistory}
           averageFormScore={formScore}
+          isWorkoutActive={isWorkoutActive}
+          hasWorkoutEnded={hasWorkoutEnded}
         />
 
         {/* Debug Panel */}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -19,6 +19,7 @@ import {
   Shield,
   Sparkles,
   ArrowRight,
+  Brain,
 } from "lucide-react";
 import { BlockchainScoreSubmission } from "./BlockchainScoreSubmission";
 import { InlineWallet } from "./UnifiedWallet";
@@ -39,6 +40,8 @@ interface PostWorkoutFlowProps {
   repHistory: RepData[];
   averageFormScore: number;
   onSubmissionComplete?: () => void;
+  isWorkoutActive?: boolean;
+  hasWorkoutEnded?: boolean;
 }
 
 type FlowState = "results" | "connect" | "authenticate" | "ready" | "submitted";
@@ -49,21 +52,36 @@ export const PostWorkoutFlow = ({
   repHistory,
   averageFormScore,
   onSubmissionComplete,
+  isWorkoutActive = false,
+  hasWorkoutEnded = false,
 }: PostWorkoutFlowProps) => {
   const { isConnected, isAuthenticated } = useUserAuth();
   const { basename } = useUserDisplay();
   const { achievements } = useAchievements(reps, repHistory, averageFormScore);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isUpsellOpen, setIsUpsellOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{
     analysis: string;
   } | null>(null);
 
+  const resultsRef = useRef<HTMLDivElement>(null);
+
   const canShowSummary = useFeatureGate("AI_SUMMARY");
   const canShowAchievements = useFeatureGate("ACHIEVEMENTS");
   const canShowAnalytics = useFeatureGate("FULL_ANALYTICS");
+
+  // Auto-scroll to results only when workout actually ends
+  useEffect(() => {
+    if (hasWorkoutEnded && reps > 0 && resultsRef.current) {
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 500);
+    }
+  }, [hasWorkoutEnded, reps]);
 
   // Determine current flow state
   const getFlowState = (): FlowState => {
@@ -119,31 +137,72 @@ export const PostWorkoutFlow = ({
 
   return (
     <div className="space-y-4">
-      {/* Workout Results - Always Visible */}
-      <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-green-800">
-            <Sparkles className="h-5 w-5" />
-            Workout Complete!
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-3 bg-white/60 rounded-lg">
-              <div className="text-3xl font-bold text-green-700">{reps}</div>
-              <div className="text-sm text-green-600 capitalize font-medium">
-                {exercise}
+      {/* Basic AI Analysis - Replaces redundant Workout Complete section */}
+      <div ref={resultsRef}>
+        <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-800">
+              <Brain className="h-5 w-5" />
+              Basic AI Analysis
+            </CardTitle>
+            <CardDescription className="text-blue-700">
+              Free insights about your {exercise} performance
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-white rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{reps}</div>
+                <div className="text-sm text-gray-600">Reps Completed</div>
+              </div>
+              <div className="text-center p-3 bg-white rounded-lg">
+                <div className="text-2xl font-bold text-green-600">
+                  {Math.round(averageFormScore)}%
+                </div>
+                <div className="text-sm text-gray-600">Avg Form Score</div>
               </div>
             </div>
-            <div className="text-center p-3 bg-white/60 rounded-lg">
-              <div className="text-3xl font-bold text-green-700">
-                {Math.round(averageFormScore)}%
-              </div>
-              <div className="text-sm text-green-600 font-medium">Avg Form</div>
+
+            <div className="p-4 bg-white rounded-lg border-l-4 border-blue-500">
+              <h4 className="font-semibold text-gray-800 mb-2">Quick Tips:</h4>
+              <ul className="text-sm text-gray-700 space-y-1">
+                <li>
+                  •{" "}
+                  {averageFormScore >= 80
+                    ? "Excellent form! Keep it consistent."
+                    : "Focus on controlled movements for better form."}
+                </li>
+                <li>
+                  •{" "}
+                  {reps >= 5
+                    ? "Great endurance! Try increasing intensity."
+                    : "Build up reps gradually for strength gains."}
+                </li>
+                <li>• Remember to maintain steady breathing throughout</li>
+              </ul>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+
+            <Alert className="border-amber-200 bg-amber-50">
+              <Sparkles className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                <div className="flex items-center justify-between">
+                  <span>
+                    <strong>Want detailed analysis?</strong> Get professional AI
+                    coaching for just $0.25
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => setIsUpsellOpen(true)}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    Upgrade
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Primary Action - Context Sensitive */}
       {primaryAction && (
@@ -215,7 +274,7 @@ export const PostWorkoutFlow = ({
           reps,
           repHistory: repHistory.map((rep) => ({
             score: rep.score,
-            details: rep.details as Record<string, unknown>,
+            details: rep.details as unknown as Record<string, unknown>,
           })),
           averageFormScore,
         }}
@@ -226,130 +285,20 @@ export const PostWorkoutFlow = ({
         }}
       />
 
-      {/* Quick Leaderboard Preview - Only if connected */}
-      {isConnected && (
+      {/* Advanced Features - Simplified */}
+      {canShowAchievements && (
         <Card className="border border-gray-200">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-gray-800">
-                <Users className="h-5 w-5" />
-                Global Leaderboard
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowLeaderboard(!showLeaderboard)}
-                className="text-gray-600 hover:text-gray-800"
-              >
-                {showLeaderboard ? (
-                  <>
-                    Hide <ChevronUp className="h-4 w-4 ml-1" />
-                  </>
-                ) : (
-                  <>
-                    Show <ChevronDown className="h-4 w-4 ml-1" />
-                  </>
-                )}
-              </Button>
-            </div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-gray-800">
+              <Trophy className="h-5 w-5" />
+              Achievements Unlocked
+            </CardTitle>
           </CardHeader>
-          {showLeaderboard && (
-            <CardContent>
-              <Leaderboard
-                exercise={exercise}
-                currentUserAddress={undefined}
-                refreshTrigger={0}
-                compact={true}
-              />
-            </CardContent>
-          )}
+          <CardContent>
+            <UnlockedAchievements achievements={achievements} />
+          </CardContent>
         </Card>
       )}
-
-      {/* Advanced Features - Collapsible */}
-      <Card className="border border-gray-200">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-gray-800">
-              <TrendingUp className="h-5 w-5" />
-              Performance & Analysis
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-gray-600 hover:text-gray-800"
-            >
-              {showAdvanced ? (
-                <>
-                  Hide <ChevronUp className="h-4 w-4 ml-1" />
-                </>
-              ) : (
-                <>
-                  Show <ChevronDown className="h-4 w-4 ml-1" />
-                </>
-              )}
-            </Button>
-          </div>
-          {!showAdvanced && (
-            <CardDescription className="text-gray-600">
-              View detailed analytics, AI coach feedback, and performance trends
-            </CardDescription>
-          )}
-        </CardHeader>
-        {showAdvanced && (
-          <CardContent className="space-y-4">
-            {canShowSummary && (
-              <div className="space-y-2">
-                <h4 className="font-semibold text-gray-800">
-                  AI Coach Summaries
-                </h4>
-                <div className="text-sm text-muted-foreground p-4 bg-gray-50 rounded-lg border">
-                  <p>
-                    <span className="font-semibold text-green-600">
-                      Unlocked:
-                    </span>{" "}
-                    You can now select multiple AI coaches to get diverse
-                    feedback on your performance. This feature is available in
-                    the main settings.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {canShowAchievements && (
-              <div className="space-y-2">
-                <h4 className="font-semibold text-gray-800">Achievements</h4>
-                <UnlockedAchievements achievements={achievements} />
-              </div>
-            )}
-
-            {!canShowAnalytics && canShowSummary && (
-              <Alert className="border-yellow-200 bg-yellow-50">
-                <Zap className="h-4 w-4 text-yellow-600" />
-                <AlertDescription className="text-yellow-800">
-                  <div className="flex items-center justify-between">
-                    <span>
-                      <strong>Want more?</strong> Get a Base Name to unlock
-                      detailed analytics and AI chat.
-                    </span>
-                    <ArrowRight className="h-4 w-4 text-yellow-600" />
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {canShowAnalytics && (
-              <div className="text-center text-green-600 py-4">
-                <p className="font-semibold">Full Analytics Unlocked!</p>
-                <p className="text-sm">
-                  You can now access detailed performance charts and AI chat.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        )}
-      </Card>
 
       {/* Motivational Footer - Only for disconnected users */}
       {!isConnected && (

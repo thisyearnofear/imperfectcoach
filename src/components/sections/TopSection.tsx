@@ -3,6 +3,7 @@ import WorkoutSidebar from "@/components/WorkoutSidebar";
 import CoachFeedback from "@/components/CoachFeedback";
 import CoreControls from "@/components/CoreControls";
 import Leaderboard from "@/components/Leaderboard";
+import PoseDetectionGuide from "@/components/PoseDetectionGuide";
 import {
   Exercise,
   CoachPersonality,
@@ -71,6 +72,11 @@ export const TopSection = (props: TopSectionProps) => {
           <div className="hidden lg:block">
             <Leaderboard timeframe="week" />
           </div>
+
+          {/* Desktop Visual Guide - Below leaderboard for landscape symmetry */}
+          <div className="hidden lg:block">
+            <PoseDetectionGuide />
+          </div>
         </div>
 
         {/* Right: Workout Sidebar - Controls + Live Feedback (~40% width) */}
@@ -93,6 +99,8 @@ export const TopSection = (props: TopSectionProps) => {
 
       {/* Mobile: Stacked layout with feedback first, then controls below video */}
       <div className="lg:hidden mt-6 space-y-4">
+        {/* Mobile Visual Guide - First on mobile for educational value */}
+        <PoseDetectionGuide />
         {/* Live Feedback - Now first on mobile too for consistency */}
         <div className="bg-card p-4 rounded-lg border">
           <h3 className="text-lg font-semibold mb-4">Live Feedback</h3>

@@ -178,56 +178,62 @@ const MyPassport = () => {
   const typedPassportData = passportData as PassportData | null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>My WIP Passport</CardTitle>
+    <Card className="h-fit">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <span className="text-2xl">🏆</span>
+          My WIP Passport
+          {tokenId && (
+            <span className="text-sm font-normal text-muted-foreground">
+              #{tokenId.toString()}
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        {!imageUrl && typedPassportData && (
-          <div className="w-full h-32 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center">
-            <div className="text-center text-sm text-gray-600">
-              <div className="text-2xl font-bold text-blue-600">
-                #{tokenId?.toString()}
-              </div>
-              <div>NFT Image Loading...</div>
-            </div>
-          </div>
-        )}
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt="Imperfect Coach Passport NFT"
-            className="w-full rounded-lg mb-4"
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
-          />
-        )}
+      <CardContent className="space-y-3">
         {typedPassportData && (
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <p>
-              <strong>Level:</strong> {typedPassportData.level.toString()}
-            </p>
-            <p>
-              <strong>Total Sessions:</strong>{" "}
-              {typedPassportData.totalWorkoutSessions.toString()}
-            </p>
-            <p>
-              <strong>Pull-ups:</strong>{" "}
-              {typedPassportData.totalPullups.toString()}
-            </p>
-            <p>
-              <strong>Jumps:</strong> {typedPassportData.totalJumps.toString()}
-            </p>
-            <p>
-              <strong>Current Streak:</strong>{" "}
-              {typedPassportData.currentStreak.toString()} days
-            </p>
-            <p>
-              <strong>Longest Streak:</strong>{" "}
-              {typedPassportData.longestStreak.toString()} days
-            </p>
-          </div>
+          <>
+            <div className="flex items-center justify-between p-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-600">Level</span>
+              <span className="text-lg font-bold text-blue-600">
+                {typedPassportData.level.toString()}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Sessions:</span>
+                <span className="font-semibold">
+                  {typedPassportData.totalWorkoutSessions.toString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Streak:</span>
+                <span className="font-semibold">
+                  {typedPassportData.currentStreak.toString()}d
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Pull-ups:</span>
+                <span className="font-semibold text-green-600">
+                  {typedPassportData.totalPullups.toString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Jumps:</span>
+                <span className="font-semibold text-blue-600">
+                  {typedPassportData.totalJumps.toString()}
+                </span>
+              </div>
+            </div>
+
+            {typedPassportData.longestStreak >
+              typedPassportData.currentStreak && (
+              <div className="text-xs text-center text-muted-foreground border-t pt-2">
+                Best streak: {typedPassportData.longestStreak.toString()} days
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

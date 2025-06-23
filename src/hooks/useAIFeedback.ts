@@ -17,22 +17,25 @@ const getFallbackFeedback = (
 ): string => {
   const fallbackMessages = {
     "pull-ups": [
-      "Keep pushing! Focus on full range of motion and controlled movement.",
-      "Great effort! Remember to engage your core and avoid swinging.",
-      "Nice work! Try to pull your chest to the bar for maximum benefit.",
-      "Keep it up! Control the descent to maximize muscle engagement.",
+      "Strong form! Focus on controlled descent and full range of motion.",
+      "Good technique! Engage your lats and avoid momentum swinging.",
+      "Nice control! Try to pause briefly at the top for maximum benefit.",
+      "Solid reps! Keep your core tight throughout the movement.",
+      "Great effort! Focus on pulling with your back, not just arms.",
     ],
     jumps: [
-      "Explosive power! Focus on soft landings to protect your joints.",
-      "Great height! Remember to land with bent knees for safety.",
-      "Nice jumps! Try to maintain consistent form throughout the set.",
-      "Keep jumping! Focus on quick takeoffs and controlled landings.",
+      "Explosive power! Land softly on the balls of your feet.",
+      "Good height! Keep your knees slightly bent on landing.",
+      "Nice rhythm! Focus on quick, powerful takeoffs.",
+      "Great consistency! Try to minimize ground contact time.",
+      "Excellent jumps! Keep your core engaged for stability.",
     ],
     default: [
-      "Great workout! Keep maintaining good form and consistency.",
-      "Nice effort! Focus on quality over quantity.",
-      "Keep it up! Remember to breathe and stay focused.",
-      "Excellent work! Consistency is key to improvement.",
+      "Excellent form! Maintain this quality throughout your workout.",
+      "Strong technique! Focus on controlled, deliberate movements.",
+      "Great consistency! Quality reps lead to better results.",
+      "Nice control! Remember to breathe steadily during exercise.",
+      "Solid performance! Keep challenging yourself progressively.",
     ],
   };
 
@@ -41,11 +44,12 @@ const getFallbackFeedback = (
   // If there are specific issues, provide targeted advice
   if (issues.length > 0) {
     const issueAdvice = {
-      form: "Focus on maintaining proper form - slow and controlled movements work best.",
-      range: "Try to achieve full range of motion for maximum effectiveness.",
-      pace: "Consider adjusting your pace - quality repetitions are more valuable than speed.",
-      fatigue:
-        "Take a moment to rest if needed - proper form is more important than pushing through fatigue.",
+      form: "Form check! Slow down and focus on perfect technique.",
+      range: "Range of motion tip: Go for full extension and contraction.",
+      pace: "Pace yourself - controlled reps beat rushed ones every time.",
+      fatigue: "Take a breather if needed - quality over quantity always wins.",
+      asymmetry: "Balance check! Focus on symmetrical movement patterns.",
+      depth: "Go deeper! Full range of motion maximizes muscle activation.",
     };
 
     for (const issue of issues) {
@@ -108,9 +112,11 @@ export const useAIFeedback = ({
         }
       } catch (error) {
         console.error("Error getting AI feedback:", error);
-        // Provide more helpful fallback feedback based on exercise type
+        // Always provide helpful fallback feedback when AI services fail
         const fallbackFeedback = getFallbackFeedback(exercise, lastIssues);
-        onFormFeedback(fallbackFeedback);
+        onFormFeedback(
+          `💡 ${fallbackFeedback} (Upgrade for detailed AI analysis!)`
+        );
       }
     },
     [exercise, coachPersonality, workoutMode, onFormFeedback]
