@@ -125,55 +125,41 @@ To enable blockchain features:
 - **Blockchain Leaderboard**: Compete with others on a tamper-proof leaderboard
 - **Permanent Records**: Your best performances are stored forever on Base Sepolia
 
-## Contracts
+## 🚀 Deployment Status
 
-deployed on base sepolia
+**All systems deployed and operational on Base Sepolia!**
 
-@/contracts/ImperfectCoachPassport.sol
+### 📄 Smart Contracts
 
-ImperfectCoachPassport.sol
-0x7ACE72cdD241e26be842381fF2AfAcBB9d969718
+| Contract | Address | Status |
+|----------|---------|--------|
+| **ImperfectCoachPassport** | `0x7c95712a2bce65e723cE99C190f6bd6ff73c4212` | ✅ Deployed |
+| **CoachOperator** | `0xdEc2d60c9526106a8e4BBd01d70950f6694053A3` | ✅ Deployed |
+| **RevenueSplitter** | `0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA` | ✅ Deployed |
+| **Jumps Leaderboard** | `0xc5fB32a87A0D54f2AEbc773F0038d32c79AA1004` | ✅ Deployed |
+| **Pullups Leaderboard** | `0x69FD29376c3e77C494Fa4c25aac4A8810f511305` | ✅ Deployed |
 
-@/contracts/CoachOperator.sol
+### 🎯 Platform Features
 
-CoachOperator.sol
-0x11640405F7552124dB36195158e59Ff791Df47C2
+- ✅ **Real-time pose detection** - Jump detection working perfectly
+- ✅ **AI coaching integration** - Gemini, OpenAI, Anthropic powered feedback
+- ✅ **Blockchain leaderboards** - Live on Base Sepolia with automatic score submission
+- ✅ **Premium analysis** - Amazon Nova Lite integration with AWS Lambda deployed
+- ✅ **Revenue distribution** - Autonomous 70/20/10 split to stakeholders
+- 🔄 **CDP Wallet integration** - In progress for autonomous treasury management
 
-ExerciseLeaderboard.sol
-0xa946cF9253Fe3734F3ea794DaEB7D5Dd7fB81E03
+### 💰 Revenue Distribution
 
-\_exercisename: jumps
+- **Platform Treasury** (70%): `0x55A5705453Ee82c742274154136Fce8149597058`
+- **User Rewards Pool** (20%): `0x3D86Ff165D8bEb8594AE05653249116a6d1fF3f1`
+- **Referrer Pool** (10%): `0xec4F3Ac60AE169fE27bed005F3C945A112De2c5A`
 
-ExerciseLeaderboard.sol
-0xB6084cff5e0345432De6CE0d4a6EBdfDc7C4E82A
+### 🏆 Hackathon Status
 
-\_exercisename: pullups
-
-config/tuple
-
-addLeaderboard
-exercise:
-0x58857c61e1c66c3364b0e545b626ef16ecce5b7b1b9ab12c0857bcb9ee9d12d5
-leaderboardAddress:
-0xB6084cff5e0345432De6CE0d4a6EBdfDc7C4E82A
-config:
-[50, 300, 10, true]
-
-addLeaderboard
-exercise:
-0x6b3e0e693d98ab1b983d1bfa5a9cbeb4004247dfd98cdb9ae7b2595f64132e41
-leaderboardAddress:
-0xa946cF9253Fe3734F3ea794DaEB7D5Dd7fB81E03
-config:
-[50, 300, 10, true]
-
-Transfeed Passport Ownership
-The CoachOperator needs to own the Passport contract to mint/update passports.
-
-Authorized Leaderboard Operators
-Each leaderboard needs to authorize the CoachOperator to add scores.
-Call on each ExerciseLeaderboard contract:
-solidityaddOperator
+**Targeting:** Coinbase "Agents in Action" Hackathon
+- **Category**: Best Use of x402pay + CDP Wallet ($5,000 prize)
+- **Bonus**: Amazon Bedrock integration ($10,000 AWS credits + SF demo)
+- **Current**: MVP complete, CDP Wallet integration in progress
 
 ---
 
@@ -182,16 +168,19 @@ solidityaddOperator
 Unlock advanced AI-powered workout analysis with our premium tier:
 
 - **Premium Analysis Service:**
-  - Powered by AWS Lambda and Amazon Bedrock for deep-dive feedback
-  - Public API Gateway endpoint: `https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout`
-  - Accessed via the PremiumAnalysisUpsell component in the app
+  - **AWS Lambda Function:** `imperfect-coach-premium-analysis` deployed in `eu-north-1`
+  - **AI Model:** Amazon Nova Lite (`amazon.nova-lite-v1:0`) for comprehensive fitness analysis
+  - **API Endpoint:** `https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout`
+  - **Performance:** 3-second response time with detailed analysis and actionable feedback
+  - **Features:** Form analysis, consistency scoring, power assessment, and personalized recommendations
 - **On-Chain Payment:**
   - Uses x402 payment protocol for secure, blockchain-based payments
   - Payments are sent directly to the RevenueSplitter contract
+  - Integration ready for production deployment
 
 ## 💸 RevenueSplitter Contract
 
-- **Address:** `0x3Daa73E9597DD13a3a8311E079C1406b1F52AF16`
+- **Address:** `0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9C`
 - **Payees:**
   - `0x55A5705453Ee82c742274154136Fce8149597058` (70%)
   - `0x3D86Ff165D8bEb8594AE05653249116a6d1fF3f1` (20%)

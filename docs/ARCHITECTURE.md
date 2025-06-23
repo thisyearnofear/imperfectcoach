@@ -259,7 +259,7 @@ This architecture provides a solid foundation for future development while maint
 
 - **ImperfectCoachPassport.sol**: `0x7c95712a2bce65e723cE99C190f6bd6ff73c4212`
 - **CoachOperator.sol**: `0xdEc2d60c9526106a8e4BBd01d70950f6694053A3`
-- **RevenueSplitter.sol**: `0x3Daa73E9597DD13a3a8311E079C1406b1F52AF16`
+- **RevenueSplitter.sol**: `0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9C`
 
 ### RevenueSplitter Details
 

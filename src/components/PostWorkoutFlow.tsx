@@ -57,7 +57,9 @@ export const PostWorkoutFlow = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isUpsellOpen, setIsUpsellOpen] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [analysisResult, setAnalysisResult] = useState<{
+    analysis: string;
+  } | null>(null);
 
   const canShowSummary = useFeatureGate("AI_SUMMARY");
   const canShowAchievements = useFeatureGate("ACHIEVEMENTS");
@@ -208,7 +210,15 @@ export const PostWorkoutFlow = ({
       <PremiumAnalysisUpsell
         isOpen={isUpsellOpen}
         onOpenChange={setIsUpsellOpen}
-        workoutData={{ exercise, reps, repHistory, averageFormScore }}
+        workoutData={{
+          exercise,
+          reps,
+          repHistory: repHistory.map((rep) => ({
+            score: rep.score,
+            details: rep.details as Record<string, unknown>,
+          })),
+          averageFormScore,
+        }}
         onAnalysisComplete={(result) => {
           setAnalysisResult(result);
           // Optionally, display the analysis result in a new component or alert

@@ -13,7 +13,11 @@ import {
   useSwitchChain,
 } from "wagmi";
 import { cbWalletConnector } from "@/wagmi";
-import { getContractConfig } from "@/lib/contracts";
+import {
+  getContractConfig,
+  JUMPS_LEADERBOARD_CONFIG,
+  PULLUPS_LEADERBOARD_CONFIG,
+} from "@/lib/contracts";
 import { SiweMessage } from "siwe";
 import { toast } from "sonner";
 import { baseSepolia } from "wagmi/chains";
@@ -133,8 +137,39 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
     hash: txHash,
   });
 
-  // Contract config
-  const contractConfig = getContractConfig();
+  // Contract config - use CoachOperator for submissions
+  const contractConfig = useMemo(
+    () => ({
+      address: "0xdEc2d60c9526106a8e4BBd01d70950f6694053A3" as const,
+      abi: [
+        {
+          inputs: [
+            {
+              components: [
+                {
+                  internalType: "bytes32[]",
+                  name: "exercises",
+                  type: "bytes32[]",
+                },
+                { internalType: "uint32[]", name: "scores", type: "uint32[]" },
+                { internalType: "uint256", name: "timestamp", type: "uint256" },
+                { internalType: "uint256", name: "nonce", type: "uint256" },
+                { internalType: "bytes", name: "signature", type: "bytes" },
+              ],
+              internalType: "struct CoachOperator.WorkoutSession",
+              name: "session",
+              type: "tuple",
+            },
+          ],
+          name: "submitWorkoutSession",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+      ] as const,
+    }),
+    []
+  );
 
   // Local state
   const [authState, setAuthState] = useState<
@@ -169,18 +204,43 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
   const { basename, isLoading: isBasenameLoading } = useBasename(address);
 
   // Contract reads with smart caching (no auto-refresh)
+  // Get leaderboard data from jumps exercise leaderboard
   const {
-    data: leaderboardData,
-    isLoading: isLeaderboardLoading,
-    refetch: refetchLeaderboard,
-    dataUpdatedAt: leaderboardUpdatedAt,
-    error: leaderboardError,
-    status: leaderboardStatus,
+    data: jumpsLeaderboardData,
+    isLoading: isJumpsLoading,
+    error: jumpsError,
+    status: jumpsStatus,
+    refetch: refetchJumpsLeaderboard,
+    dataUpdatedAt: jumpsUpdatedAt,
   } = useReadContract({
-    ...contractConfig,
-    functionName: "getLeaderboard",
+    ...JUMPS_LEADERBOARD_CONFIG,
+    functionName: "getTopUsers",
+    args: [10], // Get top 10 users
     chainId: 84532, // Explicitly specify Base Sepolia
     query: {
+      enabled: true, // Enable now that leaderboards are deployed
+      staleTime: 60000, // 1 minute - data stays fresh longer
+      gcTime: 300000, // 5 minutes - keep in cache
+      refetchOnWindowFocus: false, // Prevent auto-refresh on focus
+      refetchInterval: false, // Disable auto-refresh
+    },
+  });
+
+  // Get leaderboard data from pullups exercise leaderboard
+  const {
+    data: pullupsLeaderboardData,
+    isLoading: isPullupsLoading,
+    error: pullupsError,
+    status: pullupsStatus,
+    refetch: refetchPullupsLeaderboard,
+    dataUpdatedAt: pullupsUpdatedAt,
+  } = useReadContract({
+    ...PULLUPS_LEADERBOARD_CONFIG,
+    functionName: "getTopUsers",
+    args: [10], // Get top 10 users
+    chainId: 84532, // Explicitly specify Base Sepolia
+    query: {
+      enabled: true, // Enable now that leaderboards are deployed
       staleTime: 60000, // 1 minute - data stays fresh longer
       gcTime: 300000, // 5 minutes - keep in cache
       refetchOnWindowFocus: false, // Prevent auto-refresh on focus
@@ -191,21 +251,29 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
   // Debug contract read status
   useEffect(() => {
     console.log("📡 Contract read status:", {
-      status: leaderboardStatus,
-      isLoading: isLeaderboardLoading,
-      hasData: !!leaderboardData,
-      error: leaderboardError,
+      jumps: {
+        status: jumpsStatus,
+        isLoading: isJumpsLoading,
+        hasData: !!jumpsLeaderboardData,
+        error: jumpsError,
+      },
+      pullups: {
+        status: pullupsStatus,
+        isLoading: isPullupsLoading,
+        hasData: !!pullupsLeaderboardData,
+        error: pullupsError,
+      },
       contractAddress: contractConfig.address,
       chainId: 84532,
-      dataType: typeof leaderboardData,
     });
 
     // Test contract deployment on Base Sepolia
-    if (leaderboardError) {
-      console.error("❌ Contract read error:", leaderboardError);
+    if (jumpsError || pullupsError) {
+      console.error("❌ Contract read error:", { jumpsError, pullupsError });
       console.log("🔍 Verifying contract deployment...");
       console.log("📋 Contract details:", {
-        address: contractConfig.address,
+        jumpsAddress: JUMPS_LEADERBOARD_CONFIG.address,
+        pullupsAddress: PULLUPS_LEADERBOARD_CONFIG.address,
         expectedChain: "Base Sepolia (84532)",
         rpcUrl: import.meta.env.VITE_BASE_SEPOLIA_RPC_URL || "fallback RPC",
         hasCustomRpc: !!import.meta.env.VITE_BASE_SEPOLIA_RPC_URL,
@@ -237,10 +305,14 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
         .catch((err) => console.error("❌ RPC connectivity test failed:", err));
     }
   }, [
-    leaderboardStatus,
-    isLeaderboardLoading,
-    leaderboardData,
-    leaderboardError,
+    jumpsStatus,
+    pullupsStatus,
+    isJumpsLoading,
+    isPullupsLoading,
+    jumpsLeaderboardData,
+    pullupsLeaderboardData,
+    jumpsError,
+    pullupsError,
     contractConfig.address,
   ]);
 
@@ -262,37 +334,83 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
     },
   });
 
-  // Process leaderboard data
+  // Process combined leaderboard data from both exercise leaderboards
   const leaderboard = useMemo((): BlockchainScore[] => {
-    console.log("🏆 Processing leaderboard data:", {
-      raw: leaderboardData,
-      isArray: Array.isArray(leaderboardData),
+    console.log("🏆 Processing combined leaderboard data:", {
+      jumpsData: jumpsLeaderboardData,
+      pullupsData: pullupsLeaderboardData,
+      jumpsIsArray: Array.isArray(jumpsLeaderboardData),
+      pullupsIsArray: Array.isArray(pullupsLeaderboardData),
       isConnected,
-      contractAddress: contractConfig.address,
     });
 
-    if (!leaderboardData || !Array.isArray(leaderboardData)) {
-      console.log("❌ No leaderboard data or not array");
-      return [];
+    // Create a map to combine user data from both leaderboards
+    const userMap = new Map<
+      string,
+      {
+        user: string;
+        pullups: number;
+        jumps: number;
+        timestamp: number;
+      }
+    >();
+
+    // Process jumps leaderboard data
+    if (jumpsLeaderboardData && Array.isArray(jumpsLeaderboardData)) {
+      jumpsLeaderboardData.forEach(
+        (entry: {
+          user: string;
+          totalScore: bigint;
+          bestSingleScore: bigint;
+          submissionCount: bigint;
+          lastSubmissionTime: bigint;
+        }) => {
+          userMap.set(entry.user, {
+            user: entry.user,
+            pullups: 0, // Will be updated if user exists in pullups leaderboard
+            jumps: Number(entry.totalScore),
+            timestamp: Number(entry.lastSubmissionTime),
+          });
+        }
+      );
     }
 
-    const processed = leaderboardData.map(
-      (score: {
-        user: string;
-        pullups: bigint;
-        jumps: bigint;
-        timestamp: bigint;
-      }) => ({
-        user: score.user,
-        pullups: Number(score.pullups),
-        jumps: Number(score.jumps),
-        timestamp: Number(score.timestamp),
-      })
-    );
+    // Process pullups leaderboard data and merge
+    if (pullupsLeaderboardData && Array.isArray(pullupsLeaderboardData)) {
+      pullupsLeaderboardData.forEach(
+        (entry: {
+          user: string;
+          totalScore: bigint;
+          bestSingleScore: bigint;
+          submissionCount: bigint;
+          lastSubmissionTime: bigint;
+        }) => {
+          const existing = userMap.get(entry.user);
+          if (existing) {
+            // User exists in both leaderboards - update pullups and use latest timestamp
+            existing.pullups = Number(entry.totalScore);
+            existing.timestamp = Math.max(
+              existing.timestamp,
+              Number(entry.lastSubmissionTime)
+            );
+          } else {
+            // User only in pullups leaderboard
+            userMap.set(entry.user, {
+              user: entry.user,
+              pullups: Number(entry.totalScore),
+              jumps: 0,
+              timestamp: Number(entry.lastSubmissionTime),
+            });
+          }
+        }
+      );
+    }
 
-    console.log("✅ Processed leaderboard:", processed);
+    const processed = Array.from(userMap.values());
+
+    console.log("✅ Processed combined leaderboard:", processed);
     return processed;
-  }, [leaderboardData, isConnected, contractConfig.address]);
+  }, [jumpsLeaderboardData, pullupsLeaderboardData, isConnected]);
 
   const hasSubmittedScore = useMemo(() => {
     if (!address || !leaderboard || leaderboard.length === 0) {
@@ -541,7 +659,11 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
 
       // Smart refresh after confirmation
       setTimeout(async () => {
-        await Promise.all([refetchLeaderboard(), refetchCooldown()]);
+        await Promise.all([
+          refetchJumpsLeaderboard(),
+          refetchPullupsLeaderboard(),
+          refetchCooldown(),
+        ]);
         setBlockchainState((prev) => ({
           ...prev,
           lastRefresh: new Date(),
@@ -556,7 +678,13 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
         toast.success("Leaderboard updated with your new score!");
       }, 2000);
     }
-  }, [isConfirmed, txHash, refetchLeaderboard, refetchCooldown]);
+  }, [
+    isConfirmed,
+    txHash,
+    refetchJumpsLeaderboard,
+    refetchPullupsLeaderboard,
+    refetchCooldown,
+  ]);
 
   // Handle confirmation error
   useEffect(() => {
@@ -620,9 +748,10 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
 
     const updateStaleness = () => {
       const now = Date.now();
-      const leaderboardAge = leaderboardUpdatedAt
-        ? now - leaderboardUpdatedAt
-        : 0;
+      const leaderboardAge = Math.max(
+        jumpsUpdatedAt ? now - jumpsUpdatedAt : 0,
+        pullupsUpdatedAt ? now - pullupsUpdatedAt : 0
+      );
       const maxAge = 300000; // 5 minutes
       const staleness = Math.min((leaderboardAge / maxAge) * 100, 100);
 
@@ -636,7 +765,7 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
     updateStaleness();
     const interval = setInterval(updateStaleness, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
-  }, [leaderboardUpdatedAt, enableSmartRefresh]);
+  }, [jumpsUpdatedAt, pullupsUpdatedAt, enableSmartRefresh]);
 
   // Network switching
   const switchToBaseSepolia = useCallback(async () => {
@@ -692,11 +821,37 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
           throw new Error("WRONG_NETWORK");
         }
 
+        // Prepare workout session data
+        const exercises: `0x${string}`[] = [];
+        const scores: number[] = [];
+
+        if (pullups > 0) {
+          exercises.push(
+            "0x58857c61e1c66c3364b0e545b626ef16ecce5b7b1b9ab12c0857bcb9ee9d12d5"
+          ); // pullups hash
+          scores.push(pullups);
+        }
+
+        if (jumps > 0) {
+          exercises.push(
+            "0x6b3e0e693d98ab1b983d1bfa5a9cbeb4004247dfd98cdb9ae7b2595f64132e41"
+          ); // jumps hash
+          scores.push(jumps);
+        }
+
+        const workoutSession = {
+          exercises,
+          scores,
+          timestamp: BigInt(Math.floor(Date.now() / 1000)),
+          nonce: BigInt(0),
+          signature: "0x" as `0x${string}`,
+        };
+
         // Submit transaction using wagmi v2 proper way
         writeContract({
           ...contractConfig,
-          functionName: "addScore",
-          args: [BigInt(pullups), BigInt(jumps)],
+          functionName: "submitWorkoutSession",
+          args: [workoutSession],
           account: address as `0x${string}`,
           chain,
         });
@@ -769,7 +924,11 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
     try {
       setRefreshState((prev) => ({ ...prev, isRefreshing: true }));
 
-      await Promise.all([refetchLeaderboard(), refetchCooldown()]);
+      await Promise.all([
+        refetchJumpsLeaderboard(),
+        refetchPullupsLeaderboard(),
+        refetchCooldown(),
+      ]);
 
       setBlockchainState((prev) => ({ ...prev, lastRefresh: new Date() }));
       setRefreshState((prev) => ({
@@ -785,7 +944,12 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
       setRefreshState((prev) => ({ ...prev, isRefreshing: false }));
       toast.error("Failed to refresh leaderboard");
     }
-  }, [refetchLeaderboard, refetchCooldown, refreshState.isRefreshing]);
+  }, [
+    refetchJumpsLeaderboard,
+    refetchPullupsLeaderboard,
+    refetchCooldown,
+    refreshState.isRefreshing,
+  ]);
 
   // UI helper functions
   const getDisplayName = useCallback(() => {
@@ -827,7 +991,7 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
 
     // Blockchain state
     leaderboard,
-    isLeaderboardLoading,
+    isLeaderboardLoading: isJumpsLoading || isPullupsLoading,
     canSubmit: isConnected && blockchainState.timeUntilNextSubmission === 0,
     timeUntilNextSubmission: blockchainState.timeUntilNextSubmission,
     isSubmitting: blockchainState.isSubmitting,

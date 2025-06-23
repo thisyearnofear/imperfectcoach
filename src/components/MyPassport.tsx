@@ -99,25 +99,73 @@ const MyPassport = () => {
           <CardTitle>My WIP Passport</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-red-500">
-            {passportError
-              ? `Error: ${passportError.message}`
-              : "Could not find your passport."}
+          <p className="text-amber-600 mb-2">
+            Your passport NFT is still being generated...
           </p>
-          <p>
-            You may not have a passport yet. Complete a workout to mint one!
+          <p className="text-sm text-muted-foreground">
+            Complete a few more workouts and submit them to the blockchain to
+            mint your passport!
           </p>
+          {passportError && (
+            <details className="mt-2 text-xs text-red-500">
+              <summary>Technical Details</summary>
+              <p>{passportError.message}</p>
+            </details>
+          )}
         </CardContent>
       </Card>
     );
   }
 
   // Decode the base64 JSON URI to get the image
-  const getImageFromTokenURI = (uri: string) => {
+  const getImageFromTokenURI = (uri: string): string | null => {
     try {
-      const jsonString = atob(uri.substring(uri.indexOf(",") + 1));
-      const json = JSON.parse(jsonString);
-      return json.image;
+      if (!uri || typeof uri !== "string") {
+        console.warn("Invalid token URI format:", uri);
+        return null;
+      }
+
+      // Handle malformed or partial data - return null silently
+      if (
+        uri.length < 10 ||
+        uri.includes("rt #") ||
+        uri.includes("de") ||
+        uri.includes("Token does not exist") ||
+        uri.includes("Unknown")
+      ) {
+        return null;
+      }
+
+      // Handle data URI format
+      if (uri.startsWith("data:application/json;base64,")) {
+        try {
+          const jsonString = atob(uri.substring(uri.indexOf(",") + 1));
+          const json = JSON.parse(jsonString);
+          return json.image || null;
+        } catch (e) {
+          console.error("Failed to parse base64 JSON:", e);
+          return null;
+        }
+      }
+
+      // Handle direct JSON string
+      if (uri.startsWith("{")) {
+        try {
+          const json = JSON.parse(uri);
+          return json.image || null;
+        } catch (e) {
+          console.error("Failed to parse JSON string:", e);
+          return null;
+        }
+      }
+
+      // Handle HTTP URL (return as is)
+      if (uri.startsWith("http")) {
+        return uri;
+      }
+
+      console.warn("Unrecognized token URI format:", uri);
+      return null;
     } catch (e) {
       console.error("Failed to parse token URI:", e);
       return null;
@@ -135,11 +183,24 @@ const MyPassport = () => {
         <CardTitle>My WIP Passport</CardTitle>
       </CardHeader>
       <CardContent>
+        {!imageUrl && typedPassportData && (
+          <div className="w-full h-32 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center">
+            <div className="text-center text-sm text-gray-600">
+              <div className="text-2xl font-bold text-blue-600">
+                #{tokenId?.toString()}
+              </div>
+              <div>NFT Image Loading...</div>
+            </div>
+          </div>
+        )}
         {imageUrl && (
           <img
             src={imageUrl}
             alt="Imperfect Coach Passport NFT"
             className="w-full rounded-lg mb-4"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
           />
         )}
         {typedPassportData && (

@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { SmartRefresh, RefreshButton } from "./SmartRefresh";
 import { Badge } from "@/components/ui/badge";
+import { useBasename } from "@/hooks/useBasename";
 
 interface LeaderboardEntry {
   address: string;
@@ -25,12 +26,19 @@ interface LeaderboardProps {
 }
 
 // Simple user display component (basename resolution temporarily disabled)
+// Helper component for displaying user names/addresses
 const UserDisplay = ({ address }: { address: string }) => {
-  const displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const { basename, isLoading } = useBasename(address);
+  const displayName =
+    basename || `${address.slice(0, 6)}...${address.slice(-4)}`;
 
   return (
     <span className="truncate font-medium" title={address}>
-      {displayName}
+      {isLoading ? (
+        <span className="text-muted-foreground">Loading...</span>
+      ) : (
+        displayName
+      )}
     </span>
   );
 };
@@ -115,7 +123,7 @@ const Leaderboard = ({
         jumps: score.jumps,
         timestamp: score.timestamp,
         rank: index + 1,
-      }),
+      })
     );
 
     // Sort by pullups (descending) and assign ranks
