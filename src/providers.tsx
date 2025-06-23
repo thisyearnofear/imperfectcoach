@@ -1,14 +1,14 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
 
 import { config } from "@/wagmi";
 import { UserProvider } from "@/contexts/UserContext";
 
 export function Web3Providers(props: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const queryClient = useMemo(() => new QueryClient(), []);
 
   return (
     <WagmiProvider config={config}>

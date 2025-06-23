@@ -12,9 +12,10 @@ interface JumpProcessorParams {
   peakAirborneY: number | null;
   jumpData: {y: number, time: number}[];
   flightData: {shoulderX: number, hipX: number}[];
+  justLanded?: boolean; // New parameter to indicate if a jump was just completed
 }
 
-export const processJumps = ({ keypoints, internalReps, lastRepIssues, jumpGroundLevel, peakAirborneY, jumpData, flightData }: JumpProcessorParams): Omit<ProcessorResult, 'feedback'> & { feedback?: string } | null => {
+export const processJumps = ({ keypoints, internalReps, lastRepIssues, jumpGroundLevel, peakAirborneY, jumpData, flightData, justLanded }: JumpProcessorParams): Omit<ProcessorResult, 'feedback'> & { feedback?: string } | null => {
     const leftHip = keypoints.find(k => k.name === 'left_hip');
     const rightHip = keypoints.find(k => k.name === 'right_hip');
     const leftKnee = keypoints.find(k => k.name === 'left_knee');
@@ -23,9 +24,26 @@ export const processJumps = ({ keypoints, internalReps, lastRepIssues, jumpGroun
     const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
 
     if (!leftHip || !rightHip || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle ||
-        [leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle].some(k => (k?.score ?? 0) < 0.5)) {
+        [leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle].some(k => (k?.score ?? 0) < 0.3)) {
+        
+        // More specific feedback based on what's missing
+        const missingParts = [];
+        if (!leftAnkle || leftAnkle.score < 0.3) missingParts.push("left foot");
+        if (!rightAnkle || rightAnkle.score < 0.3) missingParts.push("right foot");
+        if (!leftKnee || leftKnee.score < 0.3) missingParts.push("left knee");
+        if (!rightKnee || rightKnee.score < 0.3) missingParts.push("right knee");
+        if (!leftHip || leftHip.score < 0.3) missingParts.push("left hip");
+        if (!rightHip || rightHip.score < 0.3) missingParts.push("right hip");
+        
+        let feedback = "Step back so I can see your ";
+        if (missingParts.length > 0) {
+            feedback += missingParts.join(" and ");
+        } else {
+            feedback = "Make sure your full body is in view!";
+        }
+        
         return {
-            feedback: "Make sure your full body is in view to analyze the jump!",
+            feedback,
             isRepCompleted: false,
             poseData: { keypoints }
         };
@@ -126,11 +144,18 @@ export const processJumps = ({ keypoints, internalReps, lastRepIssues, jumpGroun
 
     // Landing Impact Analysis
     const landingData = jumpData.slice(-5);
-    const landingVelocity = (landingData[landingData.length - 1].y - landingData[0].y) / (landingData[landingData.length - 1].time - landingData[0].time);
-    if (landingVelocity > 2.0) { // High velocity downwards
-        landingScore = Math.max(30, landingScore - 20);
-        landingFeedback += " Control your landing more.";
-        currentIssues.push('hard_landing');
+    if (landingData.length >= 2 && landingData[0] && landingData[landingData.length - 1] && 
+        typeof landingData[0].y === 'number' && typeof landingData[landingData.length - 1].y === 'number' &&
+        typeof landingData[0].time === 'number' && typeof landingData[landingData.length - 1].time === 'number') {
+        const timeDiff = landingData[landingData.length - 1].time - landingData[0].time;
+        if (timeDiff > 0) {
+            const landingVelocity = (landingData[landingData.length - 1].y - landingData[0].y) / timeDiff;
+            if (landingVelocity > 2.0) { // High velocity downwards
+                landingScore = Math.max(30, landingScore - 20);
+                landingFeedback += " Control your landing more.";
+                currentIssues.push('hard_landing');
+            }
+        }
     }
 
 
@@ -170,20 +195,30 @@ export const processJumps = ({ keypoints, internalReps, lastRepIssues, jumpGroun
         } as JumpRepDetails & { asymmetry: number; powerScore: number; landingScore: number; explosiveness: number, flightSymmetry: number }
     };
 
+    // Only complete a rep if we just landed from a jump
+    if (justLanded && peakAirborneY !== null && jumpHeight > 10) {
+        return {
+            newRepState: 'GROUNDED',
+            isRepCompleted: true,
+            poseData,
+            repCompletionData,
+            feedback,
+            aiFeedbackPayload: {
+                reps: internalReps + 1,
+                formIssues: lastRepIssues,
+                jumpHeight,
+                landingQuality: avgKneeAngle,
+                powerLevel: heightScore >= 70 ? 'high' : heightScore >= 50 ? 'medium' : 'low',
+                explosiveness: explosivenessScore,
+                flightSymmetry: flightSymmetryScore
+            }
+        };
+    }
+
+    // Otherwise just return pose data and feedback without completing a rep
     return {
-        newRepState: 'GROUNDED',
-        isRepCompleted: true,
         poseData,
-        repCompletionData,
-        feedback,
-        aiFeedbackPayload: {
-            reps: internalReps + 1,
-            formIssues: lastRepIssues,
-            jumpHeight,
-            landingQuality: avgKneeAngle,
-            powerLevel: heightScore >= 70 ? 'high' : heightScore >= 50 ? 'medium' : 'low',
-            explosiveness: explosivenessScore,
-            flightSymmetry: flightSymmetryScore
-        }
+        isRepCompleted: false,
+        feedback: jumpHeight > 0 ? feedback : "Position yourself in frame and jump!"
     };
 };

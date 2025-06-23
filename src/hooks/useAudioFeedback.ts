@@ -7,6 +7,8 @@ import { useRef, useCallback } from 'react';
  */
 export const useAudioFeedback = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
+  const lastSpeechTime = useRef<number>(0);
+  const lastSpeechText = useRef<string>('');
 
   // Memoized function to play a simple beep sound.
   const playBeep = useCallback(() => {
@@ -36,10 +38,21 @@ export const useAudioFeedback = () => {
   // Memoized function to speak text using the browser's TTS engine.
   const speak = useCallback((text: string) => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const now = Date.now();
+      const timeSinceLastSpeech = now - lastSpeechTime.current;
+      
+      // Throttle speech: don't speak the same thing within 2 seconds, or anything within 1 second
+      if (timeSinceLastSpeech < 1000 || (text === lastSpeechText.current && timeSinceLastSpeech < 2000)) {
+        return;
+      }
+      
+      lastSpeechTime.current = now;
+      lastSpeechText.current = text;
+      
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-US';
-      utterance.rate = 1.2;
-      utterance.pitch = 1.1;
+      utterance.rate = 1.0; // Slightly slower for clarity
+      utterance.pitch = 1.0; // More natural pitch
       window.speechSynthesis.cancel(); // Cancel any ongoing speech
       window.speechSynthesis.speak(utterance);
     }

@@ -51,7 +51,7 @@ export const usePoseDetection = ({
     }
   }, [modelStatus, onFormFeedback]);
 
-  const { processPose, formIssuePulse, avgScore, currentJumpHeight, jumpGroundLevel } = useExerciseProcessor({
+  const { processPose, formIssuePulse, avgScore, currentJumpHeight, jumpGroundLevel, jumpCalibrationData } = useExerciseProcessor({
     exercise,
     workoutMode,
     onRepCount,
@@ -99,7 +99,9 @@ export const usePoseDetection = ({
               isDebugMode ? keypointHistoryRef.current : [], 
               formIssuePulse,
               jumpGroundLevel,
-              currentJumpHeight
+              currentJumpHeight,
+              undefined, // renderParticleEffects
+              jumpCalibrationData
             );
           } else {
             keypointHistoryRef.current = [];
@@ -118,7 +120,7 @@ export const usePoseDetection = ({
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose, jumpGroundLevel, currentJumpHeight]);
+  }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose, jumpGroundLevel, currentJumpHeight, jumpCalibrationData]);
 
   useEffect(() => {
     keypointHistoryRef.current = [];

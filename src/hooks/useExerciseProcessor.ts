@@ -7,9 +7,10 @@ import { processPullups } from '@/lib/exercise-processors/pullupProcessor';
 import { processJumps } from '@/lib/exercise-processors/jumpProcessor';
 import { useAIFeedback } from './useAIFeedback';
 import { useExerciseState } from './useExerciseState';
-import { getPullupReadyFeedback, getJumpReadyFeedback } from '@/lib/exerciseFeedbackUtils';
+// Old readiness functions removed - now using PoseReadinessSystem
 import { handleProcessorResult } from '@/lib/processorResultHandler';
-import { JumpDetector } from '@/lib/jumpDetector';
+import { JumpDetector, EnhancedJumpDetector } from '@/lib/jumpDetector';
+import { PoseReadinessSystem, ReadinessConfig } from '@/lib/pose-readiness/ReadinessSystem';
 
 interface UseExerciseProcessorProps {
   exercise: Exercise;
@@ -22,6 +23,7 @@ interface UseExerciseProcessorProps {
   isDebugMode: boolean;
   onPoseData: (data: PoseData | null) => void;
   isWorkoutActive: boolean;
+  onReadinessUpdate?: (readinessScore: any) => void;
 }
 
 export const useExerciseProcessor = ({
@@ -35,6 +37,7 @@ export const useExerciseProcessor = ({
   isDebugMode,
   onPoseData,
   isWorkoutActive,
+  onReadinessUpdate,
 }: UseExerciseProcessorProps) => {
   const { speak } = useAudioFeedback();
   const { getAIFeedback } = useAIFeedback({ exercise, coachPersonality, workoutMode, onFormFeedback });
@@ -47,9 +50,26 @@ export const useExerciseProcessor = ({
   const formIssuePulse = useRef(false);
   const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentJumpHeight = useRef(0);
-  const jumpDetector = useRef(new JumpDetector(15, 2.5, 0.1));
+  const jumpCalibrationData = useRef<{
+    calibrationProgress: number;
+    isStable: boolean;
+    kneeAngle: number;
+    minKneeAngle: number;
+    isCalibrating: boolean;
+  } | null>(null);
+  const jumpDetector = useRef(new JumpDetector(10, 1.8, 0.3));
+  const enhancedJumpDetector = useRef(new EnhancedJumpDetector());
   const jumpData = useRef<{y: number, time: number}[]>([]);
   const flightData = useRef<{shoulderX: number, hipX: number}[]>([]);
+  const lastJumpTime = useRef<number>(0);
+  
+  // High-quality readiness system
+  const readinessSystem = useRef(new PoseReadinessSystem({
+    exercise,
+    adaptiveThresholds: true,
+    strictMode: workoutMode === 'assessment',
+    stabilityFrames: workoutMode === 'assessment' ? 15 : 8
+  }));
 
   const processPose = useCallback((pose: posedetection.Pose | null, videoDimensions: { width: number, height: number }) => {
     if (!pose) {
@@ -70,14 +90,30 @@ export const useExerciseProcessor = ({
 
     let result: (Omit<ProcessorResult, 'feedback'> & { feedback?: string }) | null = null;
     
-    // Enhanced jump feedback that works both during calibration and after
-    if (exercise === 'jumps') {
-        const feedback = getJumpReadyFeedback(keypoints, jumpGroundLevel, calibrationFrames, videoDimensions);
-        if (!isWorkoutActive || jumpGroundLevel.current === null) {
-            onFormFeedback(feedback);
-            if (isDebugMode) onPoseData({ keypoints });
-            if (jumpGroundLevel.current === null) return; // Don't process jumps until calibrated
+    // Use high-quality readiness system when workout is not active
+    if (!isWorkoutActive) {
+        const readinessScore = readinessSystem.current.analyzePoseReadiness(keypoints, videoDimensions);
+        
+        // Update parent component with readiness score for better UI
+        if (onReadinessUpdate) {
+            onReadinessUpdate(readinessScore);
         }
+        
+        // Use progressive feedback instead of binary ready/not-ready
+        onFormFeedback(readinessScore.feedback);
+        
+        if (isDebugMode) onPoseData({ keypoints });
+        
+        // Allow workout to start when readiness is sufficient
+        if (!readinessScore.canProceed) {
+            return; // Don't process exercise until user is ready
+        }
+        
+        // Reset detectors when user becomes ready
+        if (exercise === 'jumps') {
+            enhancedJumpDetector.current.reset();
+        }
+        readinessSystem.current.reset();
     }
 
     switch (exercise) {
@@ -91,41 +127,59 @@ export const useExerciseProcessor = ({
         break;
 
       case 'jumps': 
-        if (jumpGroundLevel.current !== null) {
+        // Use enhanced jump detector with strict pose validation
+        const jumpAnalysis = enhancedJumpDetector.current.analyzePoseForJump(keypoints);
+        
+        // Update current jump height and calibration data
+        currentJumpHeight.current = jumpAnalysis.currentHeight;
+        jumpCalibrationData.current = jumpAnalysis.calibrationData || null;
+        
+        // Update legacy ground level for compatibility
+        if (!jumpGroundLevel.current && jumpAnalysis.jumpState === 'GROUNDED') {
             const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
             const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
+            if (leftAnkle?.score > 0.3 && rightAnkle?.score > 0.3) {
+                jumpGroundLevel.current = (leftAnkle.y + rightAnkle.y) / 2;
+            }
+        }
+        
+        // Collect jump data for analytics
+        if (jumpAnalysis.isValidJump) {
             const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
             const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
             const leftHip = keypoints.find(k => k.name === 'left_hip');
             const rightHip = keypoints.find(k => k.name === 'right_hip');
-
-            if (leftAnkle?.score > 0.5 && rightAnkle?.score > 0.5 && leftShoulder?.score > 0.5 && rightShoulder?.score > 0.5 && leftHip?.score > 0.5 && rightHip?.score > 0.5) {
+            
+            if (leftShoulder?.score > 0.3 && rightShoulder?.score > 0.3 && leftHip?.score > 0.3 && rightHip?.score > 0.3) {
                 const torsoY = (leftShoulder.y + rightShoulder.y + leftHip.y + rightHip.y) / 4;
                 jumpData.current.push({ y: torsoY, time: Date.now() });
-                const signal = jumpDetector.current.update(torsoY);
-
-                const isAirborne = signal < 0;
-
-                if (isAirborne) {
-                    currentJumpHeight.current = jumpGroundLevel.current - ((leftAnkle.y + rightAnkle.y) / 2);
-                } else {
-                    currentJumpHeight.current = 0;
-                }
-
-                if (repState.current === 'GROUNDED' && isAirborne) {
-                    peakAirborneY.current = (leftAnkle.y + rightAnkle.y) / 2;
-                    // Start of jump, clear old data
-                    jumpData.current = [];
-                    flightData.current = [];
-                } else if (repState.current === 'AIRBORNE' && isAirborne) {
-                    peakAirborneY.current = Math.min(peakAirborneY.current ?? (leftAnkle.y + rightAnkle.y) / 2, (leftAnkle.y + rightAnkle.y) / 2);
+                
+                if (jumpAnalysis.jumpState === 'AIRBORNE') {
                     flightData.current.push({
                         shoulderX: (leftShoulder.x + rightShoulder.x) / 2,
                         hipX: (leftHip.x + rightHip.x) / 2
                     });
+                    
+                    // Track peak airborne position
+                    const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
+                    const rightAnkle = keypoints.find(k => k.name === 'right_ankle');
+                    if (leftAnkle?.score > 0.3 && rightAnkle?.score > 0.3) {
+                        const currentAnkleY = (leftAnkle.y + rightAnkle.y) / 2;
+                        peakAirborneY.current = Math.min(peakAirborneY.current ?? currentAnkleY, currentAnkleY);
+                    }
                 }
             }
-            
+        }
+        
+        // Update rep state based on jump analysis
+        if (jumpAnalysis.jumpState === 'GROUNDED') {
+            repState.current = 'GROUNDED';
+        } else if (jumpAnalysis.jumpState === 'AIRBORNE') {
+            repState.current = 'AIRBORNE';
+        }
+        
+        // Process jump if valid
+        if (jumpAnalysis.isValidJump && jumpGroundLevel.current !== null) {
             result = processJumps({
                 keypoints,
                 repState: repState.current,
@@ -134,8 +188,28 @@ export const useExerciseProcessor = ({
                 jumpGroundLevel: jumpGroundLevel.current,
                 peakAirborneY: peakAirborneY.current,
                 jumpData: jumpData.current,
-                flightData: flightData.current
+                flightData: flightData.current,
+                justLanded: jumpAnalysis.shouldCompleteRep
             });
+            
+            // Override feedback with enhanced detector feedback
+            if (result) {
+                result.feedback = jumpAnalysis.feedback;
+            }
+        } else {
+            // Return pose analysis with enhanced feedback
+            result = {
+                poseData: { keypoints },
+                isRepCompleted: false,
+                feedback: jumpAnalysis.feedback
+            };
+        }
+        
+        // Reset jump data after landing
+        if (jumpAnalysis.jumpState === 'LANDING' && jumpAnalysis.shouldCompleteRep) {
+            jumpData.current = [];
+            flightData.current = [];
+            peakAirborneY.current = null;
         }
         break;
     }
@@ -158,16 +232,8 @@ export const useExerciseProcessor = ({
             currentRepAngles, exercise, peakAirborneY
         });
     } else if (!isWorkoutActive) {
-        // If processor gives no specific result and workout hasn't started, give pre-workout guidance.
-        let feedback = "";
-        if (workoutMode === 'assessment') {
-             feedback = "Get into starting position. The assessment will begin with your first rep.";
-        } else if (exercise === 'pull-ups') {
-            feedback = getPullupReadyFeedback(keypoints);
-        } else if (exercise === 'jumps') {
-            feedback = getJumpReadyFeedback(keypoints, jumpGroundLevel, calibrationFrames, videoDimensions);
-        }
-        onFormFeedback(feedback);
+        // The new readiness system above already handles this case
+        // No need for additional feedback here
         if (isDebugMode) onPoseData({ keypoints });
     }
 
@@ -180,6 +246,7 @@ export const useExerciseProcessor = ({
     formIssuePulse: formIssuePulse.current, 
     avgScore,
     currentJumpHeight: currentJumpHeight.current,
-    jumpGroundLevel: jumpGroundLevel.current
+    jumpGroundLevel: jumpGroundLevel.current,
+    jumpCalibrationData: jumpCalibrationData.current
   };
 }

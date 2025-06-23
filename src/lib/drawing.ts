@@ -29,8 +29,8 @@ const BODY_PART_COLORS: Record<string, string> = {
   torso: 'rgba(255, 255, 255, 0.9)', // white
   left_arm: 'rgba(0, 255, 255, 0.9)',   // cyan
   right_arm: 'rgba(0, 255, 255, 0.9)',  // cyan
-  left_leg: 'rgba(255, 0, 255, 0.9)',  // magenta
-  right_leg: 'rgba(255, 0, 255, 0.9)', // magenta
+  left_leg: 'rgba(0, 150, 255, 0.9)',  // blue - better contrast
+  right_leg: 'rgba(255, 150, 0, 0.9)', // orange - better contrast
 };
 
 const EXERCISE_HIGHLIGHT_JOINTS: Record<Exercise, string[]> = {
@@ -157,7 +157,29 @@ function drawKeypointsWithConfidence(ctx: CanvasRenderingContext2D, keypoints: K
       else if (score > 0.5) color = KEYPOINT_CONFIDENCE_COLORS.medium;
       
       let radius = 5;
-      if (highlightedJoints.includes(keypoint.name || '')) {
+      
+      // Special treatment for jump exercise critical points
+      if (exercise === 'jumps' && keypoint.name) {
+        if (keypoint.name.includes('hip')) {
+          radius = 12; // Larger for hips - most critical for jump detection
+          ctx.fillStyle = 'rgba(255, 100, 100, 0.4)';
+          ctx.beginPath();
+          ctx.arc(keypoint.x, keypoint.y, radius + Math.sin(Date.now() / 150) * 4, 0, 2 * Math.PI);
+          ctx.fill();
+        } else if (keypoint.name.includes('ankle')) {
+          radius = 10; // Important for ground detection
+          ctx.fillStyle = 'rgba(100, 255, 100, 0.4)';
+          ctx.beginPath();
+          ctx.arc(keypoint.x, keypoint.y, radius + Math.sin(Date.now() / 180) * 3, 0, 2 * Math.PI);
+          ctx.fill();
+        } else if (keypoint.name.includes('knee')) {
+          radius = 8; // Medium importance
+          ctx.fillStyle = 'rgba(100, 100, 255, 0.4)';
+          ctx.beginPath();
+          ctx.arc(keypoint.x, keypoint.y, radius + Math.sin(Date.now() / 220) * 2, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      } else if (highlightedJoints.includes(keypoint.name || '')) {
         radius = 10;
         ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
         ctx.beginPath();
@@ -165,12 +187,124 @@ function drawKeypointsWithConfidence(ctx: CanvasRenderingContext2D, keypoints: K
         ctx.fill();
       }
 
+      // Draw main keypoint
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(keypoint.x, keypoint.y, radius, 0, 2 * Math.PI);
       ctx.fill();
+      
+      // Add keypoint name labels for jump exercise during calibration
+      if (exercise === 'jumps' && highlightedJoints.includes(keypoint.name || '')) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        const labelY = keypoint.name?.includes('hip') ? keypoint.y - 20 : keypoint.y + 20;
+        ctx.fillText(keypoint.name?.replace('_', ' ') || '', keypoint.x, labelY);
+      }
     }
   });
+}
+
+function drawJumpCalibrationGuide(ctx: CanvasRenderingContext2D, keypoints: Keypoint[], calibrationProgress: number, isStable: boolean, kneeAngle: number, minKneeAngle: number) {
+  const leftHip = getKeypoint(keypoints, 'left_hip');
+  const rightHip = getKeypoint(keypoints, 'right_hip');
+  const leftKnee = getKeypoint(keypoints, 'left_knee');
+  const rightKnee = getKeypoint(keypoints, 'right_knee');
+  const leftAnkle = getKeypoint(keypoints, 'left_ankle');
+  const rightAnkle = getKeypoint(keypoints, 'right_ankle');
+
+  if (!leftHip || !rightHip || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) return;
+
+  const allVisible = [leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle]
+    .every(k => k.score > 0.3);
+  
+  if (!allVisible) return;
+
+  // Draw stability zones around key points
+  const stabilityRadius = 25; // pixels
+  const points = [
+    { point: leftAnkle, name: 'Left Ankle' },
+    { point: rightAnkle, name: 'Right Ankle' },
+    { point: leftHip, name: 'Left Hip' },
+    { point: rightHip, name: 'Right Hip' }
+  ];
+
+  points.forEach(({ point, name }) => {
+    // Stability circle
+    ctx.strokeStyle = isStable ? 'rgba(0, 255, 0, 0.6)' : 'rgba(255, 165, 0, 0.6)';
+    ctx.fillStyle = isStable ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 165, 0, 0.1)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, stabilityRadius, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Point label
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(name, point.x, point.y - stabilityRadius - 10);
+  });
+
+  // Draw leg angle indicators
+  const legCenterX = (leftHip.x + rightHip.x) / 2;
+  const legCenterY = (leftKnee.y + rightKnee.y) / 2;
+  
+  // Knee angle status
+  const angleColor = kneeAngle >= minKneeAngle ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 100, 100, 0.8)';
+  ctx.fillStyle = angleColor;
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Knee Angle: ${Math.round(kneeAngle)}°`, legCenterX, legCenterY - 30);
+  ctx.fillText(`Target: ${minKneeAngle}°+`, legCenterX, legCenterY - 10);
+
+  // Draw calibration progress bar
+  const barWidth = 200;
+  const barHeight = 20;
+  const barX = ctx.canvas.width / 2 - barWidth / 2;
+  const barY = 50;
+
+  // Background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.fillRect(barX - 5, barY - 5, barWidth + 10, barHeight + 10);
+  
+  // Progress bar background
+  ctx.fillStyle = 'rgba(60, 60, 60, 0.8)';
+  ctx.fillRect(barX, barY, barWidth, barHeight);
+  
+  // Progress fill
+  const progressColor = calibrationProgress >= 100 ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 150, 255, 0.8)';
+  ctx.fillStyle = progressColor;
+  ctx.fillRect(barX, barY, (barWidth * calibrationProgress) / 100, barHeight);
+  
+  // Progress text
+  ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Calibration: ${Math.round(calibrationProgress)}%`, barX + barWidth / 2, barY + 14);
+
+  // Status text
+  let statusText = 'Move less and stand straighter';
+  let statusColor = 'rgba(255, 100, 100, 1)';
+  
+  if (calibrationProgress >= 100) {
+    statusText = '✓ Perfect! Ready to jump!';
+    statusColor = 'rgba(0, 255, 0, 1)';
+  } else if (isStable && kneeAngle >= minKneeAngle) {
+    statusText = 'Great pose! Hold still...';
+    statusColor = 'rgba(0, 200, 0, 1)';
+  } else if (isStable) {
+    statusText = 'Stand straighter!';
+    statusColor = 'rgba(255, 165, 0, 1)';
+  } else if (kneeAngle >= minKneeAngle) {
+    statusText = 'Good angle! Stay still!';
+    statusColor = 'rgba(255, 165, 0, 1)';
+  }
+
+  ctx.fillStyle = statusColor;
+  ctx.font = 'bold 18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(statusText, ctx.canvas.width / 2, barY + 50);
 }
 
 function drawJumpHeightIndicators(ctx: CanvasRenderingContext2D, keypoints: Keypoint[], jumpGroundLevel?: number, currentHeight?: number) {
@@ -266,7 +400,14 @@ export const drawPose = (
   pulseWarning: boolean,
   jumpGroundLevel?: number,
   currentJumpHeight?: number,
-  renderParticleEffects?: (ctx: CanvasRenderingContext2D) => void
+  renderParticleEffects?: (ctx: CanvasRenderingContext2D) => void,
+  jumpCalibrationData?: {
+    calibrationProgress: number;
+    isStable: boolean;
+    kneeAngle: number;
+    minKneeAngle: number;
+    isCalibrating: boolean;
+  }
 ) => {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   if (!pose) return;
@@ -283,7 +424,20 @@ export const drawPose = (
   
   // Draw jump-specific indicators
   if (exercise === 'jumps') {
-    drawJumpHeightIndicators(ctx, keypoints, jumpGroundLevel, currentJumpHeight);
+    // Show calibration guide during setup phase
+    if (jumpCalibrationData?.isCalibrating) {
+      drawJumpCalibrationGuide(
+        ctx, 
+        keypoints, 
+        jumpCalibrationData.calibrationProgress,
+        jumpCalibrationData.isStable,
+        jumpCalibrationData.kneeAngle,
+        jumpCalibrationData.minKneeAngle
+      );
+    } else {
+      // Show normal jump indicators during actual jumping
+      drawJumpHeightIndicators(ctx, keypoints, jumpGroundLevel, currentJumpHeight);
+    }
   }
   
   drawTrajectoryTrails(ctx, keypointHistory, exercise);

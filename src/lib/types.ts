@@ -3,7 +3,7 @@ import type { Keypoint } from '@tensorflow-models/pose-detection';
 
 export type Exercise = "pull-ups" | "jumps";
 
-export type RepState = 'DOWN' | 'UP' | 'GROUNDED' | 'AIRBORNE' | 'READY';
+export type RepState = 'DOWN' | 'UP' | 'GROUNDED' | 'AIRBORNE' | 'READY' | 'PREPARING' | 'CROUCHED' | 'EXPLODING' | 'LANDING';
 
 export type CameraStatus = "idle" | "pending" | "granted" | "denied";
 

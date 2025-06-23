@@ -37,7 +37,19 @@ interface WorkoutSidebarProps {
 const WorkoutSidebar = (props: WorkoutSidebarProps) => {
   return (
     <div className="flex flex-col gap-6 h-full">
-      {/* Workout Controls */}
+      {/* Live Feedback - Moved to top so users can see feedback while positioning */}
+      <div className="bg-card p-4 rounded-lg border flex-1">
+        <h3 className="text-lg font-semibold mb-4">Live Feedback</h3>
+        <CoachFeedback
+          reps={props.reps}
+          formFeedback={props.formFeedback}
+          formScore={props.formScore}
+          coachModel={props.coachModel}
+          workoutMode={props.workoutMode}
+        />
+      </div>
+
+      {/* Workout Controls - Moved below feedback */}
       <div className="bg-card p-4 rounded-lg border">
         <h3 className="text-lg font-semibold mb-4">Workout Setup</h3>
         <div className="space-y-4">
@@ -72,18 +84,6 @@ const WorkoutSidebar = (props: WorkoutSidebarProps) => {
 
       {/* On-Chain Passport */}
       <MyPassport />
-
-      {/* Live Feedback - Always visible during workout */}
-      <div className="bg-card p-4 rounded-lg border flex-1">
-        <h3 className="text-lg font-semibold mb-4">Live Feedback</h3>
-        <CoachFeedback
-          reps={props.reps}
-          formFeedback={props.formFeedback}
-          formScore={props.formScore}
-          coachModel={props.coachModel}
-          workoutMode={props.workoutMode}
-        />
-      </div>
     </div>
   );
 };
