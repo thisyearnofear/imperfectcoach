@@ -50,7 +50,7 @@ const resolveCDPBasename = async (address: string): Promise<string | null> => {
 
     if (!projectId || !apiKeyId || !clientApiKey || !apiKeySecret) {
       console.log(
-        "📋 CDP credentials not fully configured, trying Web3.bio...",
+        "📋 CDP credentials not fully configured, trying Web3.bio..."
       );
     }
 
@@ -68,7 +68,7 @@ const resolveCDPBasename = async (address: string): Promise<string | null> => {
 
       const web3bioResponse = await fetch(
         `https://api.web3.bio/profile/${address}`,
-        { headers },
+        { headers }
       );
 
       if (web3bioResponse.ok) {
@@ -77,7 +77,7 @@ const resolveCDPBasename = async (address: string): Promise<string | null> => {
         // Check for Base nameservice (.base.eth)
         if (web3bioData?.name && web3bioData.name.endsWith(".base.eth")) {
           console.log(
-            `✅ CDP (Web3.bio) basename resolved: ${address} → ${web3bioData.name}`,
+            `✅ CDP (Web3.bio) basename resolved: ${address} → ${web3bioData.name}`
           );
           return web3bioData.name;
         }
@@ -85,11 +85,12 @@ const resolveCDPBasename = async (address: string): Promise<string | null> => {
         // Check ENS domains array for basename
         if (web3bioData?.domains) {
           const baseDomain = web3bioData.domains.find(
-            (domain: any) => domain.name && domain.name.endsWith(".base.eth"),
+            (domain: { name?: string }) =>
+              domain.name && domain.name.endsWith(".base.eth")
           );
           if (baseDomain) {
             console.log(
-              `✅ CDP (Web3.bio domains) basename resolved: ${address} → ${baseDomain.name}`,
+              `✅ CDP (Web3.bio domains) basename resolved: ${address} → ${baseDomain.name}`
             );
             return baseDomain.name;
           }
@@ -108,14 +109,14 @@ const resolveCDPBasename = async (address: string): Promise<string | null> => {
             "Content-Type": "application/json",
             "User-Agent": "ImperfectCoach/1.0",
           },
-        },
+        }
       );
 
       if (coinbaseResponse.ok) {
         const coinbaseData = await coinbaseResponse.json();
         if (coinbaseData?.name && coinbaseData.name.endsWith(".base.eth")) {
           console.log(
-            `✅ CDP (Coinbase Resolver) basename resolved: ${address} → ${coinbaseData.name}`,
+            `✅ CDP (Coinbase Resolver) basename resolved: ${address} → ${coinbaseData.name}`
           );
           return coinbaseData.name;
         }
@@ -133,14 +134,14 @@ const resolveCDPBasename = async (address: string): Promise<string | null> => {
             "Content-Type": "application/json",
             "User-Agent": "ImperfectCoach/1.0",
           },
-        },
+        }
       );
 
       if (baseResponse.ok) {
         const baseData = await baseResponse.json();
         if (baseData?.name) {
           console.log(
-            `✅ CDP (Base API) basename resolved: ${address} → ${baseData.name}`,
+            `✅ CDP (Base API) basename resolved: ${address} → ${baseData.name}`
           );
           return baseData.name;
         }
@@ -164,7 +165,7 @@ const resolveCDPBasename = async (address: string): Promise<string | null> => {
 
 // Thirdweb-based basename resolution
 const resolveThirdwebBasename = async (
-  address: string,
+  address: string
 ): Promise<string | null> => {
   try {
     const name = await resolveL2Name({
@@ -183,7 +184,7 @@ const resolveThirdwebBasename = async (
   } catch (error) {
     console.warn(
       `⚠️ Thirdweb basename resolution failed for ${address}:`,
-      error,
+      error
     );
     return null;
   }
@@ -191,16 +192,7 @@ const resolveThirdwebBasename = async (
 
 // Enhanced basename resolver hook
 export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
-  const config = useMemo(
-    () => ({ ...DEFAULT_OPTIONS, ...options }),
-    [
-      options.cacheDuration,
-      options.maxRetries,
-      options.batchSize,
-      options.enableCDP,
-      options.enableThirdweb,
-    ],
-  );
+  const config = useMemo(() => ({ ...DEFAULT_OPTIONS, ...options }), [options]);
   const [cache, setCache] = useState<BasenameCache>({});
   const [isResolving, setIsResolving] = useState(false);
   const [stats, setStats] = useState({
@@ -241,12 +233,14 @@ export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
             if (data.timestamp && now - data.timestamp < config.cacheDuration) {
               validCache[address] = data;
             }
-          },
+          }
         );
 
         setCache(validCache);
         console.log(
-          `📋 Loaded ${Object.keys(validCache).length} basename entries from cache`,
+          `📋 Loaded ${
+            Object.keys(validCache).length
+          } basename entries from cache`
         );
 
         // Log CDP and Web3.bio configuration status
@@ -291,7 +285,7 @@ export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
       setStats((prev) => ({ ...prev, cacheHits: prev.cacheHits + 1 }));
       return cached.basename;
     },
-    [cache, config.cacheDuration, config.maxRetries],
+    [cache, config.cacheDuration, config.maxRetries]
   );
 
   // Update cache with new result
@@ -323,7 +317,7 @@ export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
         lastUpdate: Date.now(),
       }));
     },
-    [],
+    [config.enableCDP, config.enableThirdweb]
   );
 
   // Resolve single basename with fallbacks
@@ -378,13 +372,13 @@ export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
         return null;
       }
     },
-    [config.enableCDP, config.enableThirdweb, getCachedBasename, updateCache],
+    [config.enableCDP, config.enableThirdweb, getCachedBasename, updateCache]
   );
 
   // Resolve multiple basenames in batches
   const resolveBasenames = useCallback(
     async (
-      addresses: string[],
+      addresses: string[]
     ): Promise<{ [address: string]: string | null }> => {
       if (addresses.length === 0) return {};
 
@@ -438,7 +432,7 @@ export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
 
       return results;
     },
-    [config.batchSize, resolveSingleBasename],
+    [config.batchSize, resolveSingleBasename]
   );
 
   // Get display name for an address (basename or formatted address)
@@ -453,7 +447,7 @@ export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
       // Return formatted address as fallback
       return `${address.slice(0, 6)}...${address.slice(-4)}`;
     },
-    [getCachedBasename],
+    [getCachedBasename]
   );
 
   // Preload basenames for a list of addresses with circuit breaker and rate limiting
@@ -519,7 +513,7 @@ export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
         }, delay);
       }
     },
-    [resolveBasenames, getCachedBasename],
+    [resolveBasenames, getCachedBasename]
   );
 
   // Clear cache

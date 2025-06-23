@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -20,6 +20,7 @@ import {
   Sparkles,
   ArrowRight,
   Brain,
+  BarChart3,
 } from "lucide-react";
 import { BlockchainScoreSubmission } from "./BlockchainScoreSubmission";
 import { InlineWallet } from "./UnifiedWallet";
@@ -27,12 +28,20 @@ import { Leaderboard } from "./Leaderboard";
 
 import { useUserAuth, useUserDisplay } from "@/hooks/useUserHooks";
 import { useFeatureGate } from "@/hooks/useFeatureGate";
-import { Exercise, RepData } from "@/lib/types";
+import {
+  Exercise,
+  RepData,
+  CoachModel,
+  SessionSummaries,
+  ChatMessage,
+} from "@/lib/types";
 import PremiumAnalysisUpsell from "./PremiumAnalysisUpsell";
 import { cn } from "@/lib/utils";
 import { CoachSummarySelector } from "./CoachSummarySelector";
 import UnlockedAchievements from "./UnlockedAchievements";
 import { useAchievements } from "@/hooks/useAchievements";
+import PerformanceAnalytics from "./PerformanceAnalytics";
+import { useAIFeedback } from "@/hooks/useAIFeedback";
 
 interface PostWorkoutFlowProps {
   exercise: Exercise;
@@ -42,6 +51,7 @@ interface PostWorkoutFlowProps {
   onSubmissionComplete?: () => void;
   isWorkoutActive?: boolean;
   hasWorkoutEnded?: boolean;
+  sessionDuration?: string;
 }
 
 type FlowState = "results" | "connect" | "authenticate" | "ready" | "submitted";
@@ -54,22 +64,42 @@ export const PostWorkoutFlow = ({
   onSubmissionComplete,
   isWorkoutActive = false,
   hasWorkoutEnded = false,
+  sessionDuration = "N/A",
 }: PostWorkoutFlowProps) => {
   const { isConnected, isAuthenticated } = useUserAuth();
   const { basename } = useUserDisplay();
   const { achievements } = useAchievements(reps, repHistory, averageFormScore);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [isUpsellOpen, setIsUpsellOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{
     analysis: string;
   } | null>(null);
+
+  // AI Analysis state
+  const [selectedCoaches, setSelectedCoaches] = useState<CoachModel[]>([
+    "gemini",
+  ]);
+  const [sessionSummaries, setSessionSummaries] =
+    useState<SessionSummaries | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const canShowSummary = useFeatureGate("AI_SUMMARY");
   const canShowAchievements = useFeatureGate("ACHIEVEMENTS");
   const canShowAnalytics = useFeatureGate("FULL_ANALYTICS");
+
+  // Initialize AI feedback hook
+  const { getAISessionSummary, getAIChatResponse } = useAIFeedback({
+    exercise,
+    coachPersonality: "supportive", // Default for summaries
+    workoutMode: "training",
+    onFormFeedback: () => {}, // Not used in post-workout
+  });
 
   // Auto-scroll to results only when workout actually ends
   useEffect(() => {
@@ -82,6 +112,97 @@ export const PostWorkoutFlow = ({
       }, 500);
     }
   }, [hasWorkoutEnded, reps]);
+
+  // Handle AI summary generation
+  const handleGenerateAISummary = useCallback(async () => {
+    if (reps === 0 || selectedCoaches.length === 0) return;
+
+    setIsSummaryLoading(true);
+    try {
+      const summaries = await getAISessionSummary(
+        {
+          reps,
+          averageFormScore,
+          repHistory,
+          exercise,
+          sessionDuration,
+        },
+        selectedCoaches
+      );
+      setSessionSummaries(summaries);
+    } catch (error) {
+      console.error("Failed to generate AI summaries:", error);
+    } finally {
+      setIsSummaryLoading(false);
+    }
+  }, [
+    reps,
+    selectedCoaches,
+    getAISessionSummary,
+    averageFormScore,
+    repHistory,
+    exercise,
+    sessionDuration,
+  ]);
+
+  // Auto-generate AI summaries when workout ends
+  useEffect(() => {
+    if (hasWorkoutEnded && reps > 0 && selectedCoaches.length > 0) {
+      handleGenerateAISummary();
+    }
+  }, [hasWorkoutEnded, reps, selectedCoaches, handleGenerateAISummary]);
+
+  // Handle chat messages
+  const handleSendMessage = async (message: string, model: CoachModel) => {
+    if (!sessionSummaries) return;
+
+    setIsChatLoading(true);
+    setChatMessages((prev) => [
+      ...prev,
+      { role: "user", content: message, model },
+    ]);
+
+    try {
+      const response = await getAIChatResponse(
+        chatMessages,
+        {
+          reps,
+          averageFormScore,
+          repHistory,
+          exercise,
+          sessionDuration,
+          message,
+        },
+        model
+      );
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response, model },
+      ]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, I couldn't process that message. Please try again.",
+          model,
+        },
+      ]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  // Calculate rep timings for analytics
+  const repTimings = {
+    avg:
+      repHistory.length > 0
+        ? repHistory.reduce((acc, rep, i) => acc + (i > 0 ? 2 : 0), 0) /
+          Math.max(repHistory.length - 1, 1)
+        : 0,
+    stdDev: 0.5, // Simplified for now
+  };
 
   // Determine current flow state
   const getFlowState = (): FlowState => {
@@ -180,6 +301,92 @@ export const PostWorkoutFlow = ({
                 </li>
                 <li>• Remember to maintain steady breathing throughout</li>
               </ul>
+            </div>
+
+            {/* AI Coach Selection */}
+            <div className="space-y-3">
+              <CoachSummarySelector
+                selectedCoaches={selectedCoaches}
+                onSelectionChange={setSelectedCoaches}
+                disabled={isSummaryLoading}
+              />
+
+              {selectedCoaches.length > 0 && (
+                <Button
+                  onClick={handleGenerateAISummary}
+                  disabled={isSummaryLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  {isSummaryLoading ? "Analyzing..." : "Get AI Analysis"}
+                </Button>
+              )}
+            </div>
+
+            {/* AI Summaries Display */}
+            {(isSummaryLoading || sessionSummaries) && (
+              <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                {isSummaryLoading && !sessionSummaries && (
+                  <p className="text-sm text-gray-600 animate-pulse text-center">
+                    🤖 Your AI coaches are analyzing your performance...
+                  </p>
+                )}
+
+                {sessionSummaries &&
+                  Object.keys(sessionSummaries).length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-gray-800">
+                        AI Coach Analysis:
+                      </h4>
+                      {Object.entries(sessionSummaries).map(
+                        ([model, summary]) => (
+                          <div
+                            key={model}
+                            className="p-3 bg-white rounded border-l-4 border-green-500"
+                          >
+                            <p className="font-semibold text-green-700 text-sm mb-1">
+                              {model.charAt(0).toUpperCase() + model.slice(1)}'s
+                              Analysis:
+                            </p>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                              {summary}
+                            </p>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+              </div>
+            )}
+
+            {/* Performance Charts Toggle */}
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="w-full"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                {showAnalytics ? "Hide" : "Show"} Performance Charts
+              </Button>
+
+              {showAnalytics && (
+                <div className="mt-4">
+                  <PerformanceAnalytics
+                    repHistory={repHistory}
+                    totalReps={reps}
+                    averageFormScore={averageFormScore}
+                    exercise={exercise}
+                    sessionDuration={sessionDuration}
+                    repTimings={repTimings}
+                    sessionSummaries={sessionSummaries}
+                    isSummaryLoading={isSummaryLoading}
+                    onTryAgain={() => window.location.reload()}
+                    chatMessages={chatMessages}
+                    isChatLoading={isChatLoading}
+                    onSendMessage={handleSendMessage}
+                  />
+                </div>
+              )}
             </div>
 
             <Alert className="border-amber-200 bg-amber-50">

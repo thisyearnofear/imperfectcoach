@@ -293,7 +293,6 @@ export const useExerciseProcessor = ({
       isWorkoutActive,
       exercise,
       workoutMode,
-      coachPersonality,
       isDebugMode,
       onFormFeedback,
       onFormScoreUpdate,
@@ -309,7 +308,6 @@ export const useExerciseProcessor = ({
       jumpGroundLevel,
       peakAirborneY,
       currentRepAngles,
-      calibrationFrames,
       incrementReps,
     ]
   );

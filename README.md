@@ -198,6 +198,18 @@ Unlock advanced AI-powered workout analysis with our premium tier:
 
 For full details, see `docs/PRODUCTION_ROADMAP.md` and `docs/ARCHITECTURE.md`.
 
+## Future
+
+# Switch to the feature branch to continue development
+git checkout feature/aws-pure-architecture-snel-steddie
+
+# Or create a pull request to review before merging
+# (GitHub will show the PR link from the push output)
+
+# Or merge directly when ready
+git checkout main
+git merge feature/aws-pure-architecture-snel-steddie
+
 ---
 
 ## 🔧 Development
