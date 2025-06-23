@@ -1,0 +1,14 @@
+{
+  "name": "coach-gemini",
+  "version": "1.0.0",
+  "description": "AI coaching feedback using Gemini, OpenAI, and Anthropic",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

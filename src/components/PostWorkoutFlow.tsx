@@ -20,6 +20,7 @@ import {
   Sparkles,
   ArrowRight,
   Brain,
+  Star,
 } from "lucide-react";
 import { BlockchainScoreSubmission } from "./BlockchainScoreSubmission";
 import { InlineWallet } from "./UnifiedWallet";
@@ -33,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { CoachSummarySelector } from "./CoachSummarySelector";
 import UnlockedAchievements from "./UnlockedAchievements";
 import { useAchievements } from "@/hooks/useAchievements";
+import { useAWSAIFeedback } from "@/hooks/useAWSAIFeedback";
 
 interface PostWorkoutFlowProps {
   exercise: Exercise;
@@ -59,6 +61,15 @@ export const PostWorkoutFlow = ({
   const { basename } = useUserDisplay();
   const { achievements } = useAchievements(reps, repHistory, averageFormScore);
 
+  // AWS AI Coaches for post-workout analysis
+  const { getSessionSummary } = useAWSAIFeedback({
+    exercise,
+    coachPersonality: "supportive",
+  });
+
+  const [snelAnalysis, setSnelAnalysis] = useState<string | null>(null);
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isUpsellOpen, setIsUpsellOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{
@@ -82,6 +93,41 @@ export const PostWorkoutFlow = ({
       }, 500);
     }
   }, [hasWorkoutEnded, reps]);
+
+  // Get SNEL basic analysis when workout ends
+  useEffect(() => {
+    if (hasWorkoutEnded && reps > 0 && !snelAnalysis && !isLoadingAnalysis) {
+      setIsLoadingAnalysis(true);
+      getSessionSummary({
+        exercise,
+        reps,
+        averageFormScore,
+        repHistory,
+      })
+        .then((result) => {
+          setSnelAnalysis(result.snel);
+          setIsLoadingAnalysis(false);
+        })
+        .catch(() => {
+          // Fallback analysis
+          const fallback =
+            averageFormScore >= 80
+              ? "Excellent form! Your technique is really coming together. 🐌"
+              : "Good effort! Focus on controlled movements for better form. 🐌";
+          setSnelAnalysis(fallback);
+          setIsLoadingAnalysis(false);
+        });
+    }
+  }, [
+    hasWorkoutEnded,
+    reps,
+    snelAnalysis,
+    isLoadingAnalysis,
+    getSessionSummary,
+    exercise,
+    averageFormScore,
+    repHistory,
+  ]);
 
   // Determine current flow state
   const getFlowState = (): FlowState => {
@@ -164,31 +210,56 @@ export const PostWorkoutFlow = ({
             </div>
 
             <div className="p-4 bg-white rounded-lg border-l-4 border-blue-500">
-              <h4 className="font-semibold text-gray-800 mb-2">Quick Tips:</h4>
-              <ul className="text-sm text-gray-700 space-y-1">
-                <li>
-                  •{" "}
-                  {averageFormScore >= 80
-                    ? "Excellent form! Keep it consistent."
-                    : "Focus on controlled movements for better form."}
-                </li>
-                <li>
-                  •{" "}
-                  {reps >= 5
-                    ? "Great endurance! Try increasing intensity."
-                    : "Build up reps gradually for strength gains."}
-                </li>
-                <li>• Remember to maintain steady breathing throughout</li>
-              </ul>
+              <h4 className="font-semibold text-gray-800 mb-2">
+                🐌 SNEL Basic Coach:
+              </h4>
+              {isLoadingAnalysis ? (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                  <span className="text-sm">SNEL is thinking...</span>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {snelAnalysis ||
+                    "Great workout! Your consistency is improving. 🐌"}
+                </p>
+              )}
             </div>
+
+            {/* Achievements inline - only show if any unlocked */}
+            {achievements && achievements.length > 0 && (
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Star className="h-4 w-4 text-amber-600" />
+                  <h4 className="font-semibold text-amber-800">
+                    Achievements Unlocked!
+                  </h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {achievements.slice(0, 3).map((achievement, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full"
+                    >
+                      {achievement.name}
+                    </span>
+                  ))}
+                  {achievements.length > 3 && (
+                    <span className="text-xs text-amber-700">
+                      +{achievements.length - 3} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <Alert className="border-amber-200 bg-amber-50">
               <Sparkles className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800">
                 <div className="flex items-center justify-between">
                   <span>
-                    <strong>Want detailed analysis?</strong> Get professional AI
-                    coaching for just $0.25
+                    <strong>Want detailed analysis?</strong> Get 🐢 STEDDIE
+                    Premium coaching for just $0.25
                   </span>
                   <Button
                     size="sm"
@@ -284,21 +355,6 @@ export const PostWorkoutFlow = ({
           console.log("Premium analysis complete:", result);
         }}
       />
-
-      {/* Advanced Features - Simplified */}
-      {canShowAchievements && (
-        <Card className="border border-gray-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-800">
-              <Trophy className="h-5 w-5" />
-              Achievements Unlocked
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <UnlockedAchievements achievements={achievements} />
-          </CardContent>
-        </Card>
-      )}
 
       {/* Motivational Footer - Only for disconnected users */}
       {!isConnected && (

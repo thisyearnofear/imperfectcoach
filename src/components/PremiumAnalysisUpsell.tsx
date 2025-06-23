@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAccount, useConnectorClient } from "wagmi";
 import { wrapFetchWithPayment, decodeXPaymentResponse } from "x402-fetch";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2, Trophy } from "lucide-react";
+import { useAWSAIFeedback } from "@/hooks/useAWSAIFeedback";
 
 interface WorkoutData {
   exercise: string;
@@ -49,6 +49,10 @@ const PremiumAnalysisUpsell = ({
   const [analysisData, setAnalysisData] = useState<string | null>(null);
   const { isConnected } = useAccount();
   const { data: walletClient } = useConnectorClient();
+  const { getSTEDDIEAnalysis } = useAWSAIFeedback({
+    exercise: workoutData.exercise,
+    coachPersonality: "supportive",
+  });
 
   const handlePaymentAndAnalysis = async () => {
     if (!isConnected || !walletClient) {
@@ -60,87 +64,31 @@ const PremiumAnalysisUpsell = ({
     setError(null);
 
     try {
-      // Call AWS Lambda directly with x402 payment
-      const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient);
-
-      const apiUrl =
-        "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
-
-      console.log("Calling AWS Lambda directly for premium analysis...");
+      console.log("🐢 Calling STEDDIE Premium Analysis...");
       console.log("Request payload:", JSON.stringify(workoutData, null, 2));
 
-      const response = await fetchWithPayment(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "Accept-Encoding": "identity", // Disable compression
-        },
-        body: JSON.stringify(workoutData),
-      });
+      // Call STEDDIE with x402 payment
+      const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient);
 
-      console.log("Lambda response status:", response.status);
-      console.log(
-        "Lambda response headers:",
-        Object.fromEntries(response.headers.entries())
+      const analysisResult = await getSTEDDIEAnalysis(
+        {
+          exercise: workoutData.exercise,
+          reps: workoutData.reps,
+          averageFormScore: workoutData.averageFormScore,
+          duration:
+            workoutData.repHistory.length > 0
+              ? workoutData.repHistory[workoutData.repHistory.length - 1]
+                  .timestamp - workoutData.repHistory[0].timestamp
+              : 0,
+          repHistory: workoutData.repHistory,
+        },
+        fetchWithPayment
       );
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "Unknown error");
-        console.error("Lambda error response:", errorText);
-        throw new Error(
-          `Analysis failed with status ${response.status}: ${errorText}`
-        );
-      }
-
-      // Check content type and handle response appropriately
-      const contentType = response.headers.get("content-type");
-      const contentEncoding = response.headers.get("content-encoding");
-      console.log("Lambda response content-type:", contentType);
-      console.log("Lambda response content-encoding:", contentEncoding);
-
-      let analysisResult;
-      try {
-        const responseText = await response.text();
-        console.log("Lambda raw response length:", responseText.length);
-        console.log(
-          "Lambda raw response preview:",
-          responseText.substring(0, 500)
-        );
-
-        // Try to parse as JSON
-        analysisResult = JSON.parse(responseText);
-        console.log("Successfully parsed Lambda response:", analysisResult);
-      } catch (parseError) {
-        console.error("Failed to parse Lambda response as JSON:", parseError);
-        console.error("Parse error details:", parseError.message);
-        throw new Error(
-          `Invalid response format from analysis service: ${parseError.message}`
-        );
-      }
-
-      // Check for x-payment-response header
-      const paymentResponseHeader = response.headers.get("x-payment-response");
-      if (paymentResponseHeader) {
-        try {
-          const paymentResponse = decodeXPaymentResponse(paymentResponseHeader);
-          console.log("Payment successful:", paymentResponse);
-        } catch (paymentError) {
-          console.log(
-            "Payment header parsing error (using mock mode):",
-            paymentError
-          );
-          console.log("Payment completed (mock payment mode)");
-        }
-      } else {
-        console.log("Analysis completed (mock payment mode)");
-      }
-
-      console.log("About to set analysis data:", analysisResult.analysis);
-      setAnalysisData(analysisResult.analysis);
+      console.log("🐢 STEDDIE analysis received");
+      setAnalysisData(analysisResult);
       setShowResults(true);
-      console.log("About to call onAnalysisComplete with:", analysisResult);
-      onAnalysisComplete(analysisResult);
+      onAnalysisComplete({ analysis: analysisResult });
     } catch (err: unknown) {
       console.error("Premium Analysis Error:", err);
       setError(
@@ -185,18 +133,26 @@ const PremiumAnalysisUpsell = ({
         {!showResults ? (
           <>
             <DialogHeader>
-              <DialogTitle>Unlock Your Full Potential</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                🐢 Unlock STEDDIE Premium Analysis
+              </DialogTitle>
               <DialogDescription>
-                Get a permanent on-chain record and a "Bedrock Deep Dive"
-                analysis of your workout for just $0.25.
+                Get expert coaching insights from STEDDIE and a permanent
+                on-chain record of your workout for just $0.25.
               </DialogDescription>
             </DialogHeader>
 
             <div className="my-4">
-              <p className="font-semibold">What you'll get:</p>
+              <p className="font-semibold">What STEDDIE 🐢 provides:</p>
               <ul className="list-disc list-inside text-sm text-muted-foreground">
-                <li>In-depth form analysis powered by Amazon Bedrock.</li>
-                <li>Actionable insights to improve your technique.</li>
+                <li>Deep-dive form analysis powered by Amazon Nova Lite.</li>
+                <li>
+                  Expert-level coaching insights and personalized
+                  recommendations.
+                </li>
+                <li>
+                  Comprehensive performance scoring with detailed rationale.
+                </li>
                 <li>
                   Your "WIP Passport" NFT will be minted or updated on-chain.
                 </li>
@@ -224,7 +180,7 @@ const PremiumAnalysisUpsell = ({
                     Processing...
                   </>
                 ) : (
-                  "Pay $0.25 and Analyze"
+                  "Get STEDDIE Analysis - $0.25"
                 )}
               </Button>
             </DialogFooter>
@@ -234,10 +190,11 @@ const PremiumAnalysisUpsell = ({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-yellow-500" />
-                Analysis Complete
+                🐢 STEDDIE Analysis Complete
               </DialogTitle>
               <DialogDescription>
-                Your premium workout analysis powered by Amazon Bedrock
+                Your premium workout analysis by STEDDIE, powered by Amazon Nova
+                Lite
               </DialogDescription>
             </DialogHeader>
 
