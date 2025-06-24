@@ -99,7 +99,7 @@ const CoachFeedback = ({
               onClick={onPremiumUpgrade}
               className="text-sm text-amber-700 hover:text-amber-800 font-medium underline"
             >
-              Get detailed AI analysis for $0.25
+              Get detailed AI analysis for $0.05
             </button>
           </div>
         </div>

@@ -1,0 +1,27 @@
+{
+  "name": "imperfect-coach-premium-analysis",
+  "version": "1.0.0",
+  "description": "Premium workout analysis with x402 payment integration",
+  "main": "premium-analysis-handler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "zip -r premium-analysis-lambda.zip premium-analysis-handler.js node_modules/ package.json"
+  },
+  "keywords": [
+    "aws-lambda",
+    "x402",
+    "cdp-wallet",
+    "bedrock",
+    "fitness",
+    "blockchain"
+  ],
+  "author": "Imperfect Coach",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.0.0",
+    "@coinbase/coinbase-sdk": "^0.25.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

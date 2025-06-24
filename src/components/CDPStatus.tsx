@@ -172,25 +172,42 @@ export const CDPStatus = ({ showDetails = false, compact = false }: CDPStatusPro
               {txHistory.slice(0, 5).map((tx) => (
                 <div
                   key={tx.hash}
-                  className="flex items-center justify-between p-2 bg-muted/30 rounded"
+                  className="p-2 bg-muted/30 rounded space-y-1"
                 >
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={
-                        tx.status === "confirmed" ? "default" :
-                        tx.status === "failed" ? "destructive" : "secondary"
-                      }
-                      className="text-xs"
-                    >
-                      {tx.status}
-                    </Badge>
-                    <span className="text-xs font-mono">
-                      {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={
+                          tx.status === "confirmed" ? "default" :
+                          tx.status === "failed" ? "destructive" : "secondary"
+                        }
+                        className="text-xs"
+                      >
+                        {tx.status}
+                      </Badge>
+                      {tx.type && (
+                        <Badge variant="outline" className="text-xs">
+                          {tx.type}
+                        </Badge>
+                      )}
+                      <span className="text-xs font-mono">
+                        {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(tx.timestamp).toLocaleTimeString()}
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(tx.timestamp).toLocaleTimeString()}
-                  </div>
+                  {(tx.amount || tx.description) && (
+                    <div className="flex justify-between items-center text-xs">
+                      {tx.description && (
+                        <span className="text-muted-foreground">{tx.description}</span>
+                      )}
+                      {tx.amount && tx.currency && (
+                        <span className="font-medium">{tx.amount} {tx.currency}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

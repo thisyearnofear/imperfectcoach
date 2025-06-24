@@ -131,13 +131,13 @@ To enable blockchain features:
 
 ### 📄 Smart Contracts
 
-| Contract | Address | Status |
-|----------|---------|--------|
+| Contract                   | Address                                      | Status      |
+| -------------------------- | -------------------------------------------- | ----------- |
 | **ImperfectCoachPassport** | `0x7c95712a2bce65e723cE99C190f6bd6ff73c4212` | ✅ Deployed |
-| **CoachOperator** | `0xdEc2d60c9526106a8e4BBd01d70950f6694053A3` | ✅ Deployed |
-| **RevenueSplitter** | `0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA` | ✅ Deployed |
-| **Jumps Leaderboard** | `0xc5fB32a87A0D54f2AEbc773F0038d32c79AA1004` | ✅ Deployed |
-| **Pullups Leaderboard** | `0x69FD29376c3e77C494Fa4c25aac4A8810f511305` | ✅ Deployed |
+| **CoachOperator**          | `0xdEc2d60c9526106a8e4BBd01d70950f6694053A3` | ✅ Deployed |
+| **RevenueSplitter**        | `0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA` | ✅ Deployed |
+| **Jumps Leaderboard**      | `0xc5fB32a87A0D54f2AEbc773F0038d32c79AA1004` | ✅ Deployed |
+| **Pullups Leaderboard**    | `0x69FD29376c3e77C494Fa4c25aac4A8810f511305` | ✅ Deployed |
 
 ### 🎯 Platform Features
 
@@ -146,17 +146,26 @@ To enable blockchain features:
 - ✅ **Blockchain leaderboards** - Live on Base Sepolia with automatic score submission
 - ✅ **Premium analysis** - Amazon Nova Lite integration with AWS Lambda deployed
 - ✅ **Revenue distribution** - Autonomous 70/20/10 split to stakeholders
-- 🔄 **CDP Wallet integration** - In progress for autonomous treasury management
+- ✅ **CDP Wallet integration** - Complete with autonomous treasury management
 
 ### 💰 Revenue Distribution
+
+**RevenueSplitter Contract** (Traditional): `0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA`
 
 - **Platform Treasury** (70%): `0x55A5705453Ee82c742274154136Fce8149597058`
 - **User Rewards Pool** (20%): `0x3D86Ff165D8bEb8594AE05653249116a6d1fF3f1`
 - **Referrer Pool** (10%): `0xec4F3Ac60AE169fE27bed005F3C945A112De2c5A`
 
+**CDP Autonomous Treasury** (New - Successfully Deployed):
+
+- **Treasury Account**: `0x7011910452cA4ab9e5c3047aA4a25297C144158a`
+- **User Rewards Account**: `0x16FF42346F2E24C869ea305e8318BC3229815c11`
+- **Referrer Account**: `0xF9468bd2D62E933ADbaD715D8da18c54f70dd94F`
+
 ### 🏆 Hackathon Status
 
 **Targeting:** Coinbase "Agents in Action" Hackathon
+
 - **Category**: Best Use of x402pay + CDP Wallet ($5,000 prize)
 - **Bonus**: Amazon Bedrock integration ($10,000 AWS credits + SF demo)
 - **Current**: MVP complete, CDP Wallet integration in progress
@@ -201,12 +210,15 @@ For full details, see `docs/PRODUCTION_ROADMAP.md` and `docs/ARCHITECTURE.md`.
 ## Future
 
 # Switch to the feature branch to continue development
+
 git checkout feature/aws-pure-architecture-snel-steddie
 
 # Or create a pull request to review before merging
+
 # (GitHub will show the PR link from the push output)
 
 # Or merge directly when ready
+
 git checkout main
 git merge feature/aws-pure-architecture-snel-steddie
 

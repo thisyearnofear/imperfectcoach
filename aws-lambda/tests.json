@@ -1,0 +1,65 @@
+{
+  "test_cases": {
+    "1_cors_preflight": {
+      "description": "Test CORS preflight request (OPTIONS method)",
+      "event": {
+        "httpMethod": "OPTIONS",
+        "headers": {
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "Content-Type, X-Payment"
+        },
+        "body": null
+      },
+      "expected_result": "Should return 200 with CORS headers"
+    },
+
+    "2_payment_required": {
+      "description": "Test 402 Payment Required response (no payment header)",
+      "event": {
+        "httpMethod": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"exercise\": \"pullup\", \"reps\": 5, \"averageFormScore\": 85, \"duration\": 30, \"repHistory\": [{\"score\": 80, \"details\": {}}, {\"score\": 85, \"details\": {}}, {\"score\": 90, \"details\": {}}, {\"score\": 85, \"details\": {}}, {\"score\": 85, \"details\": {}}]}"
+      },
+      "expected_result": "Should return 402 with payment challenge"
+    },
+
+    "3_with_mock_payment": {
+      "description": "Test with mock payment header (will fail payment verification but test flow)",
+      "event": {
+        "httpMethod": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Payment": "eyJ0ZXN0IjogInBheW1lbnQiLCAidHJhbnNhY3Rpb25IYXNoIjogIjB4MTIzNDU2NzgifQ=="
+        },
+        "body": "{\"exercise\": \"pushup\", \"reps\": 10, \"averageFormScore\": 78, \"duration\": 45, \"repHistory\": [{\"score\": 75, \"details\": {}}, {\"score\": 80, \"details\": {}}, {\"score\": 75, \"details\": {}}, {\"score\": 82, \"details\": {}}, {\"score\": 78, \"details\": {}}, {\"score\": 80, \"details\": {}}, {\"score\": 75, \"details\": {}}, {\"score\": 77, \"details\": {}}, {\"score\": 82, \"details\": {}}, {\"score\": 76, \"details\": {}}]}"
+      },
+      "expected_result": "Should attempt payment verification and likely return 402 with error"
+    },
+
+    "4_invalid_json": {
+      "description": "Test error handling with invalid JSON",
+      "event": {
+        "httpMethod": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{invalid json"
+      },
+      "expected_result": "Should return 500 internal server error"
+    },
+
+    "5_empty_workout_data": {
+      "description": "Test with minimal workout data",
+      "event": {
+        "httpMethod": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{}"
+      },
+      "expected_result": "Should return 402 Payment Required"
+    }
+  }
+}

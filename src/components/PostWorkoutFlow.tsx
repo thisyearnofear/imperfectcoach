@@ -204,6 +204,20 @@ export const PostWorkoutFlow = ({
     stdDev: 0.5, // Simplified for now
   };
 
+  // Convert sessionDuration string to seconds for AWS Lambda
+  const convertDurationToSeconds = (durationString: string): number => {
+    if (!durationString || durationString === "N/A") return 0;
+
+    // Parse formats like "2m 30s", "45s", "1m", etc.
+    const minMatch = durationString.match(/(\d+)m/);
+    const secMatch = durationString.match(/(\d+)s/);
+
+    const minutes = minMatch ? parseInt(minMatch[1]) : 0;
+    const seconds = secMatch ? parseInt(secMatch[1]) : 0;
+
+    return minutes * 60 + seconds;
+  };
+
   // Determine current flow state
   const getFlowState = (): FlowState => {
     if (reps === 0) return "results";
@@ -395,7 +409,7 @@ export const PostWorkoutFlow = ({
                 <div className="flex items-center justify-between">
                   <span>
                     <strong>Want detailed analysis?</strong> Get professional AI
-                    coaching for just $0.25
+                    coaching for just $0.05
                   </span>
                   <Button
                     size="sm"
@@ -484,6 +498,7 @@ export const PostWorkoutFlow = ({
             details: rep.details as unknown as Record<string, unknown>,
           })),
           averageFormScore,
+          duration: convertDurationToSeconds(sessionDuration),
         }}
         onAnalysisComplete={(result) => {
           setAnalysisResult(result);

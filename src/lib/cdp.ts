@@ -11,6 +11,11 @@ interface TransactionMetadata {
   timestamp: number;
   gasEstimate?: string;
   status?: "pending" | "confirmed" | "failed";
+  type?: "payment" | "contract" | "transfer";
+  amount?: string;
+  currency?: string;
+  description?: string;
+  facilitator?: string;
 }
 
 class CDPManager {
@@ -121,12 +126,33 @@ class CDPManager {
       hash,
       timestamp: Date.now(),
       status: "pending",
+      type: "payment",
       ...metadata,
     };
 
     this.transactionHistory.set(hash, txData);
     this.saveTransactionHistory();
-    console.log("📝 Transaction tracked:", hash);
+    console.log("📝 Transaction tracked:", hash, txData.type || "unknown type");
+  }
+
+  /**
+   * Track x402 payment transaction with enhanced metadata
+   */
+  trackPaymentTransaction(
+    hash: string,
+    amount: string,
+    currency: string,
+    description?: string,
+    facilitator?: string
+  ): void {
+    this.trackTransaction(hash, {
+      type: "payment",
+      amount,
+      currency,
+      description: description || "x402 payment",
+      facilitator: facilitator || "CDP",
+      status: "confirmed"
+    });
   }
 
   /**
@@ -442,6 +468,13 @@ export const trackTransaction = (
   hash: string,
   metadata?: Partial<TransactionMetadata>,
 ) => cdpManager.trackTransaction(hash, metadata);
+export const trackPaymentTransaction = (
+  hash: string,
+  amount: string,
+  currency: string,
+  description?: string,
+  facilitator?: string
+) => cdpManager.trackPaymentTransaction(hash, amount, currency, description, facilitator);
 export const updateTransactionStatus = (
   hash: string,
   status: TransactionMetadata["status"],
