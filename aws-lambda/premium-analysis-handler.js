@@ -48,9 +48,15 @@ const PAYMENT_CONFIG = {
     process.env.REVENUE_SPLITTER_ADDRESS ||
     "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA", // Your RevenueSplitter contract
   amount: "50000", // 0.05 USDC (6 decimals)
-  currency: USDC_ADDRESS_BASE_SEPOLIA,
+  asset: USDC_ADDRESS_BASE_SEPOLIA,
   chainId: 84532, // Base Sepolia
+  network: "base-sepolia",
+  scheme: "exact",
+  resource:
+    "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
   description: "Premium workout analysis powered by Amazon Bedrock",
+  mimeType: "application/json",
+  maxTimeoutSeconds: 300,
 };
 
 // CDP Account Configuration for Autonomous Treasury Management
@@ -224,17 +230,16 @@ function createPaymentRequiredResponse(errorMessage) {
   const paymentChallenge = {
     accepts: [
       {
-        scheme: "exact",
-        network: "base-sepolia",
-        asset: USDC_ADDRESS_BASE_SEPOLIA,
+        scheme: PAYMENT_CONFIG.scheme,
+        network: PAYMENT_CONFIG.network,
+        asset: PAYMENT_CONFIG.asset,
         amount: PAYMENT_CONFIG.amount,
         maxAmountRequired: PAYMENT_CONFIG.amount,
         payTo: PAYMENT_CONFIG.sellerWallet,
-        resource:
-          "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
+        resource: PAYMENT_CONFIG.resource,
         description: PAYMENT_CONFIG.description,
-        mimeType: "application/json",
-        maxTimeoutSeconds: 300,
+        mimeType: PAYMENT_CONFIG.mimeType,
+        maxTimeoutSeconds: PAYMENT_CONFIG.maxTimeoutSeconds,
         chainId: PAYMENT_CONFIG.chainId,
         facilitator: PAYMENT_CONFIG.facilitatorUrl,
       },
@@ -271,17 +276,16 @@ async function verifyAndSettlePayment(paymentHeader) {
 
     // Prepare payment details for facilitator
     const paymentDetails = {
-      scheme: "exact",
-      network: "base-sepolia",
-      asset: PAYMENT_CONFIG.currency,
+      scheme: PAYMENT_CONFIG.scheme,
+      network: PAYMENT_CONFIG.network,
+      asset: PAYMENT_CONFIG.asset,
       amount: PAYMENT_CONFIG.amount,
       chainId: PAYMENT_CONFIG.chainId,
       payTo: PAYMENT_CONFIG.sellerWallet,
-      resource:
-        "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
+      resource: PAYMENT_CONFIG.resource,
       description: PAYMENT_CONFIG.description,
-      mimeType: "application/json",
-      maxTimeoutSeconds: 300,
+      mimeType: PAYMENT_CONFIG.mimeType,
+      maxTimeoutSeconds: PAYMENT_CONFIG.maxTimeoutSeconds,
     };
 
     console.log("📋 Payment details for verification:", paymentDetails);

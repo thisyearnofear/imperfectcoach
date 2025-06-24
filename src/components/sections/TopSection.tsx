@@ -97,11 +97,9 @@ export const TopSection = (props: TopSectionProps) => {
         </div>
       </div>
 
-      {/* Mobile: Stacked layout with feedback first, then controls below video */}
+      {/* Mobile: Stacked layout with live feedback immediately after video */}
       <div className="lg:hidden mt-6 space-y-4">
-        {/* Mobile Visual Guide - First on mobile for educational value */}
-        <PoseDetectionGuide />
-        {/* Live Feedback - Now first on mobile too for consistency */}
+        {/* Live Feedback - Immediately below video for exercise attempt feedback */}
         <div className="bg-card p-4 rounded-lg border">
           <h3 className="text-lg font-semibold mb-4">Live Feedback</h3>
           <CoachFeedback
@@ -113,18 +111,8 @@ export const TopSection = (props: TopSectionProps) => {
           />
         </div>
 
-        {/* Workout Setup - Now second */}
-        <div className="bg-card p-4 rounded-lg border">
-          <h3 className="text-lg font-semibold mb-4">Workout Setup</h3>
-          <CoreControls
-            workoutMode={props.workoutMode}
-            onWorkoutModeChange={props.onWorkoutModeChange}
-            selectedExercise={props.exercise}
-            onExerciseChange={props.onExerciseChange}
-            coachPersonality={props.coachPersonality}
-            onCoachPersonalityChange={props.onCoachPersonalityChange}
-          />
-        </div>
+        {/* Mobile Visual Guide - After feedback for reference */}
+        <PoseDetectionGuide />
 
         {/* Mobile Leaderboard - At bottom */}
         <Leaderboard timeframe="week" />
