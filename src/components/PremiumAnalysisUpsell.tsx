@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
-import { wrapFetchWithPayment, decodeXPaymentResponse } from "x402-fetch";
 import { trackPaymentTransaction, updateTransactionStatus } from "@/lib/cdp";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,33 +68,58 @@ const PremiumAnalysisUpsell = ({
     setPaymentStatus("processing");
 
     try {
+      // Get wallet address
+      const address = walletClient.account?.address;
+      if (!address) {
+        throw new Error("No wallet address found");
+      }
+
       console.log("🔧 Wallet client available:", {
-        hasSignTypedData:
-          walletClient &&
-          typeof (walletClient as any).signTypedData === "function",
-        account:
-          walletClient && (walletClient as any).account
-            ? (walletClient as any).account.address
-            : "Not available",
+        address,
+        hasSignMessage: typeof walletClient.signMessage === "function",
       });
 
-      // Wrap fetch with x402 payment capability
-      const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient as any);
+      console.log("🚀 Starting premium analysis with server-side payment...");
+      console.log("💪 Workout data:", JSON.stringify(workoutData, null, 2));
+
+      // Create payment authorization message
+      const timestamp = Date.now();
+      const message = `Authorize payment of 0.05 USDC for premium workout analysis\nTimestamp: ${timestamp}\nAddress: ${address}`;
+
+      console.log("✍️ Signing payment authorization...");
+      const signature = await walletClient.signMessage({
+        account: address,
+        message,
+      });
+      console.log("✅ Payment authorization signed");
+
+      setPaymentStatus("verified");
 
       const apiUrl =
         "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
 
-      console.log("🚀 Starting premium analysis with x402 payment...");
-      console.log("💪 Workout data:", JSON.stringify(workoutData, null, 2));
+      const requestBody = {
+        workoutData,
+        payment: {
+          walletAddress: address,
+          signature,
+          message,
+          amount: "50000", // 0.05 USDC in microUSDC
+          timestamp,
+        },
+      };
 
-      const response = await fetchWithPayment(apiUrl, {
+      console.log(
+        "📤 Sending request body:",
+        JSON.stringify(requestBody, null, 2)
+      );
+
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json",
-          "Accept-Encoding": "identity",
         },
-        body: JSON.stringify(workoutData),
+        body: JSON.stringify(requestBody),
       });
 
       console.log("📡 Lambda response status:", response.status);
@@ -103,15 +127,6 @@ const PremiumAnalysisUpsell = ({
         "📋 Response headers:",
         Object.fromEntries(response.headers.entries())
       );
-
-      // Handle 402 Payment Required (should be handled by x402-fetch, but just in case)
-      if (response.status === 402) {
-        const challenge = await response.json();
-        console.log("💰 Payment challenge received:", challenge);
-        throw new Error(
-          "Payment required - please ensure you have sufficient USDC on Base Sepolia"
-        );
-      }
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "Unknown error");
@@ -121,7 +136,7 @@ const PremiumAnalysisUpsell = ({
         );
       }
 
-      setPaymentStatus("verified");
+      setPaymentStatus("settled");
 
       // Parse analysis result
       let analysisResult;
@@ -136,38 +151,21 @@ const PremiumAnalysisUpsell = ({
         throw new Error(`Invalid response format: ${parseError.message}`);
       }
 
-      setPaymentStatus("settled");
+      // Handle transaction hash from response
+      if (analysisResult.transactionHash) {
+        const txHash = analysisResult.transactionHash;
+        setTransactionHash(txHash);
 
-      // Handle payment settlement response
-      const paymentResponseHeader =
-        response.headers.get("x-payment-response") ||
-        response.headers.get("X-Payment-Response");
+        // Track the payment transaction with enhanced metadata
+        trackPaymentTransaction(
+          txHash,
+          "0.05", // amount
+          "USDC", // currency
+          "Premium workout analysis", // description
+          "Server-side payment" // facilitator
+        );
 
-      if (paymentResponseHeader) {
-        try {
-          const paymentResponse = decodeXPaymentResponse(paymentResponseHeader);
-          console.log("💳 Payment settlement successful:", paymentResponse);
-
-          // Track transaction in CDP manager
-          if (paymentResponse.transaction) {
-            const txHash = paymentResponse.transaction;
-            setTransactionHash(txHash);
-
-            // Track the payment transaction with enhanced metadata
-            trackPaymentTransaction(
-              txHash,
-              "0.05", // amount
-              "USDC", // currency
-              "Premium workout analysis", // description
-              "CDP Facilitator" // facilitator
-            );
-
-            console.log("📝 Payment transaction tracked in CDP:", txHash);
-          }
-        } catch (paymentError) {
-          console.warn("⚠️ Payment response parsing error:", paymentError);
-          // Continue anyway - analysis was successful
-        }
+        console.log("📝 Payment transaction tracked:", txHash);
       }
 
       setPaymentStatus("complete");
