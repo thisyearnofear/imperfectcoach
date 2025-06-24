@@ -12,6 +12,7 @@ import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 import { useWorkout } from "@/hooks/useWorkout";
 import { usePerformanceStats } from "@/hooks/usePerformanceStats";
 import { useAIFeedback } from "@/hooks/useAIFeedback";
+import { mapPersonalityToLegacy } from "@/lib/coachPersonalities";
 
 export const useIndexPage = () => {
   // UI and settings state
@@ -19,8 +20,7 @@ export const useIndexPage = () => {
   const [isRecordingEnabled, setIsRecordingEnabled] = useState(false);
   const [poseData, setPoseData] = useState<PoseData | null>(null);
   const [coachPersonality, setCoachPersonality] =
-    useState<CoachPersonality>("competitive");
-  const [coachModel, setCoachModel] = useState<CoachModel>("gemini");
+    useState<CoachPersonality>("RASTA");
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
   const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState(false);
   const [isHighContrast, setIsHighContrast] = useState(false);
@@ -58,7 +58,7 @@ export const useIndexPage = () => {
     handleNewRepData,
     resetSession,
     endSession,
-  } = useWorkout();
+  } = useWorkout(coachPersonality);
 
   const analyticsRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
@@ -77,7 +77,7 @@ export const useIndexPage = () => {
   const { speak } = useAudioFeedback();
   const { getAISessionSummary, getAIChatResponse } = useAIFeedback({
     exercise: selectedExercise,
-    coachPersonality,
+    coachPersonality: mapPersonalityToLegacy(coachPersonality),
     workoutMode,
     onFormFeedback: setFormFeedback,
   });
@@ -162,12 +162,6 @@ export const useIndexPage = () => {
     }
   }, [isHighContrast]);
 
-  const handleCoachModelChange = (model: CoachModel) => {
-    setCoachModel(model);
-    const modelName = model.charAt(0).toUpperCase() + model.slice(1);
-    setFormFeedback(`Switched to Coach ${modelName}. Ready when you are!`);
-  };
-
   const handleSendMessage = async (message: string, model: CoachModel) => {
     if (!message.trim()) return;
 
@@ -199,7 +193,6 @@ export const useIndexPage = () => {
     isRecordingEnabled,
     poseData,
     coachPersonality,
-    coachModel,
     isMobileSettingsOpen,
     isAudioFeedbackEnabled,
     isHighContrast,
@@ -239,7 +232,6 @@ export const useIndexPage = () => {
     setFormScore,
     handleHeightUnitChange,
     // Handlers
-    handleCoachModelChange,
     handleExerciseChange,
     handleWorkoutModeChange,
     handleNewRepData,

@@ -8,12 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Exercise,
-  CoachPersonality,
-  WorkoutMode,
-  CoachModel,
-} from "@/lib/types";
+import { Exercise, CoachPersonality, WorkoutMode } from "@/lib/types";
 
 interface WorkoutSidebarProps {
   // Core Controls props
@@ -23,10 +18,6 @@ interface WorkoutSidebarProps {
   onExerciseChange: (exercise: Exercise) => void;
   coachPersonality: CoachPersonality;
   onCoachPersonalityChange: (personality: CoachPersonality) => void;
-
-  // Coach Model props
-  coachModel: CoachModel;
-  onCoachModelChange: (model: CoachModel) => void;
 
   // Live Feedback props
   reps: number;
@@ -44,7 +35,7 @@ const WorkoutSidebar = (props: WorkoutSidebarProps) => {
           reps={props.reps}
           formFeedback={props.formFeedback}
           formScore={props.formScore}
-          coachModel={props.coachModel}
+          coachPersonality={props.coachPersonality}
           workoutMode={props.workoutMode}
         />
       </div>
@@ -64,24 +55,6 @@ const WorkoutSidebar = (props: WorkoutSidebarProps) => {
             coachPersonality={props.coachPersonality}
             onCoachPersonalityChange={props.onCoachPersonalityChange}
           />
-
-          {/* Coach Model Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">AI Coach Model</label>
-            <Select
-              value={props.coachModel}
-              onValueChange={props.onCoachModelChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select AI Model" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gemini">Gemini</SelectItem>
-                <SelectItem value="openai">OpenAI</SelectItem>
-                <SelectItem value="anthropic">Anthropic</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
     </div>

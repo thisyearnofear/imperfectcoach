@@ -1,11 +1,12 @@
-import { CoachModel, WorkoutMode } from "@/lib/types";
+import { CoachPersonality, WorkoutMode } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
+import { getCoachInfo } from "@/lib/coachPersonalities";
 
 interface CoachFeedbackProps {
   reps: number;
   formFeedback: string;
   formScore: number;
-  coachModel: CoachModel;
+  coachPersonality: CoachPersonality;
   workoutMode: WorkoutMode;
   onPremiumUpgrade?: () => void;
 }
@@ -14,7 +15,7 @@ const CoachFeedback = ({
   reps,
   formFeedback,
   formScore,
-  coachModel,
+  coachPersonality,
   workoutMode,
   onPremiumUpgrade,
 }: CoachFeedbackProps) => {
@@ -30,13 +31,13 @@ const CoachFeedback = ({
     return "bg-destructive";
   };
 
-  const coachName = coachModel.charAt(0).toUpperCase() + coachModel.slice(1);
+  const coach = getCoachInfo(coachPersonality);
 
   const getTitle = () => {
     if (workoutMode === "assessment") {
       return "Assessment Mode";
     }
-    return `Coach ${coachName} says...`;
+    return `${coach.emoji} ${coach.name} says...`;
   };
 
   const getFeedbackStyle = () => {

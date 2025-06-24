@@ -1,7 +1,7 @@
 import React from "react";
 import { PostWorkoutFlow } from "@/components/PostWorkoutFlow";
 import DebugPanel from "@/components/DebugPanel";
-import { Exercise, RepData, PoseData } from "@/lib/types";
+import { Exercise, RepData, PoseData, CoachPersonality } from "@/lib/types";
 
 interface BottomSectionProps {
   reps: number;
@@ -13,6 +13,7 @@ interface BottomSectionProps {
   isWorkoutActive: boolean;
   hasWorkoutEnded: boolean;
   sessionDuration: string;
+  coachPersonality: CoachPersonality;
 }
 
 export const BottomSection = ({
@@ -25,6 +26,7 @@ export const BottomSection = ({
   isWorkoutActive,
   hasWorkoutEnded,
   sessionDuration,
+  coachPersonality,
 }: BottomSectionProps) => {
   return (
     <div className="w-full">
@@ -38,6 +40,7 @@ export const BottomSection = ({
           isWorkoutActive={isWorkoutActive}
           hasWorkoutEnded={hasWorkoutEnded}
           sessionDuration={sessionDuration}
+          coachPersonality={coachPersonality}
         />
 
         {/* Debug Panel */}

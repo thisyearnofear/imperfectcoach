@@ -103,7 +103,7 @@ const CopyableAddress = ({
             variant="secondary"
             className={cn(
               "cursor-pointer hover:bg-secondary/80 transition-colors max-w-full",
-              sizeClasses[size],
+              sizeClasses[size]
             )}
             onClick={handleCopy}
           >
@@ -163,7 +163,7 @@ const ConnectButton = ({
       size={buttonSize}
       className={cn(
         variant === "header" && "shrink-0",
-        variant === "card" && "w-full",
+        variant === "card" && "w-full"
       )}
     >
       <Wallet className={cn(iconSize, "mr-2")} />
@@ -311,21 +311,21 @@ const ConnectedNotAuthenticatedState = ({
   return (
     <div className="space-y-3">
       <div className="text-center">
-        <Badge variant="outline" className="mb-3">
+        <Badge variant="default" className="mb-3 bg-green-600 text-white">
           Connected: {displayName}
         </Badge>
       </div>
 
       <Alert className="border-primary/20 bg-primary/5">
-        <Shield className="h-4 w-4 text-primary" />
+        <Trophy className="h-4 w-4 text-green-600" />
         <AlertDescription>
           <div className="space-y-2">
-            <p className="font-medium text-primary">
-              Optional: Enhanced Security
+            <p className="font-medium text-green-800 text-center">
+              🎯 Submit Score
             </p>
-            <p className="text-sm text-muted-foreground">
-              Sign in with Ethereum (SIWE) for secure session management and
-              enhanced features.
+            <p className="text-sm text-green-700">
+              Your wallet is connected! Authenticate (sign in with Ethereum) so
+              we know its you for sure.
             </p>
           </div>
         </AlertDescription>
@@ -430,15 +430,15 @@ export const UnifiedWallet = ({
           {isAuthenticated
             ? "Wallet Connected"
             : isConnected
-              ? "Complete Setup"
-              : "Connect Wallet"}
+            ? "Complete Setup"
+            : "Connect Wallet"}
         </CardTitle>
         <CardDescription>
           {isAuthenticated
             ? "You're ready to compete on the blockchain leaderboard!"
             : isConnected
-              ? "Complete authentication to unlock all features"
-              : "Connect your Coinbase Smart Wallet to get started"}
+            ? "Complete authentication to unlock all features"
+            : "Connect your Coinbase Smart Wallet to get started"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

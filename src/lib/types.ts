@@ -1,9 +1,17 @@
-
-import type { Keypoint } from '@tensorflow-models/pose-detection';
+import type { Keypoint } from "@tensorflow-models/pose-detection";
 
 export type Exercise = "pull-ups" | "jumps";
 
-export type RepState = 'DOWN' | 'UP' | 'GROUNDED' | 'AIRBORNE' | 'READY' | 'PREPARING' | 'CROUCHED' | 'EXPLODING' | 'LANDING';
+export type RepState =
+  | "DOWN"
+  | "UP"
+  | "GROUNDED"
+  | "AIRBORNE"
+  | "READY"
+  | "PREPARING"
+  | "CROUCHED"
+  | "EXPLODING"
+  | "LANDING";
 
 export type CameraStatus = "idle" | "pending" | "granted" | "denied";
 
@@ -51,10 +59,10 @@ export interface ProcessorResult {
     issues: string[];
     details?: PullupRepDetails | JumpRepDetails;
   };
-  aiFeedbackPayload?: Record<string, any>;
+  aiFeedbackPayload?: Record<string, unknown>;
 }
 
-export type CoachPersonality = "competitive" | "supportive" | "zen";
+export type CoachPersonality = "SNEL" | "STEDDIE" | "RASTA";
 
 export type CoachModel = "gemini" | "openai" | "anthropic";
 
@@ -74,6 +82,17 @@ export type WorkoutMode = "training" | "assessment";
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  model?: CoachModel;
+}
+
+export interface CoachInfo {
+  personality: CoachPersonality;
+  name: string;
+  emoji: string;
+  theme: string;
+  description: string;
+  supportivePhrase: string;
+  motivationalPhrase: string;
 }
 
 export interface Achievement {
@@ -102,5 +121,5 @@ export interface UserProfile {
 
 export interface ContractConfig {
   address: string;
-  abi: readonly any[];
+  abi: readonly unknown[];
 }

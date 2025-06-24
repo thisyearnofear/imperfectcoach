@@ -8,40 +8,29 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Trophy,
-  TrendingUp,
-  Users,
-  ChevronDown,
-  ChevronUp,
-  Zap,
-  Shield,
-  Sparkles,
-  ArrowRight,
-  Brain,
-  BarChart3,
-} from "lucide-react";
-import { BlockchainScoreSubmission } from "./BlockchainScoreSubmission";
-import { InlineWallet } from "./UnifiedWallet";
-import { Leaderboard } from "./Leaderboard";
+
+import { Trophy, Brain, BarChart3 } from "lucide-react";
 
 import { useUserAuth, useUserDisplay } from "@/hooks/useUserHooks";
-import { useFeatureGate } from "@/hooks/useFeatureGate";
+import { useFeatureGate, useFeatureAvailability } from "@/hooks/useFeatureGate";
 import {
   Exercise,
   RepData,
   CoachModel,
   SessionSummaries,
   ChatMessage,
+  CoachPersonality,
 } from "@/lib/types";
 import PremiumAnalysisUpsell from "./PremiumAnalysisUpsell";
+import BedrockAnalysisSection from "./BedrockAnalysisSection";
+import CoinbaseConnectionCTA from "./CoinbaseConnectionCTA";
+import SingleActionCTA from "./SingleActionCTA";
 import { cn } from "@/lib/utils";
 import { CoachSummarySelector } from "./CoachSummarySelector";
-import UnlockedAchievements from "./UnlockedAchievements";
-import { useAchievements } from "@/hooks/useAchievements";
 import PerformanceAnalytics from "./PerformanceAnalytics";
+import { useAchievements } from "@/hooks/useAchievements";
 import { useAIFeedback } from "@/hooks/useAIFeedback";
+import { mapPersonalityToLegacy } from "@/lib/coachPersonalities";
 
 interface PostWorkoutFlowProps {
   exercise: Exercise;
@@ -52,9 +41,8 @@ interface PostWorkoutFlowProps {
   isWorkoutActive?: boolean;
   hasWorkoutEnded?: boolean;
   sessionDuration?: string;
+  coachPersonality: CoachPersonality;
 }
-
-type FlowState = "results" | "connect" | "authenticate" | "ready" | "submitted";
 
 export const PostWorkoutFlow = ({
   exercise,
@@ -65,17 +53,19 @@ export const PostWorkoutFlow = ({
   isWorkoutActive = false,
   hasWorkoutEnded = false,
   sessionDuration = "N/A",
+  coachPersonality,
 }: PostWorkoutFlowProps) => {
-  const { isConnected, isAuthenticated } = useUserAuth();
-  const { basename } = useUserDisplay();
   const { achievements } = useAchievements(reps, repHistory, averageFormScore);
 
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [isUpsellOpen, setIsUpsellOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{
     analysis: string;
   } | null>(null);
+  const [remainingQueries, setRemainingQueries] = useState(3);
+
+  // Refs for auto-scroll
+  const bedrockSectionRef = useRef<HTMLDivElement>(null);
 
   // AI Analysis state
   const [selectedCoaches, setSelectedCoaches] = useState<CoachModel[]>([
@@ -90,16 +80,51 @@ export const PostWorkoutFlow = ({
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const canShowSummary = useFeatureGate("AI_SUMMARY");
-  const canShowAchievements = useFeatureGate("ACHIEVEMENTS");
-  const canShowAnalytics = useFeatureGate("FULL_ANALYTICS");
+  const { tier } = useFeatureAvailability("MULTIPLE_AI_COACHES");
 
-  // Initialize AI feedback hook
+  // Initialize AI feedback hook with mapped personality
   const { getAISessionSummary, getAIChatResponse } = useAIFeedback({
     exercise,
-    coachPersonality: "supportive", // Default for summaries
+    coachPersonality: mapPersonalityToLegacy(coachPersonality),
     workoutMode: "training",
     onFormFeedback: () => {}, // Not used in post-workout
   });
+
+  // Handle follow-up queries for Bedrock analysis
+  const handleFollowUpQuery = async (query: string, model: CoachModel) => {
+    if (remainingQueries <= 0) return "";
+
+    try {
+      const response = await getAIChatResponse(
+        chatMessages,
+        {
+          reps,
+          averageFormScore,
+          repHistory,
+          exercise,
+          sessionDuration,
+          message: query,
+        },
+        model
+      );
+      setRemainingQueries((prev) => prev - 1);
+      return response;
+    } catch (error) {
+      console.error("Follow-up query error:", error);
+      return "Sorry, I couldn't process that query. Please try again.";
+    }
+  };
+
+  const handleUpgrade = () => {
+    setIsUpsellOpen(true);
+    // Auto-scroll to Bedrock section
+    setTimeout(() => {
+      bedrockSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 100);
+  };
 
   // Auto-scroll to results only when workout actually ends
   useEffect(() => {
@@ -218,53 +243,6 @@ export const PostWorkoutFlow = ({
     return minutes * 60 + seconds;
   };
 
-  // Determine current flow state
-  const getFlowState = (): FlowState => {
-    if (reps === 0) return "results";
-    if (!isConnected) return "connect";
-    if (!isAuthenticated) return "authenticate";
-    return "ready";
-  };
-
-  const flowState = getFlowState();
-
-  // Get the primary action based on state
-  const getPrimaryAction = () => {
-    switch (flowState) {
-      case "connect":
-        return {
-          title: "🚀 Unlock Your AI Coach",
-          description:
-            "Connect your wallet to submit your score and unlock a free, personalized AI-powered performance summary.",
-          buttonText: "Connect to Unlock",
-          buttonIcon: <Zap className="h-4 w-4" />,
-          color: "blue",
-        };
-      case "authenticate":
-        return {
-          title: "🛡️ Secure Your Session",
-          description:
-            "Sign in with Ethereum to unlock blockchain score submission",
-          buttonText: "Sign In Securely",
-          buttonIcon: <Shield className="h-4 w-4" />,
-          color: "blue",
-        };
-      case "ready":
-        return {
-          title: "🎉 Submit to Blockchain",
-          description:
-            "Record your achievement permanently and compete globally",
-          buttonText: "Submit Score",
-          buttonIcon: <Trophy className="h-4 w-4" />,
-          color: "green",
-        };
-      default:
-        return null;
-    }
-  };
-
-  const primaryAction = getPrimaryAction();
-
   // Don't show if no workout completed
   if (reps === 0) {
     return null;
@@ -272,270 +250,225 @@ export const PostWorkoutFlow = ({
 
   return (
     <div className="space-y-4">
-      {/* Basic AI Analysis - Replaces redundant Workout Complete section */}
-      <div ref={resultsRef}>
-        <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-800">
-              <Brain className="h-5 w-5" />
-              Basic AI Analysis
-            </CardTitle>
-            <CardDescription className="text-blue-700">
-              Free insights about your {exercise} performance
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-white rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{reps}</div>
-                <div className="text-sm text-gray-600">Reps Completed</div>
-              </div>
-              <div className="text-center p-3 bg-white rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  {Math.round(averageFormScore)}%
+      {/* Free Tier: Basic Analysis + Connection CTA */}
+      {tier === "free" && (
+        <div ref={resultsRef} className="space-y-4">
+          {/* Basic Free Analysis */}
+          <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-800 justify-center">
+                <Brain className="h-5 w-5" />
+                Analysis [basic]
+              </CardTitle>
+              <CardDescription className="text-blue-700 text-center">
+                About your {exercise} performance
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-white rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{reps}</div>
+                  <div className="text-sm text-gray-600">Reps Completed</div>
                 </div>
-                <div className="text-sm text-gray-600">Avg Form Score</div>
+                <div className="text-center p-3 bg-white rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {Math.round(averageFormScore)}%
+                  </div>
+                  <div className="text-sm text-gray-600">Avg Form Score</div>
+                </div>
               </div>
-            </div>
 
-            <div className="p-4 bg-white rounded-lg border-l-4 border-blue-500">
-              <h4 className="font-semibold text-gray-800 mb-2">Quick Tips:</h4>
-              <ul className="text-sm text-gray-700 space-y-1">
-                <li>
-                  •{" "}
-                  {averageFormScore >= 80
-                    ? "Excellent form! Keep it consistent."
-                    : "Focus on controlled movements for better form."}
-                </li>
-                <li>
-                  •{" "}
-                  {reps >= 5
-                    ? "Great endurance! Try increasing intensity."
-                    : "Build up reps gradually for strength gains."}
-                </li>
-                <li>• Remember to maintain steady breathing throughout</li>
-              </ul>
-            </div>
+              <div className="p-4 bg-white rounded-lg border-l-4 border-blue-500">
+                <h4 className="font-semibold text-gray-800 mb-2">
+                  Quick Tips:
+                </h4>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>
+                    •{" "}
+                    {averageFormScore >= 80
+                      ? "Excellent form! Keep it consistent."
+                      : "Focus on controlled movements for better form."}
+                  </li>
+                  <li>
+                    •{" "}
+                    {reps >= 5
+                      ? "Build endurance! Try increasing intensity."
+                      : "Build up reps gradually for strength gains."}
+                  </li>
+                  <li>• Remember to maintain steady breathing throughout</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* AI Coach Selection */}
-            <div className="space-y-3">
-              <CoachSummarySelector
-                selectedCoaches={selectedCoaches}
-                onSelectionChange={setSelectedCoaches}
-                disabled={isSummaryLoading}
-              />
+          {/* Connection CTA */}
+          <CoinbaseConnectionCTA
+            reps={reps}
+            averageFormScore={averageFormScore}
+            exercise={exercise}
+          />
+        </div>
+      )}
 
-              {selectedCoaches.length > 0 && (
-                <Button
-                  onClick={handleGenerateAISummary}
-                  disabled={isSummaryLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  {isSummaryLoading ? "Analyzing..." : "Get AI Analysis"}
-                </Button>
-              )}
-            </div>
+      {/* Connected/Premium Tier: Simplified Analysis */}
+      {tier !== "free" && (
+        <div ref={resultsRef} className="space-y-4">
+          <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-center gap-2 text-blue-800">
+                <Brain className="h-5 w-5" />
+                AI Analysis - {reps} {exercise.replace("-", " ")} (
+                {Math.round(averageFormScore)}% form)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              {/* AI Coach Selection */}
+              {canShowSummary && (
+                <div className="space-y-3">
+                  <CoachSummarySelector
+                    selectedCoaches={selectedCoaches}
+                    onSelectionChange={setSelectedCoaches}
+                    disabled={isSummaryLoading}
+                    onUpgrade={handleUpgrade}
+                    bedrockSectionRef={bedrockSectionRef}
+                  />
 
-            {/* AI Summaries Display */}
-            {(isSummaryLoading || sessionSummaries) && (
-              <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-                {isSummaryLoading && !sessionSummaries && (
-                  <p className="text-sm text-gray-600 animate-pulse text-center">
-                    🤖 Your AI coaches are analyzing your performance...
-                  </p>
-                )}
-
-                {sessionSummaries &&
-                  Object.keys(sessionSummaries).length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-800">
-                        AI Coach Analysis:
-                      </h4>
-                      {Object.entries(sessionSummaries).map(
-                        ([model, summary]) => (
-                          <div
-                            key={model}
-                            className="p-3 bg-white rounded border-l-4 border-green-500"
-                          >
-                            <p className="font-semibold text-green-700 text-sm mb-1">
-                              {model.charAt(0).toUpperCase() + model.slice(1)}'s
-                              Analysis:
-                            </p>
-                            <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                              {summary}
-                            </p>
-                          </div>
-                        )
-                      )}
-                    </div>
+                  {selectedCoaches.length > 0 && (
+                    <Button
+                      onClick={handleGenerateAISummary}
+                      disabled={isSummaryLoading}
+                      className="bg-blue-600 hover:bg-blue-700"
+                      size="sm"
+                    >
+                      {isSummaryLoading ? "Analyzing..." : "Get AI Analysis"}
+                    </Button>
                   )}
-              </div>
-            )}
+                </div>
+              )}
 
-            {/* Performance Charts Toggle */}
-            <div className="space-y-2">
+              {/* AI Summaries Display */}
+              {(isSummaryLoading || sessionSummaries) && (
+                <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                  {isSummaryLoading && !sessionSummaries && (
+                    <p className="text-sm text-gray-600 animate-pulse text-center">
+                      🤖 Analyzing your performance...
+                    </p>
+                  )}
+
+                  {sessionSummaries &&
+                    Object.keys(sessionSummaries).length > 0 && (
+                      <div className="space-y-3 text-left">
+                        {Object.entries(sessionSummaries).map(
+                          ([model, summary]) => (
+                            <div
+                              key={model}
+                              className="p-3 bg-white rounded border-l-4 border-green-500"
+                            >
+                              <p className="font-semibold text-green-700 text-sm mb-1">
+                                {model.charAt(0).toUpperCase() + model.slice(1)}
+                                :
+                              </p>
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                {summary}
+                              </p>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                </div>
+              )}
+
+              {/* Performance Charts Toggle */}
               <Button
                 variant="outline"
                 onClick={() => setShowAnalytics(!showAnalytics)}
-                className="w-full"
+                size="sm"
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 {showAnalytics ? "Hide" : "Show"} Performance Charts
               </Button>
 
               {showAnalytics && (
-                <div className="mt-4">
-                  <PerformanceAnalytics
-                    repHistory={repHistory}
-                    totalReps={reps}
-                    averageFormScore={averageFormScore}
-                    exercise={exercise}
-                    sessionDuration={sessionDuration}
-                    repTimings={repTimings}
-                    sessionSummaries={sessionSummaries}
-                    isSummaryLoading={isSummaryLoading}
-                    onTryAgain={() => window.location.reload()}
-                    chatMessages={chatMessages}
-                    isChatLoading={isChatLoading}
-                    onSendMessage={handleSendMessage}
-                  />
-                </div>
-              )}
-            </div>
-
-            <Alert className="border-amber-200 bg-amber-50">
-              <Sparkles className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-800">
-                <div className="flex items-center justify-between">
-                  <span>
-                    <strong>Want detailed analysis?</strong> Get professional AI
-                    coaching for just $0.05
-                  </span>
-                  <Button
-                    size="sm"
-                    onClick={() => setIsUpsellOpen(true)}
-                    className="bg-amber-600 hover:bg-amber-700 text-white"
-                  >
-                    Upgrade
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Primary Action - Context Sensitive */}
-      {primaryAction && (
-        <Card
-          className={cn(
-            "border-2 transition-all duration-200",
-            primaryAction.color === "blue"
-              ? "border-blue-200 bg-gradient-to-br from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100"
-              : "border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100"
-          )}
-        >
-          <CardHeader className="pb-3">
-            <CardTitle
-              className={cn(
-                "text-lg",
-                primaryAction.color === "blue"
-                  ? "text-blue-800"
-                  : "text-green-800"
-              )}
-            >
-              {primaryAction.title}
-            </CardTitle>
-            <CardDescription
-              className={cn(
-                primaryAction.color === "blue"
-                  ? "text-blue-600"
-                  : "text-green-600"
-              )}
-            >
-              {primaryAction.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {flowState === "connect" && <InlineWallet showOnboarding={false} />}
-
-            {flowState === "authenticate" && (
-              <InlineWallet showOnboarding={false} />
-            )}
-
-            {flowState === "ready" && (
-              <div className="space-y-3">
-                <BlockchainScoreSubmission
-                  exercise={exercise}
-                  reps={reps}
+                <PerformanceAnalytics
                   repHistory={repHistory}
+                  totalReps={reps}
                   averageFormScore={averageFormScore}
-                  onSubmissionComplete={onSubmissionComplete}
+                  exercise={exercise}
+                  sessionDuration={sessionDuration}
+                  repTimings={repTimings}
+                  sessionSummaries={sessionSummaries}
+                  isSummaryLoading={isSummaryLoading}
+                  onTryAgain={() => window.location.reload()}
+                  chatMessages={chatMessages}
+                  isChatLoading={isChatLoading}
+                  onSendMessage={handleSendMessage}
+                  onUpgrade={handleUpgrade}
                 />
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setIsUpsellOpen(true)}
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Get Premium "Bedrock" Analysis
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Single Action CTA */}
+          <SingleActionCTA
+            exercise={exercise}
+            reps={reps}
+            repHistory={repHistory}
+            averageFormScore={averageFormScore}
+            onSubmissionComplete={onSubmissionComplete}
+            onPremiumUpgrade={handleUpgrade}
+            achievements={achievements}
+            bedrockSectionRef={bedrockSectionRef}
+          />
+        </div>
       )}
 
-      {/* Premium Analysis Modal */}
-      <PremiumAnalysisUpsell
-        isOpen={isUpsellOpen}
-        onOpenChange={setIsUpsellOpen}
-        workoutData={{
-          exercise,
-          reps,
-          repHistory: repHistory.map((rep) => ({
-            score: rep.score,
-            details: rep.details as unknown as Record<string, unknown>,
-          })),
-          averageFormScore,
-          duration: convertDurationToSeconds(sessionDuration),
-        }}
-        onAnalysisComplete={(result) => {
-          setAnalysisResult(result);
-          // Optionally, display the analysis result in a new component or alert
-          console.log("Premium analysis complete:", result);
-        }}
-      />
-
-      {/* Advanced Features - Simplified */}
-      {canShowAchievements && (
-        <Card className="border border-gray-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-800">
-              <Trophy className="h-5 w-5" />
-              Achievements Unlocked
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <UnlockedAchievements achievements={achievements} />
-          </CardContent>
-        </Card>
+      {/* Bedrock Analysis Section - Visible for connected and premium users */}
+      {(tier === "connected" || tier === "premium") && (
+        <div ref={bedrockSectionRef}>
+          <BedrockAnalysisSection
+            workoutData={{
+              exercise,
+              reps,
+              repHistory: repHistory.map((rep) => ({
+                score: rep.score,
+                details: rep.details as unknown as Record<string, unknown>,
+              })),
+              averageFormScore,
+              duration: convertDurationToSeconds(sessionDuration),
+            }}
+            onAnalysisComplete={(result) => {
+              setAnalysisResult(result);
+              setRemainingQueries(3); // Reset queries after purchase
+              setIsUpsellOpen(false); // Close any open modals
+            }}
+            onFollowUpQuery={handleFollowUpQuery}
+            remainingQueries={remainingQueries}
+          />
+        </div>
       )}
 
-      {/* Motivational Footer - Only for disconnected users */}
-      {!isConnected && (
-        <Alert className="border-blue-200 bg-blue-50">
-          <Trophy className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            <div className="flex items-center justify-between">
-              <span>
-                <strong>Want to compete?</strong> Connect your wallet to join
-                the global leaderboard!
-              </span>
-              <ArrowRight className="h-4 w-4 text-blue-600" />
-            </div>
-          </AlertDescription>
-        </Alert>
+      {/* Legacy Premium Analysis Modal - Only show for non-connected users */}
+      {tier === "free" && (
+        <PremiumAnalysisUpsell
+          isOpen={isUpsellOpen}
+          onOpenChange={setIsUpsellOpen}
+          workoutData={{
+            exercise,
+            reps,
+            repHistory: repHistory.map((rep) => ({
+              score: rep.score,
+              details: rep.details as unknown as Record<string, unknown>,
+            })),
+            averageFormScore,
+            duration: convertDurationToSeconds(sessionDuration),
+          }}
+          onAnalysisComplete={(result) => {
+            setAnalysisResult(result);
+            setRemainingQueries(3);
+            setIsUpsellOpen(false);
+          }}
+        />
       )}
     </div>
   );

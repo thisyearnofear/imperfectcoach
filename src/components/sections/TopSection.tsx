@@ -10,7 +10,6 @@ import {
   WorkoutMode,
   PoseData,
   RepData,
-  CoachModel,
   HeightUnit,
 } from "@/lib/types";
 
@@ -36,8 +35,6 @@ interface TopSectionProps {
   onWorkoutModeChange: (mode: WorkoutMode) => void;
   onExerciseChange: (exercise: Exercise) => void;
   onCoachPersonalityChange: (personality: CoachPersonality) => void;
-  coachModel: CoachModel;
-  onCoachModelChange: (model: CoachModel) => void;
   reps: number;
   formScore: number;
   formFeedback: string;
@@ -88,8 +85,6 @@ export const TopSection = (props: TopSectionProps) => {
             onExerciseChange={props.onExerciseChange}
             coachPersonality={props.coachPersonality}
             onCoachPersonalityChange={props.onCoachPersonalityChange}
-            coachModel={props.coachModel}
-            onCoachModelChange={props.onCoachModelChange}
             reps={props.reps}
             formScore={props.formScore}
             formFeedback={props.formFeedback}
@@ -106,7 +101,7 @@ export const TopSection = (props: TopSectionProps) => {
             reps={props.reps}
             formFeedback={props.formFeedback}
             formScore={props.formScore}
-            coachModel={props.coachModel}
+            coachPersonality={props.coachPersonality}
             workoutMode={props.workoutMode}
           />
         </div>

@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import {
   Sheet,
@@ -13,8 +12,14 @@ import ExerciseSelector from "./ExerciseSelector";
 import CoachPersonalitySelector from "./CoachPersonalitySelector";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Exercise, CoachPersonality, WorkoutMode, CoachModel } from "@/lib/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Exercise, CoachPersonality, WorkoutMode } from "@/lib/types";
 
 interface MobileControlsProps {
   workoutMode: WorkoutMode;
@@ -23,8 +28,6 @@ interface MobileControlsProps {
   onExerciseChange: (exercise: Exercise) => void;
   selectedPersonality: CoachPersonality;
   onPersonalityChange: (personality: CoachPersonality) => void;
-  coachModel: CoachModel;
-  onCoachModelChange: (model: CoachModel) => void;
   isRecordingEnabled: boolean;
   onRecordingChange: (enabled: boolean) => void;
   isDebugMode: boolean;
@@ -44,8 +47,6 @@ const MobileControls = ({
   onExerciseChange,
   selectedPersonality,
   onPersonalityChange,
-  coachModel,
-  onCoachModelChange,
   isRecordingEnabled,
   onRecordingChange,
   isDebugMode,
@@ -76,21 +77,11 @@ const MobileControls = ({
             selectedPersonality={selectedPersonality}
             onPersonalityChange={onPersonalityChange}
           />
-          <div className="space-y-2">
-            <Label htmlFor="coach-model-mobile">AI Coach Model</Label>
-            <Select value={coachModel} onValueChange={onCoachModelChange}>
-              <SelectTrigger id="coach-model-mobile">
-                <SelectValue placeholder="Select AI Model" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gemini">Gemini</SelectItem>
-                <SelectItem value="openai">OpenAI</SelectItem>
-                <SelectItem value="anthropic">Anthropic</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+
           <div className="flex items-center justify-between">
-            <Label htmlFor="enable-high-contrast-mobile">High Contrast Mode</Label>
+            <Label htmlFor="enable-high-contrast-mobile">
+              High Contrast Mode
+            </Label>
             <Switch
               id="enable-high-contrast-mobile"
               checked={isHighContrast}

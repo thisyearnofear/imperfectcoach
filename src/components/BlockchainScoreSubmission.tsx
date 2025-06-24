@@ -83,7 +83,7 @@ export const BlockchainScoreSubmission = ({
   return (
     <Card className="w-full border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-primary">
+        <CardTitle className="flex items-center gap-2 text-primary justify-center">
           <Trophy className="h-5 w-5" />
           🎉 Submit to Blockchain Leaderboard
         </CardTitle>
@@ -185,9 +185,7 @@ export const BlockchainScoreSubmission = ({
             <Alert className="border-primary/20 bg-primary/5">
               <Trophy className="h-4 w-4 text-primary" />
               <AlertDescription className="text-primary/90">
-                🚀 Ready to make it official? Submit your workout to compete on
-                the global blockchain leaderboard. Your scores will be
-                permanently recorded and verifiable by anyone!
+                🚀 BOOM. Go time!
               </AlertDescription>
             </Alert>
 

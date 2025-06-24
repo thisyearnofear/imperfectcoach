@@ -2,70 +2,43 @@ import { useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Exercise,
-  CoachPersonality,
   WorkoutMode,
   CoachModel,
   SessionSummaries,
   ChatMessage,
+  CoachPersonality,
 } from "@/lib/types";
 import { getRandomFeedback } from "@/lib/feedbackUtils";
+import { getPersonalityFeedback } from "@/lib/coachPersonalities";
+
+// Legacy personality type for API compatibility
+type LegacyPersonality = "supportive" | "competitive" | "zen";
 
 // Fallback feedback when AI services are unavailable
 const getFallbackFeedback = (
   exercise: Exercise,
-  issues: string[] = []
+  personality: LegacyPersonality,
+  issues: string[] = [],
+  formScore?: number
 ): string => {
-  const fallbackMessages = {
-    "pull-ups": [
-      "Strong form! Focus on controlled descent and full range of motion.",
-      "Good technique! Engage your lats and avoid momentum swinging.",
-      "Nice control! Try to pause briefly at the top for maximum benefit.",
-      "Solid reps! Keep your core tight throughout the movement.",
-      "Great effort! Focus on pulling with your back, not just arms.",
-    ],
-    jumps: [
-      "Explosive power! Land softly on the balls of your feet.",
-      "Good height! Keep your knees slightly bent on landing.",
-      "Nice rhythm! Focus on quick, powerful takeoffs.",
-      "Great consistency! Try to minimize ground contact time.",
-      "Excellent jumps! Keep your core engaged for stability.",
-    ],
-    default: [
-      "Excellent form! Maintain this quality throughout your workout.",
-      "Strong technique! Focus on controlled, deliberate movements.",
-      "Great consistency! Quality reps lead to better results.",
-      "Nice control! Remember to breathe steadily during exercise.",
-      "Solid performance! Keep challenging yourself progressively.",
-    ],
-  };
-
-  const messages = fallbackMessages[exercise] || fallbackMessages.default;
-
-  // If there are specific issues, provide targeted advice
+  // Map legacy personality to new personality for fallback
+  const newPersonality: CoachPersonality =
+    personality === "supportive"
+      ? "SNEL"
+      : personality === "zen"
+      ? "STEDDIE"
+      : "RASTA";
+  // Use personality-driven feedback as fallback
   if (issues.length > 0) {
-    const issueAdvice = {
-      form: "Form check! Slow down and focus on perfect technique.",
-      range: "Range of motion tip: Go for full extension and contraction.",
-      pace: "Pace yourself - controlled reps beat rushed ones every time.",
-      fatigue: "Take a breather if needed - quality over quantity always wins.",
-      asymmetry: "Balance check! Focus on symmetrical movement patterns.",
-      depth: "Go deeper! Full range of motion maximizes muscle activation.",
-    };
-
-    for (const issue of issues) {
-      if (issueAdvice[issue.toLowerCase()]) {
-        return issueAdvice[issue.toLowerCase()];
-      }
-    }
+    return getPersonalityFeedback(newPersonality, "form_feedback", formScore);
   }
 
-  // Return random motivational message
-  return messages[Math.floor(Math.random() * messages.length)];
+  return getPersonalityFeedback(newPersonality, "encouragement");
 };
 
 interface UseAIFeedbackProps {
   exercise: Exercise;
-  coachPersonality: CoachPersonality;
+  coachPersonality: LegacyPersonality;
   workoutMode: WorkoutMode;
   onFormFeedback: (message: string) => void;
 }
@@ -90,7 +63,12 @@ export const useAIFeedback = ({
       const lastIssues = (data.formIssues as string[]) || [];
 
       if (!navigator.onLine) {
-        onFormFeedback(getRandomFeedback(lastIssues));
+        const personalityFeedback = getFallbackFeedback(
+          exercise,
+          coachPersonality,
+          lastIssues
+        );
+        onFormFeedback(personalityFeedback);
         return;
       }
 
@@ -113,10 +91,12 @@ export const useAIFeedback = ({
       } catch (error) {
         console.error("Error getting AI feedback:", error);
         // Always provide helpful fallback feedback when AI services fail
-        const fallbackFeedback = getFallbackFeedback(exercise, lastIssues);
-        onFormFeedback(
-          `💡 ${fallbackFeedback} (Upgrade for detailed AI analysis!)`
+        const fallbackFeedback = getFallbackFeedback(
+          exercise,
+          coachPersonality,
+          lastIssues
         );
+        onFormFeedback(fallbackFeedback);
       }
     },
     [exercise, coachPersonality, workoutMode, onFormFeedback]
@@ -231,19 +211,12 @@ const getFallbackSummary = (
   const reps = (data.reps as number) || 0;
   const avgScore = (data.averageFormScore as number) || 0;
 
-  if (exercise === "pull-ups") {
-    return `Session Complete! You performed ${reps} pull-ups with an average form score of ${avgScore.toFixed(
-      1
-    )}%. Focus on maintaining full range of motion and controlled movement for continued improvement.`;
-  } else if (exercise === "jumps") {
-    return `Great jumping session! You completed ${reps} jumps with ${avgScore.toFixed(
-      1
-    )}% average form. Keep working on explosive takeoffs and soft landings for optimal performance.`;
-  }
-
-  return `Workout complete! You finished ${reps} repetitions with ${avgScore.toFixed(
+  return `Session complete! You finished ${reps} ${exercise.replace(
+    "-",
+    " "
+  )} with ${avgScore.toFixed(
     1
-  )}% average form score. Keep up the consistent training for continued progress.`;
+  )}% average form score. Keep up the consistent training!`;
 };
 
 // Fallback chat response when AI is unavailable
@@ -251,12 +224,5 @@ const getFallbackChatResponse = (
   exercise: Exercise,
   data: Record<string, unknown>
 ): string => {
-  const responses = [
-    "I'm currently offline, but keep focusing on your form and consistency!",
-    "AI coach temporarily unavailable. Remember: quality over quantity in every rep!",
-    "Service temporarily down. Keep up the great work and maintain proper breathing!",
-    "I'll be back soon! In the meantime, focus on controlled movements and full range of motion.",
-  ];
-
-  return responses[Math.floor(Math.random() * responses.length)];
+  return "I'm temporarily unavailable. Keep focusing on your form and consistency!";
 };

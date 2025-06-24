@@ -49,8 +49,6 @@ const Index = () => {
             onWorkoutModeChange={page.handleWorkoutModeChange}
             onExerciseChange={page.handleExerciseChange}
             onCoachPersonalityChange={page.setCoachPersonality}
-            coachModel={page.coachModel}
-            onCoachModelChange={page.handleCoachModelChange}
           />
 
           {/* Bottom Section: Streamlined Post-Workout Flow */}
@@ -64,6 +62,7 @@ const Index = () => {
             isWorkoutActive={page.isWorkoutActive}
             hasWorkoutEnded={page.sessionHasConcluded}
             sessionDuration={page.sessionDuration}
+            coachPersonality={page.coachPersonality}
           />
         </div>
       </main>
@@ -84,8 +83,6 @@ const Index = () => {
           onExerciseChange={page.handleExerciseChange}
           selectedPersonality={page.coachPersonality}
           onPersonalityChange={page.setCoachPersonality}
-          coachModel={page.coachModel}
-          onCoachModelChange={page.handleCoachModelChange}
           isRecordingEnabled={page.isRecordingEnabled}
           onRecordingChange={page.setIsRecordingEnabled}
           isDebugMode={page.isDebugMode}

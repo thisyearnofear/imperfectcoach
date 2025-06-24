@@ -37,7 +37,7 @@ const NETWORK_INFO = {
     name: "Base Mainnet",
     color: "blue",
     status: "wrong" as const,
-    description: "Production network - switch to testnet for this app",
+    description: "switch to testnet to proceed",
   },
   84532: {
     name: "Base Sepolia",
@@ -223,9 +223,7 @@ export const NetworkStatus = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  window.open("https://docs.base.org/", "_blank")
-                }
+                onClick={() => window.open("https://docs.base.org/", "_blank")}
                 className="text-xs"
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
