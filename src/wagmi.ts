@@ -4,7 +4,7 @@ import { coinbaseWallet } from "wagmi/connectors";
 
 export const cbWalletConnector = coinbaseWallet({
   appName: "Imperfect Coach - AI Fitness Tracker",
-  appLogoUrl: import.meta.env.VITE_APP_URL + "/logo.png",
+  appLogoUrl: import.meta.env.VITE_APP_URL + "/IC.png",
   preference: "smartWalletOnly",
 });
 
@@ -18,7 +18,7 @@ export const config = createConfig({
     [base.id]: http(),
     [baseSepolia.id]: http(
       import.meta.env.VITE_BASE_SEPOLIA_RPC_URL ||
-        "https://base-sepolia.g.alchemy.com/v2/L69xEIR9jJjLmdvq798gQCQ1Rq8GI4I2",
+        "https://base-sepolia.g.alchemy.com/v2/L69xEIR9jJjLmdvq798gQCQ1Rq8GI4I2"
     ),
   },
 });

@@ -12,13 +12,20 @@ import {
   Brain,
   CheckCircle,
   ExternalLink,
-  MessageSquare,
   Sparkles,
   TrendingUp,
   Target,
   AlertCircle,
+  BarChart3,
 } from "lucide-react";
-import { CoachModel } from "@/lib/types";
+import {
+  CoachModel,
+  RepData,
+  Exercise,
+  SessionSummaries,
+  ChatMessage,
+} from "@/lib/types";
+import PerformanceAnalytics from "./PerformanceAnalytics";
 
 interface WorkoutData {
   exercise: string;
@@ -43,6 +50,18 @@ interface BedrockAnalysisSectionProps {
   onAnalysisComplete?: (result: BedrockAnalysisResult) => void;
   onFollowUpQuery?: (query: string, model: CoachModel) => Promise<string>;
   remainingQueries?: number;
+  // Performance Analytics props
+  repHistory?: RepData[];
+  exercise?: Exercise;
+  sessionDuration?: string;
+  repTimings?: { avg: number; stdDev: number };
+  sessionSummaries?: SessionSummaries | null;
+  isSummaryLoading?: boolean;
+  chatMessages?: ChatMessage[];
+  isChatLoading?: boolean;
+  onSendMessage?: (message: string, model: CoachModel) => Promise<void>;
+  onUpgrade?: () => void;
+  onTryAgain?: () => void;
 }
 
 const BedrockAnalysisSection = ({
@@ -50,6 +69,17 @@ const BedrockAnalysisSection = ({
   onAnalysisComplete,
   onFollowUpQuery,
   remainingQueries = 3,
+  repHistory = [],
+  exercise = "jumps",
+  sessionDuration = "N/A",
+  repTimings = { avg: 0, stdDev: 0 },
+  sessionSummaries = null,
+  isSummaryLoading = false,
+  chatMessages = [],
+  isChatLoading = false,
+  onSendMessage,
+  onUpgrade,
+  onTryAgain,
 }: BedrockAnalysisSectionProps) => {
   const { addPremiumSession } = usePremiumAccess();
   const [isLoading, setIsLoading] = useState(false);
@@ -60,15 +90,8 @@ const BedrockAnalysisSection = ({
     "idle" | "processing" | "verified" | "settled" | "complete"
   >("idle");
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
-  const [followUpQuery, setFollowUpQuery] = useState("");
-  const [queryResults, setQueryResults] = useState<
-    Array<{
-      query: string;
-      model: CoachModel;
-      response: string;
-    }>
-  >([]);
-  const [queryingModel, setQueryingModel] = useState<CoachModel | null>(null);
+
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const { isConnected } = useAccount();
   const { data: walletClient } = useWalletClient({
@@ -179,29 +202,6 @@ const BedrockAnalysisSection = ({
     }
   };
 
-  const handleFollowUpQuery = async (model: CoachModel) => {
-    if (!followUpQuery.trim() || !onFollowUpQuery || remainingQueries <= 0)
-      return;
-
-    setQueryingModel(model);
-    try {
-      const response = await onFollowUpQuery(followUpQuery, model);
-      setQueryResults((prev) => [
-        ...prev,
-        {
-          query: followUpQuery,
-          model,
-          response,
-        },
-      ]);
-      setFollowUpQuery("");
-    } catch (error) {
-      console.error("Follow-up query error:", error);
-    } finally {
-      setQueryingModel(null);
-    }
-  };
-
   const extractScore = (analysis: string): string => {
     const scoreMatch = analysis.match(/Score:\s*(\d+)\/100|(\d+)\/100/);
     return scoreMatch ? scoreMatch[1] || scoreMatch[2] : "85";
@@ -257,7 +257,7 @@ const BedrockAnalysisSection = ({
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-purple-600" />
+              <Brain className="h-4 w-4 text-purple-600" />
               <span className="text-purple-800 font-medium">
                 3 follow-up queries with AI coaches
               </span>
@@ -393,71 +393,37 @@ const BedrockAnalysisSection = ({
             </details>
           </div>
 
-          <Separator />
-
-          {/* Follow-up Queries Section */}
+          {/* Performance Charts Toggle - Premium Feature */}
           <div className="text-center">
-            <h4 className="font-semibold text-purple-800 mb-3 flex items-center justify-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Ask AI Coaches
-              <Badge variant="outline" className="text-xs">
-                {remainingQueries} queries left
-              </Badge>
-            </h4>
+            <Button
+              variant="outline"
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              size="sm"
+              className="text-purple-600 border-purple-300 hover:bg-purple-50"
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              {showAnalytics ? "Hide" : "Show"} Performance Charts
+            </Button>
 
-            {remainingQueries > 0 && (
-              <div className="space-y-3">
-                <textarea
-                  value={followUpQuery}
-                  onChange={(e) => setFollowUpQuery(e.target.value)}
-                  placeholder="Ask a specific question about your analysis..."
-                  className="w-full p-3 border border-gray-200 rounded-lg text-sm resize-none"
-                  rows={2}
+            {showAnalytics && onTryAgain && (
+              <div className="mt-4">
+                <PerformanceAnalytics
+                  repHistory={repHistory}
+                  totalReps={workoutData.reps}
+                  averageFormScore={workoutData.averageFormScore}
+                  exercise={exercise}
+                  sessionDuration={sessionDuration}
+                  repTimings={repTimings}
+                  sessionSummaries={sessionSummaries}
+                  isSummaryLoading={isSummaryLoading}
+                  onTryAgain={onTryAgain}
+                  chatMessages={chatMessages}
+                  isChatLoading={isChatLoading}
+                  onSendMessage={onSendMessage || (() => Promise.resolve())}
+                  onUpgrade={onUpgrade}
+                  remainingQueries={remainingQueries}
+                  isPremiumContext={true}
                 />
-                <div className="flex gap-2">
-                  {(["gemini", "openai", "anthropic"] as CoachModel[]).map(
-                    (model) => (
-                      <Button
-                        key={model}
-                        onClick={() => handleFollowUpQuery(model)}
-                        disabled={
-                          !followUpQuery.trim() || queryingModel !== null
-                        }
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        {queryingModel === model ? (
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        ) : null}
-                        {model.charAt(0).toUpperCase() + model.slice(1)}
-                      </Button>
-                    )
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Query Results */}
-            {queryResults.length > 0 && (
-              <div className="space-y-3 mt-4">
-                {queryResults.map((result, index) => (
-                  <div
-                    key={index}
-                    className="p-4 bg-white rounded-lg border border-gray-200"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className="text-xs">
-                        {result.model.charAt(0).toUpperCase() +
-                          result.model.slice(1)}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        "{result.query}"
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700">{result.response}</p>
-                  </div>
-                ))}
               </div>
             )}
           </div>

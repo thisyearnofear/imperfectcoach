@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-import { Trophy, Brain, BarChart3 } from "lucide-react";
+import { Trophy, Brain } from "lucide-react";
 
 import { useUserAuth, useUserDisplay } from "@/hooks/useUserHooks";
 import { useFeatureGate, useFeatureAvailability } from "@/hooks/useFeatureGate";
@@ -57,7 +57,6 @@ export const PostWorkoutFlow = ({
 }: PostWorkoutFlowProps) => {
   const { achievements } = useAchievements(reps, repHistory, averageFormScore);
 
-  const [showAnalytics, setShowAnalytics] = useState(false);
   const [isUpsellOpen, setIsUpsellOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{
     analysis: string;
@@ -317,7 +316,7 @@ export const PostWorkoutFlow = ({
             <CardHeader>
               <CardTitle className="flex items-center justify-center gap-2 text-blue-800">
                 <Brain className="h-5 w-5" />
-                AI Analysis - {reps} {exercise.replace("-", " ")} (
+                Analysis - {reps} {exercise.replace("-", " ")} (
                 {Math.round(averageFormScore)}% form)
               </CardTitle>
             </CardHeader>
@@ -378,34 +377,6 @@ export const PostWorkoutFlow = ({
                     )}
                 </div>
               )}
-
-              {/* Performance Charts Toggle */}
-              <Button
-                variant="outline"
-                onClick={() => setShowAnalytics(!showAnalytics)}
-                size="sm"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                {showAnalytics ? "Hide" : "Show"} Performance Charts
-              </Button>
-
-              {showAnalytics && (
-                <PerformanceAnalytics
-                  repHistory={repHistory}
-                  totalReps={reps}
-                  averageFormScore={averageFormScore}
-                  exercise={exercise}
-                  sessionDuration={sessionDuration}
-                  repTimings={repTimings}
-                  sessionSummaries={sessionSummaries}
-                  isSummaryLoading={isSummaryLoading}
-                  onTryAgain={() => window.location.reload()}
-                  chatMessages={chatMessages}
-                  isChatLoading={isChatLoading}
-                  onSendMessage={handleSendMessage}
-                  onUpgrade={handleUpgrade}
-                />
-              )}
             </CardContent>
           </Card>
 
@@ -444,6 +415,17 @@ export const PostWorkoutFlow = ({
             }}
             onFollowUpQuery={handleFollowUpQuery}
             remainingQueries={remainingQueries}
+            repHistory={repHistory}
+            exercise={exercise}
+            sessionDuration={sessionDuration}
+            repTimings={repTimings}
+            sessionSummaries={sessionSummaries}
+            isSummaryLoading={isSummaryLoading}
+            chatMessages={chatMessages}
+            isChatLoading={isChatLoading}
+            onSendMessage={handleSendMessage}
+            onUpgrade={handleUpgrade}
+            onTryAgain={() => window.location.reload()}
           />
         </div>
       )}

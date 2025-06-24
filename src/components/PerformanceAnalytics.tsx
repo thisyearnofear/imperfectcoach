@@ -64,6 +64,8 @@ interface PerformanceAnalyticsProps {
   isChatLoading: boolean;
   onSendMessage: (message: string, model: CoachModel) => Promise<void>;
   onUpgrade?: () => void;
+  remainingQueries?: number;
+  isPremiumContext?: boolean;
 }
 
 const PerformanceAnalytics = ({
@@ -80,6 +82,8 @@ const PerformanceAnalytics = ({
   isChatLoading,
   onSendMessage,
   onUpgrade,
+  remainingQueries = 999,
+  isPremiumContext = false,
 }: PerformanceAnalyticsProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -460,6 +464,9 @@ const PerformanceAnalytics = ({
                   messages={chatMessages}
                   isLoading={isChatLoading}
                   onSendMessage={onSendMessage}
+                  remainingQueries={remainingQueries}
+                  onUpgrade={onUpgrade}
+                  isPremiumContext={isPremiumContext}
                 />
               ) : (
                 <div className="p-4 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20 relative">
