@@ -207,41 +207,9 @@ Unlock advanced AI-powered workout analysis with our premium tier:
 
 For full details, see `docs/PRODUCTION_ROADMAP.md` and `docs/ARCHITECTURE.md`.
 
-## Future
-
-# Switch to the feature branch to continue development
-
-git checkout feature/aws-pure-architecture-snel-steddie
-
-# Or create a pull request to review before merging
-
-# (GitHub will show the PR link from the push output)
-
-# Or merge directly when ready
-
-git checkout main
-git merge feature/aws-pure-architecture-snel-steddie
-
 ---
 
 ## 🔧 Development
-
-### Project Structure
-
-```
-src/
-├── components/          # React components
-│   ├── sections/       # Layout sections
-│   └── ui/            # Reusable UI components
-├── hooks/              # Custom React hooks
-├── lib/               # Utilities and processors
-│   ├── exercise-processors/  # Exercise-specific logic
-│   └── types.ts       # TypeScript definitions
-└── pages/             # Main application pages
-
-supabase/
-└── functions/         # Edge functions for AI processing
-```
 
 ### Key Components
 
@@ -265,18 +233,6 @@ bun run preview
 # Lint code
 bun run lint
 ```
-
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to submit issues and pull requests.
-
-### Development Guidelines
-
-1. Follow TypeScript best practices
-2. Use the existing component patterns
-3. Add proper error handling
-4. Test on both desktop and mobile
-5. Ensure camera permissions work correctly
 
 ## 📄 License
 

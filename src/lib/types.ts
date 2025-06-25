@@ -28,6 +28,9 @@ export interface JumpRepDetails {
   landingKneeFlexion: number; // Average knee angle on landing
   explosiveness: number;
   flightSymmetry: number;
+  landingScore: number; // Landing quality score (0-100)
+  powerScore: number; // Jump height/power score (0-100)
+  asymmetry: number; // Landing asymmetry measurement
 }
 
 export interface RepData {

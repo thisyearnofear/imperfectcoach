@@ -50,10 +50,28 @@ export const useAIFeedback = ({
   onFormFeedback,
 }: UseAIFeedbackProps) => {
   const aiFeedbackCooldown = useRef(false);
+  const apiErrorCount = useRef(0);
+  const lastErrorTime = useRef(0);
 
   const getAIFeedback = useCallback(
     async (data: Record<string, unknown>) => {
       if (aiFeedbackCooldown.current || workoutMode === "assessment") return;
+
+      // Check if we've had too many API errors recently
+      const now = Date.now();
+      const timeSinceLastError = now - lastErrorTime.current;
+
+      // If we've had 3+ errors in the last 5 minutes, skip AI calls
+      if (apiErrorCount.current >= 3 && timeSinceLastError < 300000) {
+        const lastIssues = (data.formIssues as string[]) || [];
+        const fallbackFeedback = getFallbackFeedback(
+          exercise,
+          coachPersonality,
+          lastIssues
+        );
+        onFormFeedback(fallbackFeedback);
+        return;
+      }
 
       aiFeedbackCooldown.current = true;
       setTimeout(() => {
@@ -87,9 +105,22 @@ export const useAIFeedback = ({
         if (error) throw error;
         if (responseData.feedback) {
           onFormFeedback(responseData.feedback);
+          // Reset error count on successful call
+          apiErrorCount.current = 0;
         }
       } catch (error) {
-        console.error("Error getting AI feedback:", error);
+        // Track API errors
+        apiErrorCount.current++;
+        lastErrorTime.current = now;
+
+        // Only log errors in development mode to reduce console spam
+        if (process.env.NODE_ENV === "development") {
+          console.warn(
+            `AI feedback error (${apiErrorCount.current}/3):`,
+            error
+          );
+        }
+
         // Always provide helpful fallback feedback when AI services fail
         const fallbackFeedback = getFallbackFeedback(
           exercise,

@@ -15,11 +15,11 @@ import { useAIFeedback } from "./useAIFeedback";
 import { useExerciseState } from "./useExerciseState";
 // Old readiness functions removed - now using PoseReadinessSystem
 import { handleProcessorResult } from "@/lib/processorResultHandler";
-import { JumpDetector, EnhancedJumpDetector } from "@/lib/jumpDetector";
 import {
   PoseReadinessSystem,
   ReadinessConfig,
 } from "@/lib/pose-readiness/ReadinessSystem";
+import { mapPersonalityToLegacy } from "@/lib/coachPersonalities";
 
 interface UseExerciseProcessorProps {
   exercise: Exercise;
@@ -55,7 +55,7 @@ export const useExerciseProcessor = ({
   const { speak } = useAudioFeedback();
   const { getAIFeedback } = useAIFeedback({
     exercise,
-    coachPersonality,
+    coachPersonality: mapPersonalityToLegacy(coachPersonality),
     workoutMode,
     onFormFeedback,
   });
@@ -82,11 +82,8 @@ export const useExerciseProcessor = ({
     minKneeAngle: number;
     isCalibrating: boolean;
   } | null>(null);
-  const jumpDetector = useRef(new JumpDetector(10, 1.8, 0.3));
-  const enhancedJumpDetector = useRef(new EnhancedJumpDetector());
   const jumpData = useRef<{ y: number; time: number }[]>([]);
   const flightData = useRef<{ shoulderX: number; hipX: number }[]>([]);
-  const lastJumpTime = useRef<number>(0);
 
   // High-quality readiness system
   const readinessSystem = useRef(
@@ -149,10 +146,6 @@ export const useExerciseProcessor = ({
           return; // Don't process exercise until user is ready
         }
 
-        // Reset detectors when user becomes ready
-        if (exercise === "jumps") {
-          enhancedJumpDetector.current.reset();
-        }
         readinessSystem.current.reset();
       }
 
@@ -175,6 +168,9 @@ export const useExerciseProcessor = ({
             // Set ground level if not established
             if (!jumpGroundLevel.current) {
               jumpGroundLevel.current = (leftAnkle.y + rightAnkle.y) / 2;
+              if (process.env.NODE_ENV === "development") {
+                console.log("🏃 Ground level set:", jumpGroundLevel.current);
+              }
             }
 
             // Collect jump data for analytics
@@ -199,7 +195,19 @@ export const useExerciseProcessor = ({
 
               // Track airborne position data
               const avgAnkleY = (leftAnkle.y + rightAnkle.y) / 2;
-              const isAirborne = avgAnkleY < jumpGroundLevel.current - 30;
+              const isAirborne = avgAnkleY < jumpGroundLevel.current - 10;
+
+              if (process.env.NODE_ENV === "development") {
+                console.log("📊 Jump Height Debug:", {
+                  avgAnkleY: avgAnkleY.toFixed(1),
+                  groundLevel: jumpGroundLevel.current?.toFixed(1),
+                  isAirborne,
+                  currentPeak: peakAirborneY.current?.toFixed(1) ?? "null",
+                  heightDiff: jumpGroundLevel.current
+                    ? (jumpGroundLevel.current - avgAnkleY).toFixed(1)
+                    : "null",
+                });
+              }
 
               if (isAirborne) {
                 flightData.current.push({
@@ -212,6 +220,13 @@ export const useExerciseProcessor = ({
                   peakAirborneY.current ?? avgAnkleY,
                   avgAnkleY
                 );
+
+                if (process.env.NODE_ENV === "development") {
+                  console.log(
+                    "✈️ Airborne! New peak:",
+                    peakAirborneY.current?.toFixed(1)
+                  );
+                }
               }
             }
 
@@ -229,6 +244,12 @@ export const useExerciseProcessor = ({
 
             // Reset jump data after rep completion
             if (result?.isRepCompleted) {
+              if (process.env.NODE_ENV === "development") {
+                console.log(
+                  "🎯 Rep completed! Final peak was:",
+                  peakAirborneY.current?.toFixed(1) ?? "null"
+                );
+              }
               jumpData.current = [];
               flightData.current = [];
               peakAirborneY.current = null;

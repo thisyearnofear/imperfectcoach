@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Lock, Crown } from "lucide-react";
 import { useFeatureAvailability } from "@/hooks/useFeatureGate";
 import { cn } from "@/lib/utils";
+import { useCallback } from "react";
 
 interface CoachSummarySelectorProps {
   selectedCoaches: CoachModel[];
@@ -53,17 +54,22 @@ export function CoachSummarySelector({
     tier,
   } = useFeatureAvailability("MULTIPLE_AI_COACHES");
 
-  const handleSelectionChange = (value: CoachModel[]) => {
-    if (!canSelectMultiple) {
-      // Only allow Gemini for free/connected users
-      const filteredValue = value.filter((coach) => coach === "gemini");
-      onSelectionChange(filteredValue.length > 0 ? filteredValue : ["gemini"]);
-    } else {
-      onSelectionChange(value);
-    }
-  };
+  const handleSelectionChange = useCallback(
+    (value: CoachModel[]) => {
+      if (!canSelectMultiple) {
+        // Only allow Gemini for free/connected users
+        const filteredValue = value.filter((coach) => coach === "gemini");
+        onSelectionChange(
+          filteredValue.length > 0 ? filteredValue : ["gemini"]
+        );
+      } else {
+        onSelectionChange(value);
+      }
+    },
+    [canSelectMultiple, onSelectionChange]
+  );
 
-  const handleUpgradeClick = () => {
+  const handleUpgradeClick = useCallback(() => {
     if (onUpgrade) {
       onUpgrade();
     }
@@ -74,7 +80,7 @@ export function CoachSummarySelector({
         block: "center",
       });
     }
-  };
+  }, [onUpgrade, bedrockSectionRef]);
 
   return (
     <div className="space-y-3">

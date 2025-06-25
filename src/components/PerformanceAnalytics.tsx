@@ -41,6 +41,7 @@ import {
   JumpRepDetails,
   ChatMessage,
 } from "@/lib/types";
+import { convertHeight } from "@/lib/heightConversion";
 import {
   exportToCSV,
   shareCardImage,
@@ -112,20 +113,24 @@ const PerformanceAnalytics = ({
           .map((rep) => rep.details as JumpRepDetails)
           .filter(Boolean);
         const jumpHeights = jumpDetails.map((d) => d.jumpHeight);
+        const jumpHeightsCm = jumpHeights.map((h) =>
+          Math.round(convertHeight(h, "cm"))
+        );
         const landingFlexions = jumpDetails.map((d) => d.landingKneeFlexion);
 
         const avgHeight =
-          jumpHeights.length > 0
-            ? jumpHeights.reduce((a, b) => a + b, 0) / jumpHeights.length
+          jumpHeightsCm.length > 0
+            ? jumpHeightsCm.reduce((a, b) => a + b, 0) / jumpHeightsCm.length
             : 0;
-        const maxHeight = jumpHeights.length > 0 ? Math.max(...jumpHeights) : 0;
+        const maxHeight =
+          jumpHeightsCm.length > 0 ? Math.max(...jumpHeightsCm) : 0;
         const heightConsistency =
-          jumpHeights.length > 1
+          jumpHeightsCm.length > 1
             ? 100 -
               Math.sqrt(
-                jumpHeights
+                jumpHeightsCm
                   .map((h) => Math.pow(h - avgHeight, 2))
-                  .reduce((a, b) => a + b, 0) / jumpHeights.length
+                  .reduce((a, b) => a + b, 0) / jumpHeightsCm.length
               )
             : 100;
         const avgLandingForm =
@@ -133,11 +138,25 @@ const PerformanceAnalytics = ({
             ? landingFlexions.reduce((a, b) => a + b, 0) /
               landingFlexions.length
             : 0;
-        const goodLandings = landingFlexions.filter((f) => f < 160).length;
+        const goodLandings = landingFlexions.filter((f) => f < 140).length;
         const landingSuccessRate =
           landingFlexions.length > 0
             ? (goodLandings / landingFlexions.length) * 100
             : 0;
+
+        // Debug logging for landing success calculation
+        if (
+          process.env.NODE_ENV === "development" &&
+          landingFlexions.length > 0
+        ) {
+          console.log("🦵 Landing Success Debug:", {
+            totalLandings: landingFlexions.length,
+            landingAngles: landingFlexions,
+            goodLandings: goodLandings,
+            successRate: landingSuccessRate,
+            avgLandingAngle: avgLandingForm,
+          });
+        }
 
         return {
           avgHeight,
@@ -163,11 +182,16 @@ const PerformanceAnalytics = ({
       "Top ROM": pullupDetails?.peakElbowFlexion,
       "Bottom ROM": pullupDetails?.bottomElbowExtension,
       Asymmetry: pullupDetails?.asymmetry,
-      "Jump Height": jumpDetails?.jumpHeight,
+      "Jump Height (cm)": jumpDetails?.jumpHeight
+        ? Math.round(convertHeight(jumpDetails.jumpHeight, "cm"))
+        : undefined,
+      "Landing Score": jumpDetails?.landingScore,
       "Landing Quality": jumpDetails?.landingKneeFlexion
-        ? jumpDetails.landingKneeFlexion < 160
+        ? jumpDetails.landingKneeFlexion < 140
           ? 100
-          : 60
+          : jumpDetails.landingKneeFlexion < 160
+          ? 75
+          : 40
         : undefined,
       "Raw Landing Flexion": jumpDetails?.landingKneeFlexion,
     };
@@ -232,13 +256,13 @@ const PerformanceAnalytics = ({
             <div>
               <span className="font-semibold text-foreground">Avg Height:</span>
               <span className="ml-2 text-muted-foreground">
-                {jumpAnalytics.avgHeight.toFixed(0)}px
+                {jumpAnalytics.avgHeight.toFixed(0)}cm
               </span>
             </div>
             <div>
               <span className="font-semibold text-foreground">Max Height:</span>
               <span className="ml-2 text-muted-foreground">
-                {jumpAnalytics.maxHeight.toFixed(0)}px
+                {jumpAnalytics.maxHeight.toFixed(0)}cm
               </span>
             </div>
             <div>
@@ -306,9 +330,15 @@ const PerformanceAnalytics = ({
                   }}
                   labelStyle={{ fontWeight: "bold", marginBottom: "4px" }}
                   formatter={(value, name) => {
-                    if (name === "Jump Height") return [`${value}px`, "Height"];
-                    if (name === "Landing Quality")
-                      return [`${value === 100 ? "Good" : "Stiff"}`, "Landing"];
+                    if (name === "Jump Height (cm)")
+                      return [`${value}cm`, "Height"];
+                    if (name === "Landing Score")
+                      return [`${value}/100`, "Landing"];
+                    if (name === "Landing Quality") {
+                      if (value === 100) return ["Excellent", "Landing"];
+                      if (value === 75) return ["Good", "Landing"];
+                      return ["Needs Work", "Landing"];
+                    }
                     return [value, name];
                   }}
                 />
@@ -324,7 +354,7 @@ const PerformanceAnalytics = ({
                 <Line
                   yAxisId="right"
                   type="monotone"
-                  dataKey="Jump Height"
+                  dataKey="Jump Height (cm)"
                   stroke="#22c55e"
                   strokeWidth={3}
                   dot={{ r: 4 }}
@@ -333,7 +363,7 @@ const PerformanceAnalytics = ({
                 <Line
                   yAxisId="left"
                   type="monotone"
-                  dataKey="Landing Quality"
+                  dataKey="Landing Score"
                   stroke="#f97316"
                   strokeWidth={2}
                   dot={{ r: 3 }}

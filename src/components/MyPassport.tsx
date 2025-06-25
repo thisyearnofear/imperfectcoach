@@ -139,11 +139,34 @@ const MyPassport = () => {
       // Handle data URI format
       if (uri.startsWith("data:application/json;base64,")) {
         try {
-          const jsonString = atob(uri.substring(uri.indexOf(",") + 1));
+          const base64Data = uri.substring(uri.indexOf(",") + 1);
+
+          // Validate base64 data before parsing
+          if (!base64Data || base64Data.length === 0) {
+            console.warn("Empty base64 data in token URI");
+            return null;
+          }
+
+          const jsonString = atob(base64Data);
+
+          // Check if the decoded string looks like JSON
+          if (
+            !jsonString.trim().startsWith("{") &&
+            !jsonString.trim().startsWith("[")
+          ) {
+            console.warn("Decoded base64 data is not valid JSON format");
+            return null;
+          }
+
           const json = JSON.parse(jsonString);
           return json.image || null;
         } catch (e) {
-          console.error("Failed to parse base64 JSON:", e);
+          // Silently handle parsing errors to avoid console spam
+          if (process.env.NODE_ENV === "development") {
+            console.warn(
+              "Failed to parse base64 JSON in token URI - this may be expected for some tokens"
+            );
+          }
           return null;
         }
       }

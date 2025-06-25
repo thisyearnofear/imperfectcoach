@@ -31,6 +31,8 @@ import PerformanceAnalytics from "./PerformanceAnalytics";
 import { useAchievements } from "@/hooks/useAchievements";
 import { useAIFeedback } from "@/hooks/useAIFeedback";
 import { mapPersonalityToLegacy } from "@/lib/coachPersonalities";
+import { convertHeight } from "@/lib/heightConversion";
+import { JumpRepDetails } from "@/lib/types";
 
 interface PostWorkoutFlowProps {
   exercise: Exercise;
@@ -90,19 +92,114 @@ export const PostWorkoutFlow = ({
   });
 
   // Handle follow-up queries for Bedrock analysis
+  // Helper function to convert jump heights to cm for AI analysis
+  const processRepHistoryForAI = useCallback(
+    (repHistory: RepData[]) => {
+      if (exercise !== "jumps") return repHistory;
+
+      const processed = repHistory.map((rep, index) => {
+        const original = rep.details as JumpRepDetails;
+        const processed = rep.details
+          ? {
+              ...rep.details,
+              jumpHeight: Math.round(
+                convertHeight((rep.details as JumpRepDetails).jumpHeight, "cm")
+              ),
+              jumpHeightCm: Math.round(
+                convertHeight((rep.details as JumpRepDetails).jumpHeight, "cm")
+              ),
+            }
+          : rep.details;
+
+        // Debug logging for AI data transformation
+        if (
+          process.env.NODE_ENV === "development" &&
+          original &&
+          "jumpHeight" in original
+        ) {
+          const jumpOriginal = original as JumpRepDetails;
+          console.log(`🤖 AI Data Transform Rep ${index + 1}:`, {
+            originalJumpHeight: jumpOriginal.jumpHeight?.toFixed(1) ?? "null",
+            originalLandingKnee:
+              jumpOriginal.landingKneeFlexion?.toFixed(1) ?? "null",
+            originalLandingScore: jumpOriginal.landingScore ?? "null",
+            convertedJumpHeight:
+              processed && "jumpHeight" in processed
+                ? processed.jumpHeight
+                : "null",
+            landingKneeToAI:
+              processed && "landingKneeFlexion" in processed
+                ? processed.landingKneeFlexion
+                : "null",
+            landingScoreToAI:
+              processed && "landingScore" in processed
+                ? processed.landingScore
+                : "null",
+          });
+        }
+
+        return {
+          ...rep,
+          details: processed,
+        };
+      });
+
+      return processed;
+    },
+    [exercise]
+  );
+
   const handleFollowUpQuery = async (query: string, model: CoachModel) => {
     if (remainingQueries <= 0) return "";
 
     try {
+      const processedRepHistory = processRepHistoryForAI(repHistory);
+
+      // Calculate jump analytics for follow-up queries
+      let jumpAnalytics = {};
+      if (exercise === "jumps" && processedRepHistory.length > 0) {
+        const jumpDetails = processedRepHistory
+          .map((rep) => rep.details)
+          .filter(
+            (details): details is JumpRepDetails =>
+              details !== undefined && "jumpHeight" in details
+          );
+
+        if (jumpDetails.length > 0) {
+          const landingAngles = jumpDetails.map((d) => d.landingKneeFlexion);
+          const jumpHeights = jumpDetails.map((d) => d.jumpHeight);
+          const landingScores = jumpDetails
+            .map((d) => d.landingScore)
+            .filter((s) => s !== undefined);
+
+          jumpAnalytics = {
+            avgLandingAngle:
+              landingAngles.reduce((a, b) => a + b, 0) / landingAngles.length,
+            landingSuccessRate:
+              (landingAngles.filter((angle) => angle < 140).length /
+                landingAngles.length) *
+              100,
+            avgJumpHeight:
+              jumpHeights.reduce((a, b) => a + b, 0) / jumpHeights.length,
+            avgLandingScore:
+              landingScores.length > 0
+                ? landingScores.reduce((a, b) => a + b, 0) /
+                  landingScores.length
+                : 0,
+          };
+        }
+      }
+
       const response = await getAIChatResponse(
         chatMessages,
         {
           reps,
           averageFormScore,
-          repHistory,
+          repHistory: processedRepHistory,
           exercise,
           sessionDuration,
           message: query,
+          ...(exercise === "jumps" && { jumpAnalytics }),
         },
         model
       );
@@ -143,13 +240,84 @@ export const PostWorkoutFlow = ({
 
     setIsSummaryLoading(true);
     try {
+      const processedRepHistory = processRepHistoryForAI(repHistory);
+
+      // Calculate jump-specific analytics for AI
+      let jumpAnalytics = {};
+      if (exercise === "jumps" && processedRepHistory.length > 0) {
+        const jumpDetails = processedRepHistory
+          .map((rep) => rep.details)
+          .filter(
+            (details): details is JumpRepDetails =>
+              details !== undefined && "jumpHeight" in details
+          );
+
+        if (jumpDetails.length > 0) {
+          const landingAngles = jumpDetails.map((d) => d.landingKneeFlexion);
+          const jumpHeights = jumpDetails.map((d) => d.jumpHeight);
+          const landingScores = jumpDetails
+            .map((d) => d.landingScore)
+            .filter((s) => s !== undefined);
+
+          jumpAnalytics = {
+            totalJumps: jumpDetails.length,
+            avgLandingAngle:
+              landingAngles.reduce((a, b) => a + b, 0) / landingAngles.length,
+            bestLandingAngle: Math.min(...landingAngles),
+            worstLandingAngle: Math.max(...landingAngles),
+            avgJumpHeight:
+              jumpHeights.reduce((a, b) => a + b, 0) / jumpHeights.length,
+            maxJumpHeight: Math.max(...jumpHeights),
+            avgLandingScore:
+              landingScores.length > 0
+                ? landingScores.reduce((a, b) => a + b, 0) /
+                  landingScores.length
+                : 0,
+            goodLandings: landingAngles.filter((angle) => angle < 140).length,
+            landingSuccessRate:
+              (landingAngles.filter((angle) => angle < 140).length /
+                landingAngles.length) *
+              100,
+            landingProgression: landingAngles,
+            heightProgression: jumpHeights,
+          };
+        }
+      }
+
+      // Debug logging for final AI data
+      if (process.env.NODE_ENV === "development" && exercise === "jumps") {
+        console.log("📤 Final Data Sent to Gemini:", {
+          reps,
+          averageFormScore,
+          totalReps: processedRepHistory.length,
+          jumpAnalytics,
+          jumpData: processedRepHistory.map((rep, i) => {
+            const details = rep.details;
+            const jumpDetails =
+              details && "jumpHeight" in details
+                ? (details as JumpRepDetails)
+                : null;
+            return {
+              rep: i + 1,
+              score: rep.score,
+              jumpHeight: jumpDetails?.jumpHeight ?? "null",
+              landingKnee: jumpDetails?.landingKneeFlexion ?? "null",
+              landingScore: jumpDetails?.landingScore ?? "null",
+            };
+          }),
+          exercise,
+          sessionDuration,
+        });
+      }
+
       const summaries = await getAISessionSummary(
         {
           reps,
           averageFormScore,
-          repHistory,
+          repHistory: processedRepHistory,
           exercise,
           sessionDuration,
+          ...(exercise === "jumps" && { jumpAnalytics }),
         },
         selectedCoaches
       );
@@ -167,6 +335,7 @@ export const PostWorkoutFlow = ({
     repHistory,
     exercise,
     sessionDuration,
+    processRepHistoryForAI,
   ]);
 
   // Auto-generate AI summaries when workout ends
@@ -187,15 +356,53 @@ export const PostWorkoutFlow = ({
     ]);
 
     try {
+      const processedRepHistory = processRepHistoryForAI(repHistory);
+
+      // Calculate jump analytics for chat
+      let jumpAnalytics = {};
+      if (exercise === "jumps" && processedRepHistory.length > 0) {
+        const jumpDetails = processedRepHistory
+          .map((rep) => rep.details)
+          .filter(
+            (details): details is JumpRepDetails =>
+              details !== undefined && "jumpHeight" in details
+          );
+
+        if (jumpDetails.length > 0) {
+          const landingAngles = jumpDetails.map((d) => d.landingKneeFlexion);
+          const jumpHeights = jumpDetails.map((d) => d.jumpHeight);
+          const landingScores = jumpDetails
+            .map((d) => d.landingScore)
+            .filter((s) => s !== undefined);
+
+          jumpAnalytics = {
+            avgLandingAngle:
+              landingAngles.reduce((a, b) => a + b, 0) / landingAngles.length,
+            landingSuccessRate:
+              (landingAngles.filter((angle) => angle < 140).length /
+                landingAngles.length) *
+              100,
+            avgJumpHeight:
+              jumpHeights.reduce((a, b) => a + b, 0) / jumpHeights.length,
+            avgLandingScore:
+              landingScores.length > 0
+                ? landingScores.reduce((a, b) => a + b, 0) /
+                  landingScores.length
+                : 0,
+          };
+        }
+      }
+
       const response = await getAIChatResponse(
         chatMessages,
         {
           reps,
           averageFormScore,
-          repHistory,
+          repHistory: processedRepHistory,
           exercise,
           sessionDuration,
           message,
+          ...(exercise === "jumps" && { jumpAnalytics }),
         },
         model
       );

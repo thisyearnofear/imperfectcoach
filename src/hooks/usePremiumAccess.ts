@@ -143,40 +143,45 @@ export function usePremiumAccess() {
           tx.status === "confirmed"
       );
 
-      let sessionsUpdated = false;
-      const existingHashes = premiumSessions.map((s) => s.transactionHash);
+      setPremiumSessions((currentSessions) => {
+        let sessionsUpdated = false;
+        const existingHashes = currentSessions.map((s) => s.transactionHash);
+        const newSessions = [...currentSessions];
 
-      premiumPayments.forEach((payment) => {
-        if (!existingHashes.includes(payment.hash)) {
-          // Calculate expiry from transaction timestamp
-          const expiresAt = payment.timestamp + PREMIUM_SESSION_DURATION;
+        premiumPayments.forEach((payment) => {
+          if (!existingHashes.includes(payment.hash)) {
+            // Calculate expiry from transaction timestamp
+            const expiresAt = payment.timestamp + PREMIUM_SESSION_DURATION;
 
-          // Only add if not expired
-          if (expiresAt > Date.now()) {
-            const session: PremiumSession = {
-              transactionHash: payment.hash,
-              timestamp: payment.timestamp,
-              expiresAt,
-              walletAddress: address || "",
-              amount: payment.amount || "0.05",
-              currency: payment.currency || "USDC",
-            };
+            // Only add if not expired
+            if (expiresAt > Date.now()) {
+              const session: PremiumSession = {
+                transactionHash: payment.hash,
+                timestamp: payment.timestamp,
+                expiresAt,
+                walletAddress: address || "",
+                amount: payment.amount || "0.05",
+                currency: payment.currency || "USDC",
+              };
 
-            premiumSessions.push(session);
-            sessionsUpdated = true;
+              newSessions.push(session);
+              sessionsUpdated = true;
+            }
           }
-        }
-      });
+        });
 
-      if (sessionsUpdated) {
-        setPremiumSessions([...premiumSessions]);
-        savePremiumSessions(premiumSessions);
-        console.log("🔄 Premium sessions synced from transaction history");
-      }
+        if (sessionsUpdated) {
+          savePremiumSessions(newSessions);
+          console.log("🔄 Premium sessions synced from transaction history");
+          return newSessions;
+        }
+
+        return currentSessions;
+      });
     } catch (error) {
       console.error("Error syncing premium sessions:", error);
     }
-  }, [premiumSessions, address]);
+  }, [address]);
 
   // Initialize and check for premium access
   useEffect(() => {
@@ -191,35 +196,41 @@ export function usePremiumAccess() {
       const hasAccess = checkPremiumAccess(sessions);
       setHasPremiumAccess(hasAccess);
 
-      // Sync with transaction history if connected
-      if (address) {
-        syncWithTransactionHistory();
-      }
-
       setIsLoading(false);
     };
 
     initialize();
-  }, [address, checkPremiumAccess, syncWithTransactionHistory]);
+  }, [address, checkPremiumAccess]);
+
+  // Separate effect for syncing transaction history
+  useEffect(() => {
+    if (address && !isLoading) {
+      syncWithTransactionHistory();
+    }
+  }, [address, isLoading, syncWithTransactionHistory]);
 
   // Periodically check for expired sessions
   useEffect(() => {
     const interval = setInterval(() => {
-      const now = Date.now();
-      const validSessions = premiumSessions.filter(
-        (session) => session.expiresAt > now
-      );
+      setPremiumSessions((currentSessions) => {
+        const now = Date.now();
+        const validSessions = currentSessions.filter(
+          (session) => session.expiresAt > now
+        );
 
-      if (validSessions.length !== premiumSessions.length) {
-        setPremiumSessions(validSessions);
-        savePremiumSessions(validSessions);
-        setHasPremiumAccess(checkPremiumAccess(validSessions));
-        console.log("🧹 Expired premium sessions cleaned up");
-      }
+        if (validSessions.length !== currentSessions.length) {
+          savePremiumSessions(validSessions);
+          setHasPremiumAccess(checkPremiumAccess(validSessions));
+          console.log("🧹 Expired premium sessions cleaned up");
+          return validSessions;
+        }
+
+        return currentSessions;
+      });
     }, 60000); // Check every minute
 
     return () => clearInterval(interval);
-  }, [premiumSessions, address, checkPremiumAccess]);
+  }, [address, checkPremiumAccess]);
 
   return {
     hasPremiumAccess,
