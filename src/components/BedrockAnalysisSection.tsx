@@ -151,14 +151,86 @@ const BedrockAnalysisSection = ({
         },
       };
 
-      const response = await fetch(
-        "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody),
+      const apiUrl =
+        "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
+
+      // First, make a request without payment to get the 402 challenge
+      let response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      // If we get a 402 Payment Required, handle the x402 flow manually
+      if (response.status === 402) {
+        console.log("💰 Payment required - processing x402 payment...");
+
+        const paymentChallenge = await response.json();
+        console.log("🎯 Payment challenge received:", paymentChallenge);
+
+        // Extract payment requirements
+        const paymentRequirement = paymentChallenge.accepts?.[0];
+        if (!paymentRequirement) {
+          throw new Error(
+            "Invalid payment challenge - no payment requirements found"
+          );
         }
-      );
+
+        // Create x402 payment payload with correct structure
+        const paymentTimestamp = Math.floor(Date.now() / 1000);
+        const paymentNonce = crypto.randomUUID();
+
+        // Create payment message for x402 signature
+        const x402Message = `x402 Payment Authorization
+Scheme: ${paymentRequirement.scheme}
+Network: ${paymentRequirement.network}
+Asset: ${paymentRequirement.asset}
+Amount: ${paymentRequirement.amount}
+PayTo: ${paymentRequirement.payTo}
+Payer: ${address}
+Timestamp: ${paymentTimestamp}
+Nonce: ${paymentNonce}`;
+
+        console.log("🖊️ Signing x402 payment message...");
+
+        // Generate new signature specifically for x402 payment
+        const x402Signature = await walletClient.signMessage({
+          account: address,
+          message: x402Message,
+        });
+
+        console.log("✅ x402 payment signature generated");
+
+        // Create the payment payload in exact x402 format
+        const paymentPayload = {
+          scheme: paymentRequirement.scheme,
+          network: paymentRequirement.network,
+          asset: paymentRequirement.asset,
+          amount: paymentRequirement.amount,
+          payTo: paymentRequirement.payTo,
+          payer: address,
+          timestamp: paymentTimestamp,
+          nonce: paymentNonce,
+          signature: x402Signature,
+          message: x402Message,
+        };
+
+        // Encode payment payload as base64 for x402 header
+        const paymentHeader = btoa(JSON.stringify(paymentPayload));
+        console.log("📦 Created x402 payment header with real signature");
+
+        setPaymentStatus("settled");
+
+        // Retry the request with the x402 payment header
+        response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Payment": paymentHeader,
+          },
+          body: JSON.stringify(requestBody),
+        });
+      }
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "Unknown error");

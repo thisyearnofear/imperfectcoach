@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2, Trophy, ExternalLink, CheckCircle } from "lucide-react";
+// Removed x402-fetch import due to wallet interface conflicts
 
 interface WorkoutData {
   exercise: string;
@@ -79,10 +80,10 @@ const PremiumAnalysisUpsell = ({
         hasSignMessage: typeof walletClient.signMessage === "function",
       });
 
-      console.log("🚀 Starting premium analysis with server-side payment...");
+      console.log("🚀 Starting premium analysis with x402 payment...");
       console.log("💪 Workout data:", JSON.stringify(workoutData, null, 2));
 
-      // Create payment authorization message
+      // Create payment authorization message for wallet signature verification
       const timestamp = Date.now();
       const message = `Authorize payment of 0.05 USDC for premium workout analysis\nTimestamp: ${timestamp}\nAddress: ${address}`;
 
@@ -104,17 +105,17 @@ const PremiumAnalysisUpsell = ({
           walletAddress: address,
           signature,
           message,
-          amount: "50000", // 0.05 USDC in microUSDC
+          amount: "50000",
           timestamp,
         },
       };
 
       console.log(
-        "📤 Sending request body:",
-        JSON.stringify(requestBody, null, 2)
+        "💳 Making initial request to check for payment requirements..."
       );
 
-      const response = await fetch(apiUrl, {
+      // First, make a request without payment to get the 402 challenge
+      let response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -122,7 +123,53 @@ const PremiumAnalysisUpsell = ({
         body: JSON.stringify(requestBody),
       });
 
-      console.log("📡 Lambda response status:", response.status);
+      // If we get a 402 Payment Required, handle the x402 flow manually
+      if (response.status === 402) {
+        console.log("💰 Payment required - processing x402 payment...");
+
+        const paymentChallenge = await response.json();
+        console.log("🎯 Payment challenge received:", paymentChallenge);
+
+        // Extract payment requirements
+        const paymentRequirement = paymentChallenge.accepts?.[0];
+        if (!paymentRequirement) {
+          throw new Error(
+            "Invalid payment challenge - no payment requirements found"
+          );
+        }
+
+        // Create payment payload
+        const paymentPayload = {
+          scheme: paymentRequirement.scheme,
+          network: paymentRequirement.network,
+          asset: paymentRequirement.asset,
+          amount: paymentRequirement.amount,
+          chainId: paymentRequirement.chainId,
+          payTo: paymentRequirement.payTo,
+          from: address,
+          timestamp: Date.now(),
+          nonce: crypto.randomUUID(),
+          signature: signature, // Use the wallet signature we already have
+        };
+
+        // Encode payment payload as base64 for x402 header
+        const paymentHeader = btoa(JSON.stringify(paymentPayload));
+        console.log("📦 Created x402 payment header");
+
+        setPaymentStatus("settled");
+
+        // Retry the request with the x402 payment header
+        response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Payment": paymentHeader,
+          },
+          body: JSON.stringify(requestBody),
+        });
+      }
+
+      console.log("📡 x402 response status:", response.status);
       console.log(
         "📋 Response headers:",
         Object.fromEntries(response.headers.entries())
@@ -130,7 +177,7 @@ const PremiumAnalysisUpsell = ({
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "Unknown error");
-        console.error("❌ Lambda error response:", errorText);
+        console.error("❌ x402 payment error response:", errorText);
         throw new Error(
           `Analysis failed with status ${response.status}: ${errorText}`
         );
@@ -162,7 +209,7 @@ const PremiumAnalysisUpsell = ({
           "0.05", // amount
           "USDC", // currency
           "Premium workout analysis", // description
-          "Server-side payment" // facilitator
+          "x402 payment protocol" // facilitator
         );
 
         console.log("📝 Payment transaction tracked:", txHash);

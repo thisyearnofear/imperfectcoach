@@ -1,0 +1,33 @@
+{
+  "name": "imperfect-coach-scripts",
+  "version": "1.0.0",
+  "description": "Testing and diagnostic scripts for Imperfect Coach on-chain infrastructure",
+  "main": "check-contracts.js",
+  "scripts": {
+    "check": "bun run check-contracts.js",
+    "test-payments": "bun run test-payments.js",
+    "setup-cdp": "bun run setup-cdp.js",
+    "test-cdp-lambda": "node test-cdp-lambda.mjs",
+    "install": "bun install"
+  },
+  "dependencies": {
+    "viem": "^2.21.0",
+    "dotenv": "^16.4.5",
+    "@coinbase/coinbase-sdk": "^0.25.0"
+  },
+  "type": "module",
+  "devDependencies": {},
+  "keywords": [
+    "blockchain",
+    "base-sepolia",
+    "smart-contracts",
+    "testing",
+    "x402",
+    "revenue-splitter"
+  ],
+  "author": "Imperfect Coach Team",
+  "license": "MIT",
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
