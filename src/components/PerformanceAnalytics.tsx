@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { Badge } from "@/components/ui/badge";
 import {
   Download,
@@ -50,6 +50,7 @@ import {
 import { AIChat } from "@/components/AIChat";
 import { useFeatureAvailability } from "@/hooks/useFeatureGate";
 import { cn } from "@/lib/utils";
+import { PADDING } from "@/lib/constants/design-system";
 
 interface PerformanceAnalyticsProps {
   repHistory: RepData[];
@@ -241,7 +242,7 @@ const PerformanceAnalytics = ({
         {isJumpSession && jumpAnalytics && (
           <div
             className={cn(
-              "grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-6 p-3 rounded-lg relative",
+              "grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-6 p-4 rounded-lg relative",
               canUsePremiumAnalytics ? "bg-muted/30" : "bg-muted/20 opacity-60"
             )}
           >
@@ -513,17 +514,19 @@ const PerformanceAnalytics = ({
         </CardFooter>
       )}
       <CardFooter className="flex flex-wrap gap-2 pt-6">
-        <Button
+        <AnimatedButton
           onClick={onTryAgain}
           variant="default"
           size="sm"
           className="flex-grow min-w-[calc(50%-0.25rem)]"
           disabled={repHistory.length === 0}
+          disableAnimation={repHistory.length === 0}
+          animationPreset="scale"
         >
           <RotateCw />
           Try Again
-        </Button>
-        <Button
+        </AnimatedButton>
+        <AnimatedButton
           onClick={
             canUseAdvancedExports
               ? () =>
@@ -541,8 +544,8 @@ const PerformanceAnalytics = ({
           {!canUseAdvancedExports && <Lock className="h-3 w-3 mr-1" />}
           <Share2 className={cn(!canUseAdvancedExports && "ml-1")} />
           Share Summary
-        </Button>
-        <Button
+        </AnimatedButton>
+        <AnimatedButton
           onClick={
             canUseAdvancedExports ? () => exportChartImage(chartRef) : onUpgrade
           }
@@ -557,8 +560,8 @@ const PerformanceAnalytics = ({
           {!canUseAdvancedExports && <Lock className="h-3 w-3 mr-1" />}
           <ImageIcon className={cn(!canUseAdvancedExports && "ml-1")} />
           Export Chart
-        </Button>
-        <Button
+        </AnimatedButton>
+        <AnimatedButton
           onClick={
             canUseAdvancedExports ? () => exportToCSV(repHistory) : onUpgrade
           }
@@ -573,7 +576,7 @@ const PerformanceAnalytics = ({
           {!canUseAdvancedExports && <Lock className="h-3 w-3 mr-1" />}
           <Download className={cn(!canUseAdvancedExports && "ml-1")} />
           Export CSV
-        </Button>
+        </AnimatedButton>
 
         {showExportsDisabled && tier === "connected" && onUpgrade && (
           <div className="w-full text-center pt-2">

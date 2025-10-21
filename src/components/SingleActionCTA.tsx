@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Sparkles, Shield, Brain, CheckCircle } from "lucide-react";
 import { BlockchainScoreSubmission } from "./BlockchainScoreSubmission";
@@ -105,15 +105,16 @@ const SingleActionCTA = ({
           />
 
           <div className="pt-2 border-t border-green-200">
-            <Button
+            <AnimatedButton
               onClick={handleUpgradeClick}
               variant="outline"
               size="sm"
               className="text-xs"
+              animationPreset="lift"
             >
               <Sparkles className="h-3 w-3 mr-1" />
               Get Premium Analysis - $0.05
-            </Button>
+            </AnimatedButton>
           </div>
         </CardContent>
       </Card>
@@ -166,13 +167,14 @@ const SingleActionCTA = ({
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <Button
+          <AnimatedButton
             onClick={handleUpgradeClick}
             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            animationPreset="glow"
           >
             <Brain className="h-4 w-4 mr-2" />
             Get Bedrock Deep Dive - $0.05
-          </Button>
+          </AnimatedButton>
 
           <div className="text-xs text-purple-600">
             Advanced biomechanical analysis + 3 AI coach queries

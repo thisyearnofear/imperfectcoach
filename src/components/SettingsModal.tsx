@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings, Bug } from "lucide-react";
@@ -31,10 +31,10 @@ const SettingsModal = ({
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
+                <AnimatedButton variant="outline" size="sm" animationPreset="lift">
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
-                </Button>
+                </AnimatedButton>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[450px] max-h-[85vh] overflow-y-auto">
                 <DialogHeader>

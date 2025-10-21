@@ -7,6 +7,7 @@ import NotFound from "./pages/NotFound";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Web3Providers } from "@/providers";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { OnboardingFlow } from "@/components/OnboardingFlow";
 
 const App = () => (
   <ErrorBoundary
@@ -22,6 +23,8 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          {/* First-time user onboarding */}
+          <OnboardingFlow onComplete={() => console.log("Onboarding complete")} />
           <ErrorBoundary
             maxRetries={2}
             onError={(error) => console.error("Router Error:", error)}

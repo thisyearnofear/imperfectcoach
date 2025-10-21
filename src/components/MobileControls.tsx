@@ -6,7 +6,7 @@ import {
   SheetTitle,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+import { AnimatedButton } from "@/components/ui/animated-button";
 import WorkoutModeSelector from "./WorkoutModeSelector";
 import ExerciseSelector from "./ExerciseSelector";
 import CoachPersonalitySelector from "./CoachPersonalitySelector";
@@ -113,7 +113,7 @@ const MobileControls = ({
             />
           </div>
           <SheetClose asChild>
-            <Button>Done</Button>
+            <AnimatedButton animationPreset="scale">Done</AnimatedButton>
           </SheetClose>
         </div>
       </SheetContent>

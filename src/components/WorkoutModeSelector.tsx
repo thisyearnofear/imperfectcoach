@@ -1,5 +1,5 @@
 
-import { Button } from "@/components/ui/button";
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { WorkoutMode } from "@/lib/types";
 import { Dumbbell, ClipboardCheck } from "lucide-react";
 
@@ -17,16 +17,17 @@ const WorkoutModeSelector = ({ selectedMode, onModeChange }: WorkoutModeSelector
   return (
     <div className="flex items-center gap-2 rounded-lg bg-background p-1 border">
       {modes.map((mode) => (
-        <Button
+        <AnimatedButton
           key={mode.id}
           variant={selectedMode === mode.id ? "secondary" : "ghost"}
           size="sm"
           onClick={() => onModeChange(mode.id)}
           className="flex-1 justify-center gap-2"
+          animationPreset="scale"
         >
           <mode.icon className="h-4 w-4" />
           {mode.name}
-        </Button>
+        </AnimatedButton>
       ))}
     </div>
   );

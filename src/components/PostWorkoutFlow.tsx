@@ -6,8 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { Badge } from "@/components/ui/badge";
+import { FadeIn } from "@/components/ui/fade-in";
 
 import { Trophy, Brain } from "lucide-react";
 
@@ -25,6 +26,8 @@ import PremiumAnalysisUpsell from "./PremiumAnalysisUpsell";
 import BedrockAnalysisSection from "./BedrockAnalysisSection";
 import CoinbaseConnectionCTA from "./CoinbaseConnectionCTA";
 import SingleActionCTA from "./SingleActionCTA";
+import { SmartTierRecommendation } from "./SmartTierRecommendation";
+import { AgentCoachUpsell } from "./AgentCoachUpsell";
 import { cn } from "@/lib/utils";
 import { CoachSummarySelector } from "./CoachSummarySelector";
 import PerformanceAnalytics from "./PerformanceAnalytics";
@@ -64,6 +67,7 @@ export const PostWorkoutFlow = ({
     analysis: string;
   } | null>(null);
   const [remainingQueries, setRemainingQueries] = useState(3);
+  const [showAgentUpsell, setShowAgentUpsell] = useState(false);
 
   // Refs for auto-scroll
   const bedrockSectionRef = useRef<HTMLDivElement>(null);
@@ -460,6 +464,7 @@ export const PostWorkoutFlow = ({
       {tier === "free" && (
         <div ref={resultsRef} className="space-y-4">
           {/* Basic Free Analysis */}
+          <FadeIn>
           <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-blue-800 justify-center">
@@ -506,19 +511,23 @@ export const PostWorkoutFlow = ({
               </div>
             </CardContent>
           </Card>
+          </FadeIn>
 
           {/* Connection CTA */}
+          <FadeIn delay={0.1}>
           <CoinbaseConnectionCTA
             reps={reps}
             averageFormScore={averageFormScore}
             exercise={exercise}
           />
+          </FadeIn>
         </div>
       )}
 
       {/* Connected/Premium Tier: Simplified Analysis */}
       {tier !== "free" && (
         <div ref={resultsRef} className="space-y-4">
+          <FadeIn>
           <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
             <CardHeader>
               <CardTitle className="flex items-center justify-center gap-2 text-blue-800">
@@ -540,14 +549,16 @@ export const PostWorkoutFlow = ({
                   />
 
                   {selectedCoaches.length > 0 && (
-                    <Button
+                    <AnimatedButton
                       onClick={handleGenerateAISummary}
                       disabled={isSummaryLoading}
+                      disableAnimation={isSummaryLoading}
                       className="bg-blue-600 hover:bg-blue-700"
                       size="sm"
+                      animationPreset="scale"
                     >
                       {isSummaryLoading ? "Analyzing..." : "Get AI Analysis"}
-                    </Button>
+                    </AnimatedButton>
                   )}
                 </div>
               )}
@@ -586,8 +597,56 @@ export const PostWorkoutFlow = ({
               )}
             </CardContent>
           </Card>
+          </FadeIn>
+
+      {/* Smart Tier Recommendation - Personalized suggestion */}
+          <FadeIn delay={0.1}>
+          <SmartTierRecommendation
+            workoutData={{
+              exercise,
+              reps,
+              averageFormScore,
+              repHistory: repHistory.map(r => ({ score: r.score })),
+              hasFormIssues: averageFormScore < 70,
+              hasAsymmetry: false, // Can be enhanced with pose data analysis
+              isPersonalBest: reps >= 10, // Simplified, can track actual PBs
+            }}
+            onSelectTier={(tier) => {
+              if (tier === "premium") {
+                handleUpgrade();
+              } else if (tier === "agent") {
+                setShowAgentUpsell(true);
+                setTimeout(() => {
+                  bedrockSectionRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                  });
+                }, 100);
+              }
+            }}
+          />
+          </FadeIn>
+
+          {/* Agent Coach Upsell */}
+          {showAgentUpsell && (
+            <FadeIn delay={0.2}>
+            <AgentCoachUpsell
+              workoutData={{
+                exercise,
+                reps,
+                formScore: averageFormScore,
+                poseData: {}, // Can be enhanced with actual pose data
+                userId: undefined,
+              }}
+              onSuccess={(analysis) => {
+                console.log("Agent analysis complete:", analysis);
+              }}
+            />
+            </FadeIn>
+          )}
 
           {/* Single Action CTA */}
+          <FadeIn delay={showAgentUpsell ? 0.3 : 0.2}>
           <SingleActionCTA
             exercise={exercise}
             reps={reps}
@@ -598,12 +657,14 @@ export const PostWorkoutFlow = ({
             achievements={achievements}
             bedrockSectionRef={bedrockSectionRef}
           />
+          </FadeIn>
         </div>
       )}
 
       {/* Bedrock Analysis Section - Visible for connected and premium users */}
       {(tier === "connected" || tier === "premium") && (
         <div ref={bedrockSectionRef}>
+          <FadeIn delay={0.2}>
           <BedrockAnalysisSection
             workoutData={{
               exercise,
@@ -634,6 +695,7 @@ export const PostWorkoutFlow = ({
             onUpgrade={handleUpgrade}
             onTryAgain={() => window.location.reload()}
           />
+          </FadeIn>
         </div>
       )}
 

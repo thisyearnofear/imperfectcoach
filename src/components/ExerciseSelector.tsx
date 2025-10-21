@@ -1,5 +1,5 @@
 
-import { Button } from "@/components/ui/button";
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { Exercise } from "@/lib/types";
 
 const exercises: Exercise[] = [
@@ -16,16 +16,17 @@ const ExerciseSelector = ({ selectedExercise, onExerciseChange }: ExerciseSelect
   return (
     <div className="bg-card p-4 rounded-lg border border-border/40">
       <h3 className="text-lg font-semibold mb-3 text-center">Select Your Exercise</h3>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         {exercises.map((exercise) => (
-          <Button
+          <AnimatedButton
             key={exercise}
             variant={selectedExercise === exercise ? "default" : "secondary"}
             onClick={() => onExerciseChange(exercise)}
             className="capitalize"
+            animationPreset="scale"
           >
             {exercise}
-          </Button>
+          </AnimatedButton>
         ))}
       </div>
     </div>

@@ -5,8 +5,9 @@ import { trackPaymentTransaction } from "@/lib/cdp";
 import { usePremiumAccess } from "@/hooks/usePremiumAccess";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { SkeletonPaymentStatus } from "@/components/ui/enhanced-skeleton";
 import {
   Loader2,
   Brain,
@@ -344,51 +345,48 @@ Nonce: ${paymentNonce}`;
 
           {/* Payment Status Indicator */}
           {paymentStatus !== "idle" && (
-            <div className="my-4 p-3 bg-blue-50 rounded-lg text-center">
-              <div className="flex items-center justify-center gap-2 text-sm">
-                {paymentStatus === "processing" && (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                    <span className="text-blue-800 font-medium">
-                      Processing payment...
-                    </span>
-                  </>
-                )}
-                {paymentStatus === "verified" && (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-green-800 font-medium">
-                      Payment verified, analyzing workout...
-                    </span>
-                  </>
-                )}
-                {paymentStatus === "settled" && (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-green-800 font-medium">
-                      Payment settled, generating analysis...
-                    </span>
-                  </>
-                )}
-                {paymentStatus === "complete" && (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-green-800 font-medium">
-                      Analysis complete!
-                    </span>
-                  </>
-                )}
-              </div>
-              {transactionHash && (
-                <div className="mt-2 text-xs">
-                  <a
-                    href={`https://sepolia.basescan.org/tx/${transactionHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1 text-blue-700 hover:text-blue-800"
-                  >
-                    View transaction <ExternalLink className="h-3 w-3" />
-                  </a>
+            <div className="my-4">
+              {paymentStatus === "processing" && <SkeletonPaymentStatus />}
+              {paymentStatus !== "processing" && (
+                <div className="p-3 bg-blue-50 rounded-lg text-center">
+                  <div className="flex items-center justify-center gap-2 text-sm">
+                    {paymentStatus === "verified" && (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-green-800 font-medium">
+                          Payment verified, analyzing workout...
+                        </span>
+                      </>
+                    )}
+                    {paymentStatus === "settled" && (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-green-800 font-medium">
+                          Payment settled, generating analysis...
+                        </span>
+                      </>
+                    )}
+                    {paymentStatus === "complete" && (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-green-800 font-medium">
+                          Analysis complete!
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  {transactionHash && (
+                    <div className="mt-2 text-xs">
+                      <a
+                        href={`https://sepolia.basescan.org/tx/${transactionHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1 text-blue-700 hover:text-blue-800"
+                      >
+                        View transaction <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -401,10 +399,12 @@ Nonce: ${paymentNonce}`;
             </div>
           )}
 
-          <Button
+          <AnimatedButton
             onClick={handlePremiumAnalysis}
             disabled={isLoading || !isConnected}
+            disableAnimation={isLoading}
             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            animationPreset="glow"
           >
             {isLoading ? (
               <>
@@ -422,7 +422,7 @@ Nonce: ${paymentNonce}`;
                 Unlock Bedrock Analysis - $0.05
               </>
             )}
-          </Button>
+          </AnimatedButton>
         </CardContent>
       </Card>
     );

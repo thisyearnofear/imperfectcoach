@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "ask": [
+      "Read(!/Users/udingethe/dev/imperfectcoach/**)",
+      "Edit(!/Users/udingethe/dev/imperfectcoach/**)"
+    ],
+    "allow": [
+      "Read(/Users/udingethe/dev/imperfectcoach/**)",
+      "Edit(/Users/udingethe/dev/imperfectcoach/**)"
+    ]
+  },
+  "memoryImport": {},
+  "monitoring": {}
+}
