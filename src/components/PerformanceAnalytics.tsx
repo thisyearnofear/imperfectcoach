@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -10,6 +10,29 @@ import {
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import {
   Download,
   LineChart as LineChartIcon,
   Share2,
@@ -17,6 +40,8 @@ import {
   RotateCw,
   Lock,
   Crown,
+  ChevronDown,
+  Info,
 } from "lucide-react";
 import { BlockchainScoreSubmission } from "./BlockchainScoreSubmission";
 import {
@@ -89,6 +114,17 @@ const PerformanceAnalytics = ({
 }: PerformanceAnalyticsProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
+  const [showRepDetails, setShowRepDetails] = useState(false);
+  const [selectedRepIndex, setSelectedRepIndex] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on mount
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const isPullupSession =
     exercise === "pull-ups" &&
@@ -285,9 +321,218 @@ const PerformanceAnalytics = ({
           </div>
         )}
 
-        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">
-          {isJumpSession ? "Jump Performance Analysis" : "Rep Analysis"}
-        </h4>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold text-muted-foreground">
+            {isJumpSession ? "Jump Performance Analysis" : "Rep Analysis"}
+          </h4>
+          <button
+            onClick={() => setShowRepDetails(!showRepDetails)}
+            className="text-xs text-primary hover:underline flex items-center gap-1"
+          >
+            <Info className="h-3 w-3" />
+            {showRepDetails ? "Hide" : "Show"} Rep Details
+          </button>
+        </div>
+
+        {/* Rep-by-Rep Accordion (collapsible) */}
+        {showRepDetails && (
+          <div className="mb-4 max-h-60 overflow-y-auto">
+            <Accordion type="single" collapsible className="w-full">
+              {repHistory.map((rep, index) => {
+                const jumpDetails = isJumpSession
+                  ? (rep.details as JumpRepDetails)
+                  : undefined;
+                const pullupDetails = isPullupSession
+                  ? (rep.details as PullupRepDetails)
+                  : undefined;
+
+                // Mobile: Use Drawer for better UX
+                if (isMobile) {
+                  return (
+                    <Drawer key={index}>
+                      <DrawerTrigger asChild>
+                        <button
+                          className="w-full flex items-center justify-between py-3 px-2 text-left border-b hover:bg-muted/50 transition-colors"
+                          onClick={() => setSelectedRepIndex(index)}
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <span className="font-medium text-sm">Rep {index + 1}</span>
+                            <Badge
+                              variant={rep.score >= 80 ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {rep.score}%
+                            </Badge>
+                            {jumpDetails && (
+                              <span className="text-xs text-muted-foreground">
+                                {Math.round(convertHeight(jumpDetails.jumpHeight, "cm"))}cm
+                              </span>
+                            )}
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </DrawerTrigger>
+                      <DrawerContent>
+                        <DrawerHeader>
+                          <DrawerTitle>Rep {index + 1} Details</DrawerTitle>
+                          <DrawerDescription>
+                            Form score: {rep.score}%
+                          </DrawerDescription>
+                        </DrawerHeader>
+                        <div className="px-4 pb-4">
+                          <div className="grid grid-cols-2 gap-3">
+                            {jumpDetails && (
+                              <>
+                                <div className="p-3 bg-muted rounded-lg">
+                                  <p className="text-xs text-muted-foreground mb-1">Jump Height</p>
+                                  <p className="text-lg font-semibold">
+                                    {Math.round(convertHeight(jumpDetails.jumpHeight, "cm"))}cm
+                                  </p>
+                                </div>
+                                <div className="p-3 bg-muted rounded-lg">
+                                  <p className="text-xs text-muted-foreground mb-1">Landing Score</p>
+                                  <p className="text-lg font-semibold">
+                                    {jumpDetails.landingScore}/100
+                                  </p>
+                                </div>
+                                <div className="p-3 bg-muted rounded-lg">
+                                  <p className="text-xs text-muted-foreground mb-1">Landing Knee</p>
+                                  <p className="text-lg font-semibold">
+                                    {jumpDetails.landingKneeFlexion.toFixed(0)}°
+                                  </p>
+                                </div>
+                                <div className="p-3 bg-muted rounded-lg">
+                                  <p className="text-xs text-muted-foreground mb-1">Power Score</p>
+                                  <p className="text-lg font-semibold">
+                                    {jumpDetails.powerScore}/100
+                                  </p>
+                                </div>
+                              </>
+                            )}
+                            {pullupDetails && (
+                              <>
+                                <div className="p-3 bg-muted rounded-lg">
+                                  <p className="text-xs text-muted-foreground mb-1">Peak Flexion</p>
+                                  <p className="text-lg font-semibold">
+                                    {pullupDetails.peakElbowFlexion.toFixed(0)}°
+                                  </p>
+                                </div>
+                                <div className="p-3 bg-muted rounded-lg">
+                                  <p className="text-xs text-muted-foreground mb-1">Bottom Extension</p>
+                                  <p className="text-lg font-semibold">
+                                    {pullupDetails.bottomElbowExtension.toFixed(0)}°
+                                  </p>
+                                </div>
+                                <div className="col-span-2 p-3 bg-muted rounded-lg">
+                                  <p className="text-xs text-muted-foreground mb-1">Asymmetry</p>
+                                  <p className="text-lg font-semibold">
+                                    {pullupDetails.asymmetry.toFixed(1)}°
+                                  </p>
+                                </div>
+                              </>
+                            )}
+                            {!jumpDetails && !pullupDetails && (
+                              <div className="col-span-2 p-4 text-center text-muted-foreground text-sm">
+                                Basic rep data - connect wallet for detailed metrics
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <DrawerFooter>
+                          <DrawerClose asChild>
+                            <Button variant="outline">Close</Button>
+                          </DrawerClose>
+                        </DrawerFooter>
+                      </DrawerContent>
+                    </Drawer>
+                  );
+                }
+
+                // Desktop: Use Accordion
+                return (
+                  <AccordionItem key={index} value={`rep-${index}`}>
+                    <AccordionTrigger className="py-2 text-sm">
+                      <div className="flex items-center gap-3 flex-1">
+                        <span className="font-medium">Rep {index + 1}</span>
+                        <Badge
+                          variant={rep.score >= 80 ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {rep.score}%
+                        </Badge>
+                        {jumpDetails && (
+                          <span className="text-xs text-muted-foreground">
+                            {Math.round(convertHeight(jumpDetails.jumpHeight, "cm"))}cm
+                          </span>
+                        )}
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="grid grid-cols-2 gap-2 text-xs pl-4">
+                        {jumpDetails && (
+                          <>
+                            <div>
+                              <span className="text-muted-foreground">Jump Height:</span>
+                              <span className="ml-2 font-medium">
+                                {Math.round(convertHeight(jumpDetails.jumpHeight, "cm"))}cm
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Landing Score:</span>
+                              <span className="ml-2 font-medium">
+                                {jumpDetails.landingScore}/100
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Landing Knee:</span>
+                              <span className="ml-2 font-medium">
+                                {jumpDetails.landingKneeFlexion.toFixed(0)}°
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Power Score:</span>
+                              <span className="ml-2 font-medium">
+                                {jumpDetails.powerScore}/100
+                              </span>
+                            </div>
+                          </>
+                        )}
+                        {pullupDetails && (
+                          <>
+                            <div>
+                              <span className="text-muted-foreground">Peak Flexion:</span>
+                              <span className="ml-2 font-medium">
+                                {pullupDetails.peakElbowFlexion.toFixed(0)}°
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Bottom Extension:</span>
+                              <span className="ml-2 font-medium">
+                                {pullupDetails.bottomElbowExtension.toFixed(0)}°
+                              </span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Asymmetry:</span>
+                              <span className="ml-2 font-medium">
+                                {pullupDetails.asymmetry.toFixed(1)}°
+                              </span>
+                            </div>
+                          </>
+                        )}
+                        {!jumpDetails && !pullupDetails && (
+                          <div className="col-span-2 text-muted-foreground">
+                            Basic rep data - connect wallet for detailed metrics
+                          </div>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          </div>
+        )}
+
         <div className="h-60" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
             {isJumpSession ? (

@@ -1,6 +1,9 @@
-# Imperfect Coach - User Guide
+# User Guide - Imperfect Coach
 
-## 🏋️ Welcome to Your AI Fitness Coach
+**Your Autonomous AI Fitness Coach**
+
+> 🤖 **AWS AI Agent Global Hackathon Submission**  
+> Built with Amazon Bedrock AgentCore
 
 Imperfect Coach uses cutting-edge AI technology to analyze your workout form and provide personalized coaching. Choose the level of analysis that works for you.
 

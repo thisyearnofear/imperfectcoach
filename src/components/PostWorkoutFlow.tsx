@@ -24,8 +24,7 @@ import {
 } from "@/lib/types";
 import PremiumAnalysisUpsell from "./PremiumAnalysisUpsell";
 import BedrockAnalysisSection from "./BedrockAnalysisSection";
-import CoinbaseConnectionCTA from "./CoinbaseConnectionCTA";
-import SingleActionCTA from "./SingleActionCTA";
+import { UnifiedActionCTA } from "./UnifiedActionCTA";
 import { SmartTierRecommendation } from "./SmartTierRecommendation";
 import { AgentCoachUpsell } from "./AgentCoachUpsell";
 import { cn } from "@/lib/utils";
@@ -513,14 +512,15 @@ export const PostWorkoutFlow = ({
           </Card>
           </FadeIn>
 
-          {/* Connection CTA */}
-          <FadeIn delay={0.1}>
-          <CoinbaseConnectionCTA
-            reps={reps}
-            averageFormScore={averageFormScore}
+          {/* Unified CTA - handles connection flow */}
+          <UnifiedActionCTA
             exercise={exercise}
+            reps={reps}
+            repHistory={repHistory}
+            averageFormScore={averageFormScore}
+            onSubmissionComplete={onSubmissionComplete}
+            achievements={achievements}
           />
-          </FadeIn>
         </div>
       )}
 
@@ -645,9 +645,8 @@ export const PostWorkoutFlow = ({
             </FadeIn>
           )}
 
-          {/* Single Action CTA */}
-          <FadeIn delay={showAgentUpsell ? 0.3 : 0.2}>
-          <SingleActionCTA
+          {/* Unified CTA - handles connected/premium flows */}
+          <UnifiedActionCTA
             exercise={exercise}
             reps={reps}
             repHistory={repHistory}
@@ -657,7 +656,6 @@ export const PostWorkoutFlow = ({
             achievements={achievements}
             bedrockSectionRef={bedrockSectionRef}
           />
-          </FadeIn>
         </div>
       )}
 
