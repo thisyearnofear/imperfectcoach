@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -93,8 +92,121 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Poppins', sans-serif;
   }
+}
+
+/* Dynamic gradient backgrounds */
+.dynamic-gradient {
+  background: linear-gradient(135deg,
+      hsl(var(--background)) 0%,
+      hsl(var(--muted)) 50%,
+      hsl(var(--background)) 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 20s ease infinite;
+}
+
+.dynamic-gradient-warm {
+  background: linear-gradient(135deg,
+      hsl(48, 93%, 98%) 0%,
+      hsl(48, 93%, 96%) 25%,
+      hsl(48, 93%, 98%) 50%,
+      hsl(48, 93%, 96%) 75%,
+      hsl(48, 93%, 98%) 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+.dynamic-gradient-cool {
+  background: linear-gradient(135deg,
+      hsl(210, 40%, 98%) 0%,
+      hsl(210, 40%, 96%) 25%,
+      hsl(210, 40%, 98%) 50%,
+      hsl(210, 40%, 96%) 75%,
+      hsl(210, 40%, 98%) 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 18s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Icon entrance animations */
+.icon-entrance {
+  animation: iconEntrance 0.6s ease-out forwards;
+}
+
+.icon-entrance:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.icon-entrance:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.icon-entrance:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.icon-entrance:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.icon-entrance:nth-child(5) {
+  animation-delay: 0.5s;
+}
+
+@keyframes iconEntrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-180deg);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1) rotate(10deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Ripple effect for buttons */
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.ripple-effect:active::before {
+  width: 300px;
+  height: 300px;
 }

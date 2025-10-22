@@ -1,6 +1,9 @@
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { CoachPersonality, WorkoutMode } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
-import { getCoachInfo } from "@/lib/coachPersonalities";
+import { getCoachInfo, COACH_PERSONALITIES } from "@/lib/coachPersonalities";
+import { Dumbbell, Activity } from "lucide-react";
 
 interface CoachFeedbackProps {
   reps: number;
@@ -19,6 +22,54 @@ const CoachFeedback = ({
   workoutMode,
   onPremiumUpgrade,
 }: CoachFeedbackProps) => {
+  const [currentCoachIndex, setCurrentCoachIndex] = useState(0);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+
+  const coaches = Object.values(COACH_PERSONALITIES);
+  const exercises = [
+    {
+      name: "Pull-ups",
+      icon: <Dumbbell className="h-5 w-5" />,
+      benefits: [
+        "Build functional upper body strength",
+        "Support healthy aging with bone density",
+        "Boost mental resilience through progressive challenges",
+        "Improve posture for better spinal health"
+      ],
+      description: "Master the king of bodyweight exercises"
+    },
+    {
+      name: "Jumps",
+      icon: <Activity className="h-5 w-5" />,
+      benefits: [
+        "Enhance cardiovascular wellness",
+        "Build bone density for long-term health",
+        "Improve coordination and balance",
+        "Release endorphins for mental well-being"
+      ],
+      description: "Train for explosive athletic movements"
+    }
+  ];
+
+  // Cycle through coaches and exercises when not actively working out
+  useEffect(() => {
+    // Always cycle when reps are 0 (pre-workout state), regardless of formFeedback
+    if (reps === 0) {
+      const coachInterval = setInterval(() => {
+        setCurrentCoachIndex((prev) => (prev + 1) % coaches.length);
+      }, 6000); // Slower cycling for better readability
+
+      const exerciseInterval = setInterval(() => {
+        setCurrentExerciseIndex((prev) => (prev + 1) % exercises.length);
+      }, 8000); // Slower cycling
+
+      return () => {
+        clearInterval(coachInterval);
+        clearInterval(exerciseInterval);
+      };
+    }
+  }, [reps, coaches.length, exercises.length]);
+
   const getScoreColor = () => {
     if (formScore >= 80) return "text-green-500";
     if (formScore >= 60) return "text-yellow-500";
@@ -32,10 +83,16 @@ const CoachFeedback = ({
   };
 
   const coach = getCoachInfo(coachPersonality);
+  const currentCoach = coaches[currentCoachIndex];
+  const currentExercise = exercises[currentExerciseIndex];
 
   const getTitle = () => {
     if (workoutMode === "assessment") {
       return "Assessment Mode";
+    }
+    // Show current cycling coach when not actively working out (reps === 0)
+    if (reps === 0) {
+      return `${currentCoach.emoji} ${currentCoach.name} says...`;
     }
     return `${coach.emoji} ${coach.name} says...`;
   };
@@ -82,13 +139,105 @@ const CoachFeedback = ({
 
   return (
     <div className="bg-card p-4 rounded-lg border border-border/40 h-full flex flex-col">
-      <h3 className="text-lg font-semibold mb-3 text-primary">{getTitle()}</h3>
+      <motion.h3
+        className="text-lg font-semibold mb-3 text-primary"
+        key={getTitle()}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        {getTitle()}
+      </motion.h3>
+
       <div className="flex-grow flex items-center justify-center p-2 min-h-[60px]">
-        <p
-          className={`text-center transition-all duration-300 ${getFeedbackStyle()}`}
-        >
-          {formFeedback}
-        </p>
+        {reps === 0 ? (
+          // Show cycling content when not actively working out
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${currentCoachIndex}-${currentExerciseIndex}`}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.5 }}
+              className="text-center space-y-3"
+            >
+              {/* Coach personality teaser */}
+              <div className="space-y-2">
+                <motion.div
+                  className="text-2xl"
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  {currentCoach.emoji}
+                </motion.div>
+                <p className="text-sm text-muted-foreground italic">
+                  "{currentCoach.description}"
+                </p>
+                <p className="text-sm font-medium">
+                  {currentCoach.motivationalPhrase}
+                </p>
+                {/* Personality-specific teaser content */}
+                <div className="mt-2 p-2 bg-primary/5 rounded-lg">
+                  {currentCoach.personality === "SNEL" && (
+                    <p className="text-xs text-muted-foreground">
+                      "Remember, every rep is a step toward the person you want to become. Quality over quantity, my friend."
+                    </p>
+                  )}
+                  {currentCoach.personality === "STEDDIE" && (
+                    <p className="text-xs text-muted-foreground">
+                      "In the philosophy of movement, each breath synchronizes with each rep. Find your inner balance."
+                    </p>
+                  )}
+                  {currentCoach.personality === "RASTA" && (
+                    <p className="text-xs text-muted-foreground">
+                      "Haha, look at you go! But seriously though, that last rep was pure fire 🔥 Keep that energy!"
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Exercise showcase */}
+              <motion.div
+                className="border-t border-border/40 pt-3 space-y-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  {currentExercise.icon}
+                  <span className="font-semibold">{currentExercise.name}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {currentExercise.description}
+                </p>
+                <div className="flex flex-wrap justify-center gap-1">
+                  {currentExercise.benefits.map((benefit, idx) => (
+                    <motion.span
+                      key={benefit}
+                      className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3 + idx * 0.1 }}
+                    >
+                      {benefit}
+                    </motion.span>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          // Show active feedback when working out
+          <motion.p
+            key={formFeedback}
+            className={`text-center transition-all duration-300 ${getFeedbackStyle()}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {formFeedback}
+          </motion.p>
+        )}
       </div>
 
       {/* Premium Upsell Hint */}

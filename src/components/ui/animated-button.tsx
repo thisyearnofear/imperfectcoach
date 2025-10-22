@@ -3,6 +3,14 @@ import { motion, HTMLMotionProps } from "framer-motion";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+export interface RippleButtonProps extends Omit<ButtonProps, "asChild"> {
+  /**
+   * Whether to enable ripple effect
+   * @default true
+   */
+  enableRipple?: boolean;
+}
+
 export interface AnimatedButtonProps extends Omit<ButtonProps, "asChild"> {
   /**
    * Whether to disable animations
@@ -77,4 +85,20 @@ const AnimatedButton = React.forwardRef<HTMLButtonElement, AnimatedButtonProps>(
 
 AnimatedButton.displayName = "AnimatedButton";
 
-export { AnimatedButton };
+const RippleButton = React.forwardRef<HTMLButtonElement, RippleButtonProps>(
+  ({ className, enableRipple = true, children, ...props }, ref) => {
+    return (
+      <Button
+        ref={ref}
+        className={cn(enableRipple && "ripple-effect", className)}
+        {...props}
+      >
+        {children}
+      </Button>
+    );
+  }
+);
+
+RippleButton.displayName = "RippleButton";
+
+export { AnimatedButton, RippleButton };

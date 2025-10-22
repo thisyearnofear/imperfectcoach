@@ -3,17 +3,18 @@ import { UserContext } from "@/contexts/UserContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Zap, 
-  Brain, 
-  Sparkles, 
-  ChevronDown, 
+import {
+  Zap,
+  Brain,
+  Sparkles,
+  ChevronDown,
   ChevronUp,
   Target,
   TrendingUp,
   Lightbulb
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CoachingTier {
   id: "free" | "premium" | "agent";
@@ -42,7 +43,8 @@ export function CoachingTierSelector({
 }: CoachingTierSelectorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const context = useContext(UserContext);
-  const userStats = context?.userStats;
+  // Note: UserContext doesn't have userStats - using hasSubmittedScore as proxy
+  const userStats = context ? { sessions: context.hasSubmittedScore ? 10 : 0 } : null;
   
   const coachingTiers: CoachingTier[] = [
     {
@@ -182,69 +184,114 @@ export function CoachingTierSelector({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {coachingTiers.map((tier) => (
-          <button
+        {coachingTiers.map((tier, index) => (
+          <motion.button
             key={tier.id}
             onClick={() => onTierSelect(tier.id)}
             className={cn(
-              "w-full p-4 rounded-xl border text-left transition-all hover:scale-[1.02]",
+              "w-full p-4 rounded-xl border text-left transition-all",
               currentTier === tier.id
                 ? "border-primary bg-primary/5 shadow-sm"
                 : "border-border hover:bg-muted/50"
             )}
+            whileHover={{
+              scale: 1.02,
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)"
+            }}
+            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3">
-                <div className={cn(
-                  "p-2 rounded-lg bg-gradient-to-r",
-                  tier.color
-                )}>
+                <motion.div
+                  className={cn(
+                    "p-2 rounded-lg bg-gradient-to-r",
+                    tier.color
+                  )}
+                  whileHover={{ rotate: [0, -10, 10, 0] }}
+                  transition={{ duration: 0.5 }}
+                >
                   {tier.icon}
-                </div>
+                </motion.div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">{tier.name}</h3>
                     {tier.isRecommended && (
-                      <Badge 
-                        variant="secondary" 
-                        className={cn("text-[10px] px-1.5 py-0.5", tier.badgeColor)}
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", delay: 0.5 }}
                       >
-                        <Lightbulb className="h-2.5 w-2.5 mr-1" />
-                        Recommended
-                      </Badge>
+                        <Badge
+                          variant="secondary"
+                          className={cn("text-[10px] px-1.5 py-0.5", tier.badgeColor)}
+                        >
+                          <Lightbulb className="h-2.5 w-2.5 mr-1" />
+                          Recommended
+                        </Badge>
+                      </motion.div>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     {tier.description}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {tier.features.slice(0, 2).map((feature, idx) => (
-                      <Badge 
-                        key={idx} 
-                        variant="outline" 
-                        className="text-[10px] px-1.5 py-0.5"
-                      >
-                        {feature}
-                      </Badge>
-                    ))}
+                    <AnimatePresence>
+                      {tier.features.slice(0, 2).map((feature, idx) => (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.2, delay: idx * 0.1 }}
+                        >
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0.5"
+                          >
+                            {feature}
+                          </Badge>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                     {tier.features.length > 2 && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
-                        +{tier.features.length - 2} more
-                      </Badge>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                      >
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                          +{tier.features.length - 2} more
+                        </Badge>
+                      </motion.div>
                     )}
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-semibold">{tier.price}</p>
+                <motion.p
+                  className="font-semibold"
+                  whileHover={{ scale: 1.1 }}
+                  transition={{ type: "spring", stiffness: 400 }}
+                >
+                  {tier.price}
+                </motion.p>
                 {currentTier === tier.id && (
-                  <Badge className={cn("mt-1 text-[10px]", tier.badgeColor)}>
-                    Current
-                  </Badge>
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <Badge className={cn("mt-1 text-[10px]", tier.badgeColor)}>
+                      Current
+                    </Badge>
+                  </motion.div>
                 )}
               </div>
             </div>
-          </button>
+          </motion.button>
         ))}
       </CardContent>
     </Card>

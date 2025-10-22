@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award, Loader2, Activity } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Exercise, BlockchainScore } from "@/lib/types";
 import { useUserBlockchain } from "@/hooks/useUserHooks";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -109,6 +110,7 @@ const Leaderboard = ({
 }: LeaderboardProps) => {
   const { leaderboard, isLoading, pendingUpdates } = useUserBlockchain();
   const previousLeaderboardLength = useRef(leaderboard.length);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
   // Basename resolver temporarily disabled to prevent infinite loop
   // const resolver = useBasenameResolver(...);
@@ -162,32 +164,80 @@ const Leaderboard = ({
     previousLeaderboardLength.current = leaderboard.length;
   }, [leaderboard.length]);
 
+  // Auto-rotate preview cards for compact mode
+  useEffect(() => {
+    if (compact && pullupData.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentPreviewIndex((prev) => (prev + 1) % Math.min(pullupData.length, 3));
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [compact, pullupData.length]);
+
   if (compact) {
     return (
       <div className="space-y-3">
-        {/* Compact mode - show specific exercise or both */}
-        {exercise ? (
+        {/* Compact mode - show rotating preview cards */}
+        {!exercise && pullupData.length > 0 && (
+          <div className="relative overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentPreviewIndex}
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.5 }}
+                className="flex gap-2"
+              >
+                {[pullupData[currentPreviewIndex], jumpData[currentPreviewIndex]].map((entry, idx) => {
+                  if (!entry) return null;
+                  const exerciseType = idx === 0 ? "pull-ups" : "jumps";
+                  const reps = idx === 0 ? entry.pullups : entry.jumps;
+
+                  return (
+                    <motion.div
+                      key={`${entry.address}-${exerciseType}`}
+                      className="flex-1 bg-card/50 rounded-lg p-3 border border-border/40"
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1">
+                          {getRankIcon(entry.rank)}
+                          <span className="text-xs font-medium capitalize">{exerciseType}</span>
+                        </div>
+                        <motion.div
+                          className="text-xs text-muted-foreground"
+                          animate={{ scale: [1, 1.1, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          {reps} reps
+                        </motion.div>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min((reps / 50) * 100, 100)}%` }}
+                          transition={{ duration: 1, delay: 0.2 }}
+                        />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Fallback to original compact mode for specific exercise */}
+        {exercise && (
           <ExerciseLeaderboard
             exercise={exercise}
             data={exercise === "pull-ups" ? pullupData : jumpData}
             isLoading={isLoading}
             compact={true}
           />
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            <ExerciseLeaderboard
-              exercise="pull-ups"
-              data={pullupData}
-              isLoading={isLoading}
-              compact={true}
-            />
-            <ExerciseLeaderboard
-              exercise="jumps"
-              data={jumpData}
-              isLoading={isLoading}
-              compact={true}
-            />
-          </div>
         )}
       </div>
     );

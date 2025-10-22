@@ -1,7 +1,8 @@
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Video, VideoOff, SwitchCamera, Timer } from "lucide-react";
+import { Video, VideoOff, SwitchCamera, Timer, Zap, Target, TrendingUp } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -35,8 +36,22 @@ interface VideoFeedProps {
 
 const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset, heightUnit }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
+  const [valuePropIndex, setValuePropIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const valueProps = [
+    { text: "Real-time AI Coaching", icon: Zap },
+    { text: "Perfect Your Form", icon: Target },
+    { text: "Track Progress", icon: TrendingUp }
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setValuePropIndex((prev) => (prev + 1) % valueProps.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const onCameraStatusChange = useCallback((status: CameraStatus) => {
     if (status === 'idle' || status === 'denied') {
@@ -174,12 +189,50 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
           </div>
         </div>
       ) : (
-        <div className="text-center">
+        <div className="text-center relative">
           {cameraStatus === "denied" && <p className="text-destructive mb-4">Camera access denied. Please check your browser settings.</p>}
-          <Button onClick={handleEnableCamera} disabled={cameraStatus === "pending"}>
-            <Video className="mr-2 h-4 w-4" />
-            {cameraStatus === 'pending' ? 'Starting Camera...' : 'Start'}
-          </Button>
+
+          {/* Cycling value propositions */}
+          <div className="mb-6 relative h-8 flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={valuePropIndex}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.5 }}
+                className="flex items-center gap-2 text-sm text-muted-foreground"
+              >
+                {(() => {
+                  const Icon = valueProps[valuePropIndex].icon;
+                  return <Icon className="h-4 w-4" />;
+                })()}
+                <span>{valueProps[valuePropIndex].text}</span>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button
+              onClick={handleEnableCamera}
+              disabled={cameraStatus === "pending"}
+              className="relative overflow-hidden"
+            >
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/40"
+                initial={{ x: "-100%" }}
+                whileHover={{ x: "100%" }}
+                transition={{ duration: 0.6 }}
+              />
+              <Video className="mr-2 h-4 w-4 relative z-10" />
+              <span className="relative z-10">
+                {cameraStatus === 'pending' ? 'Starting Camera...' : 'Start'}
+              </span>
+            </Button>
+          </motion.div>
           <p className="text-xs text-muted-foreground mt-2">We need camera access to track your reps.</p>
         </div>
       )}
