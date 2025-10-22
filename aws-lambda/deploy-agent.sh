@@ -88,7 +88,9 @@ EOF
         "bedrock:InvokeModel",
         "bedrock:InvokeModelWithResponseStream",
         "bedrock:Converse",
-        "bedrock:ConverseStream"
+        "bedrock:ConverseStream",
+        "bedrock:InvokeAgent",
+        "bedrock-agent:InvokeAgent"
       ],
       "Resource": "*"
     }
@@ -186,6 +188,6 @@ echo -e "${YELLOW}💡 Update your frontend AgentCoachUpsell.tsx with this endpo
 
 # Clean up
 rm -f agent-coach-lambda.zip
-rm -f /tmp/trust-policy.json /tmp/bedrock-policy.json
+rm -f /tmp/trust-policy.json /tmp/bedrock-policy.json /tmp/bedrock-agent-policy.json
 
 echo -e "${GREEN}🎉 Ready for AWS AI Agent Hackathon!${NC}"

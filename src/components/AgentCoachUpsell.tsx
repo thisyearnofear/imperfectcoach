@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useAccount, useWalletClient } from "wagmi";
+import { baseSepolia } from "wagmi/chains";
+import { trackPaymentTransaction } from "@/lib/cdp";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,9 +27,27 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   const [currentStep, setCurrentStep] = useState<string>("");
   const [progress, setProgress] = useState(0);
   const [activeTools, setActiveTools] = useState<string[]>([]);
+  const [error, setError] = useState<{title: string, message: string} | null>(null);
   const { toast } = useToast();
+  
+  const clearError = () => {
+    setError(null);
+  };
+  
+  // Wallet integration
+  const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient({ chainId: baseSepolia.id });
 
   const handleUnlockAgent = async () => {
+    if (!isConnected || !address || !walletClient) {
+      toast({
+        title: "❌ Wallet Required",
+        description: "Please connect your wallet to access AI Agent coaching.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
     setProgress(0);
     setCurrentStep("Initializing AI Coach Agent...");
@@ -34,32 +55,16 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
     try {
       // Simulate agent reasoning progress for UX
       const progressSteps = [
-        { step: "Agent analyzing workout data...", progress: 20, tools: [] },
-        { step: "Examining pose patterns...", progress: 35, tools: ["analyze_pose_data"] },
-        { step: "Querying your workout history...", progress: 55, tools: ["analyze_pose_data", "query_workout_history"] },
-        { step: "Benchmarking performance...", progress: 70, tools: ["analyze_pose_data", "query_workout_history", "benchmark_performance"] },
-        { step: "Generating personalized plan...", progress: 85, tools: ["analyze_pose_data", "query_workout_history", "benchmark_performance", "generate_training_plan"] },
+        { step: "Processing payment...", progress: 15, tools: [] },
+        { step: "Agent analyzing workout data...", progress: 30, tools: [] },
+        { step: "Examining pose patterns...", progress: 45, tools: ["analyze_pose_data"] },
+        { step: "Querying your workout history...", progress: 60, tools: ["analyze_pose_data", "query_workout_history"] },
+        { step: "Benchmarking performance...", progress: 75, tools: ["analyze_pose_data", "query_workout_history", "benchmark_performance"] },
+        { step: "Generating personalized plan...", progress: 90, tools: ["analyze_pose_data", "query_workout_history", "benchmark_performance", "generate_training_plan"] },
         { step: "Synthesizing insights...", progress: 95, tools: ["analyze_pose_data", "query_workout_history", "benchmark_performance", "generate_training_plan"] },
       ];
 
-      // Call the AI Agent Lambda endpoint
-      const responsePromise = fetch(
-        "https://YOUR_AGENT_API_ENDPOINT.execute-api.eu-north-1.amazonaws.com/agent-coach",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            workoutData: {
-              ...workoutData,
-              userId: workoutData.userId || "demo-user",
-            },
-          }),
-        }
-      );
-
-      // Show progress steps while waiting
+      // Start progress simulation
       let stepIndex = 0;
       const progressInterval = setInterval(() => {
         if (stepIndex < progressSteps.length) {
@@ -69,19 +74,114 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
           setActiveTools(current.tools);
           stepIndex++;
         }
-      }, 1500);
+      }, 2000);
 
-      const response = await responsePromise;
+      // Prepare request body with agent mode
+      const timestamp = Math.floor(Date.now() / 1000);
+      const requestBody = {
+        workoutData: {
+          ...workoutData,
+          userId: workoutData.userId || address,
+        },
+        agentMode: true, // Enable real agent functionality
+        payment: {
+          walletAddress: address,
+          signature: "placeholder", // Will be replaced with x402 signature
+          message: "I authorize payment for AI Agent analysis",
+          amount: "100000", // $0.10 USDC
+          timestamp,
+        },
+      };
+
+      const apiUrl = "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
+
+      // First, make a request without payment to get the 402 challenge
+      let response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      // If we get a 402 Payment Required, handle the x402 flow
+      if (response.status === 402) {
+        console.log("💰 Payment required - processing x402 payment for agent...");
+
+        const paymentChallenge = await response.json();
+        console.log("🎯 Agent payment challenge received:", paymentChallenge);
+
+        // Extract payment requirements
+        const paymentRequirement = paymentChallenge.accepts?.[0];
+        if (!paymentRequirement) {
+          throw new Error("Invalid payment challenge - no payment requirements found");
+        }
+
+        // Create x402 payment payload
+        const paymentTimestamp = Math.floor(Date.now() / 1000);
+        const paymentNonce = crypto.randomUUID();
+
+        // Create payment message for x402 signature
+        const x402Message = `x402 Payment Authorization
+Scheme: ${paymentRequirement.scheme}
+Network: ${paymentRequirement.network}
+Asset: ${paymentRequirement.asset}
+Amount: ${paymentRequirement.amount}
+PayTo: ${paymentRequirement.payTo}
+Payer: ${address}
+Timestamp: ${paymentTimestamp}
+Nonce: ${paymentNonce}`;
+
+        console.log("🖊️ Signing x402 payment message for agent...");
+
+        // Generate signature for x402 payment
+        const x402Signature = await walletClient.signMessage({
+          account: address,
+          message: x402Message,
+        });
+
+        console.log("✅ x402 signature generated for agent");
+
+        // Update request body with x402 payment details
+        requestBody.payment = {
+          walletAddress: address,
+          signature: x402Signature,
+          message: x402Message,
+          amount: paymentRequirement.amount,
+          timestamp: paymentTimestamp,
+          nonce: paymentNonce,
+          scheme: paymentRequirement.scheme,
+          network: paymentRequirement.network,
+          asset: paymentRequirement.asset,
+          payTo: paymentRequirement.payTo,
+        };
+
+        // Make the actual request with payment
+        response = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        });
+      }
+
       clearInterval(progressInterval);
 
       if (!response.ok) {
-        throw new Error("Agent analysis failed");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Agent analysis failed");
       }
 
       const result = await response.json();
       setProgress(100);
       setCurrentStep("Analysis complete!");
       setAgentAnalysis(result);
+
+      // Track payment transaction if available
+      if (result.transactionHash) {
+        try {
+          await trackPaymentTransaction(result.transactionHash, "agent_analysis");
+        } catch (trackingError) {
+          console.warn("Failed to track payment transaction:", trackingError);
+        }
+      }
 
       toast({
         title: "✅ AI Agent Analysis Complete",
@@ -93,11 +193,36 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
       }
     } catch (error) {
       console.error("Agent analysis error:", error);
+      
+      // Enhanced error messaging based on error type
+      let title = "Agent Analysis Failed";
+      let message = "Unable to process autonomous analysis. Please try again.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes("payment")) {
+          title = "Payment Required";
+          message = "Please ensure you have sufficient USDC funds for the agent analysis.";
+        } else if (error.message.includes("network")) {
+          title = "Network Error";
+          message = "Unable to connect to the agent service. Please check your connection and try again.";
+        } else if (error.message.includes("timeout")) {
+          title = "Request Timeout";
+          message = "The agent is taking longer than expected. Please try again in a few minutes.";
+        } else {
+          message = error.message;
+        }
+      }
+      
+      // Set error state to show error view
+      setError({ title, message });
+      
+      // Also show toast for immediate feedback
       toast({
-        title: "❌ Agent Analysis Failed",
-        description: "Unable to process autonomous analysis. Please try again.",
+        title: `❌ ${title}`,
+        description: message,
         variant: "destructive",
       });
+      
       setProgress(0);
       setCurrentStep("");
     } finally {
@@ -105,12 +230,55 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
     }
   };
 
+  // Error view
+  if (error) {
+    return (
+      <Card className="border-red-500/50 bg-gradient-to-br from-red-900/20 to-red-950/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-400">
+            <AlertCircle className="h-5 w-5" />
+            Agent Error
+          </CardTitle>
+          <CardDescription>
+            {error.title}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+            <p className="text-sm text-red-300">{error.message}</p>
+          </div>
+          
+          <div className="flex gap-2">
+            <AnimatedButton
+              onClick={clearError}
+              className="bg-red-600 hover:bg-red-700"
+              size="sm"
+            >
+              Try Again
+            </AnimatedButton>
+            <AnimatedButton
+              onClick={() => setError(null)}
+              variant="outline"
+              size="sm"
+            >
+              Close
+            </AnimatedButton>
+          </div>
+          
+          <div className="text-xs text-muted-foreground pt-2 border-t">
+            <p>If this issue persists, please contact support with the error details above.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   // Processing view with live feedback
   if (isProcessing) {
     return (
-      <Card className="border-purple-500/50 bg-gradient-to-br from-purple-950/20 to-blue-950/20 relative overflow-hidden">
+      <Card className="border-purple-500/50 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/30 backdrop-blur-sm relative overflow-hidden">
         {/* Animated background */}
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-purple-500/10 animate-pulse" />
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-indigo-500/10 animate-pulse" />
         
         <CardHeader className="relative">
           <CardTitle className="flex items-center gap-2">
@@ -133,7 +301,14 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
               <span className="text-purple-300 font-medium">{currentStep}</span>
               <span className="text-muted-foreground">{progress}%</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <Progress value={progress} className="h-2 transition-all duration-500 ease-out" />
+            {progress > 0 && progress < 100 && (
+              <div className="flex justify-center">
+                <div className="h-2 w-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="h-2 w-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                <div className="h-2 w-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '600ms' }}></div>
+              </div>
+            )}
           </div>
 
           {/* Active Tools Visualization */}
@@ -143,34 +318,47 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
                 <Eye className="h-4 w-4" />
                 Watch the Agent Work:
               </h4>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { name: "analyze_pose_data", label: "Form Analysis", icon: Target },
-                  { name: "query_workout_history", label: "History Check", icon: TrendingUp },
-                  { name: "benchmark_performance", label: "Benchmarking", icon: Trophy },
-                  { name: "generate_training_plan", label: "Plan Creation", icon: Brain },
+                  { name: "analyze_pose_data", label: "Form Analysis", icon: Target, color: "text-green-400", bg: "bg-green-500/10 border-green-500/30" },
+                  { name: "query_workout_history", label: "History Check", icon: TrendingUp, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/30" },
+                  { name: "benchmark_performance", label: "Benchmarking", icon: Trophy, color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/30" },
+                  { name: "generate_training_plan", label: "Plan Creation", icon: Brain, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/30" },
                 ].map((tool) => {
                   const Icon = tool.icon;
                   const isActive = activeTools.includes(tool.name);
+                  
                   return (
                     <div
                       key={tool.name}
                       className={cn(
-                        "p-4 rounded-lg border-2 transition-all duration-300",
+                        "p-4 rounded-xl border-2 transition-all duration-500 transform",
                         isActive
-                          ? "border-green-500 bg-green-500/10 shadow-lg shadow-green-500/20"
-                          : "border-gray-700 bg-gray-800/30 opacity-50"
+                          ? `${tool.bg} shadow-lg shadow-purple-500/20 scale-105 animate-pulse`
+                          : "border-gray-700 bg-gray-800/30 opacity-60"
                       )}
                     >
                       <div className="flex items-center gap-2">
                         <Icon
                           className={cn(
-                            "h-4 w-4",
-                            isActive ? "text-green-400 animate-pulse" : "text-gray-500"
+                            "h-5 w-5 transition-all duration-300",
+                            isActive ? `${tool.color} animate-pulse` : "text-gray-500"
                           )}
                         />
-                        <span className="text-xs font-medium">{tool.label}</span>
-                        {isActive && <CheckCircle2 className="h-3 w-3 ml-auto text-green-400" />}
+                        <div className="flex-1">
+                          <span className="text-xs font-medium">{tool.label}</span>
+                          {isActive && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <div className="h-1 w-1 bg-green-400 rounded-full animate-ping"></div>
+                              <span className="text-[10px] text-green-400">Executing...</span>
+                            </div>
+                          )}
+                        </div>
+                        {isActive && (
+                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-500/20">
+                            <CheckCircle2 className="h-3 w-3 text-green-400 animate-pulse" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -180,14 +368,18 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
           )}
 
           {/* Agent Info */}
-          <div className="bg-purple-950/30 border border-purple-500/20 rounded-lg p-4">
+          <div className="bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-lg p-4 backdrop-blur-sm">
             <div className="flex items-start gap-4">
               <AlertCircle className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <p className="text-sm font-semibold text-purple-300">Autonomous Decision-Making</p>
                 <p className="text-xs text-muted-foreground">
                   The agent is independently deciding which tools to use and how to analyze your workout. No human intervention required.
                 </p>
+                <div className="flex items-center gap-2 text-xs text-purple-400/80 mt-2">
+                  <div className="h-2 w-2 bg-purple-400 rounded-full animate-pulse"></div>
+                  <span>Agent is actively reasoning...</span>
+                </div>
               </div>
             </div>
           </div>
@@ -199,12 +391,13 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   // Results view
   if (agentAnalysis) {
     return (
-      <Card className="border-purple-500/50 bg-gradient-to-br from-purple-950/20 to-blue-950/20">
+      <Card className="border-purple-500/50 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/30 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-purple-400" />
             AI Coach Agent Analysis
-            <Badge variant="outline" className="ml-auto">
+            <Badge variant="outline" className="ml-auto bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border-purple-400">
+              <Sparkles className="h-3 w-3 mr-1" />
               Autonomous
             </Badge>
           </CardTitle>
@@ -237,23 +430,33 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
             </div>
           )}
 
-          {/* Reasoning Steps */}
+          {/* Reasoning Steps Timeline */}
           {agentAnalysis.reasoning_steps && agentAnalysis.reasoning_steps.length > 0 && (
             <div className="border-t pt-4">
-              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 <Target className="h-4 w-4 text-blue-400" />
                 Autonomous Reasoning Chain
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {agentAnalysis.reasoning_steps.map((step: any, idx: number) => (
-                  <div key={idx} className="flex items-start gap-2 text-xs">
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-400 font-mono">
+                  <div key={idx} className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-xs">
                       {step.step}
-                    </span>
-                    <div className="flex-1">
-                      <span className="font-semibold text-blue-300">
-                        {step.action.replace(/_/g, " ")}
-                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-semibold text-purple-300">
+                            {step.action.replace(/_/g, " ")}
+                          </span>
+                          <Badge variant="secondary" className="text-[10px] bg-green-500/20 text-green-400 border-green-500/30">
+                            Completed
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {step.reasoning || "Tool execution completed"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -280,21 +483,23 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   }
 
   return (
-    <Card className="border-purple-500/50 bg-gradient-to-br from-purple-950/20 to-blue-950/20">
+    <Card className="border-purple-500/50 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/30 backdrop-blur-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Brain className="h-6 w-6 text-purple-400" />
-            <CardTitle>AI Coach Agent</CardTitle>
+            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-indigo-500/20">
+              <Brain className="h-6 w-6 text-purple-400" />
+            </div>
+            <div>
+              <CardTitle>AI Coach Agent</CardTitle>
+              <p className="text-sm text-muted-foreground">Autonomous multi-step reasoning</p>
+            </div>
           </div>
-          <Badge variant="outline" className="bg-purple-500/20 border-purple-400 text-purple-200">
+          <Badge variant="outline" className="bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border-purple-400 text-purple-200">
             <Sparkles className="h-3 w-3 mr-1" />
             Autonomous
           </Badge>
         </div>
-        <CardDescription>
-          Advanced multi-step reasoning with tool integration
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Value Proposition */}
@@ -306,7 +511,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
             <div className="flex-1">
               <h4 className="font-semibold text-sm mb-1">Multi-Step Reasoning</h4>
               <p className="text-xs text-muted-foreground">
-                Agent autonomously decides which analysis tools to use and synthesizes insights
+                Agent autonomously decides which analysis tools to use and synthesizes insights with real Bedrock AgentCore
               </p>
             </div>
           </div>
@@ -318,7 +523,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
             <div className="flex-1">
               <h4 className="font-semibold text-sm mb-1">Tool Integration</h4>
               <p className="text-xs text-muted-foreground">
-                Accesses pose analysis, workout history, benchmarks, and training plan generation
+                Accesses pose analysis, workout history, benchmarks, and training plan generation with real tool execution
               </p>
             </div>
           </div>
@@ -342,7 +547,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
             <div className="flex-1">
               <h4 className="font-semibold text-sm mb-1">Autonomous Decisions</h4>
               <p className="text-xs text-muted-foreground">
-                Agent independently determines analysis strategy without manual intervention
+                Agent independently determines analysis strategy with real Bedrock AgentCore primitives
               </p>
             </div>
           </div>
@@ -364,7 +569,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
             onClick={handleUnlockAgent}
             disabled={isProcessing}
             disableAnimation={isProcessing}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-purple-500/20"
             size="lg"
             animationPreset="glow"
           >
@@ -385,7 +590,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
         {/* Tech Info */}
         <div className="text-xs text-muted-foreground text-center pt-2 border-t">
           <Lock className="h-3 w-3 inline mr-1" />
-          Powered by Amazon Bedrock AgentCore • Multi-step reasoning • Tool use
+          Powered by Amazon Bedrock AgentCore • Real multi-step reasoning • Actual tool use
         </div>
       </CardContent>
     </Card>

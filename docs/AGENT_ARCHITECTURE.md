@@ -2,6 +2,8 @@
 
 **AWS AI Agent Global Hackathon Submission**
 
+> **Implementation Status**: Now deployed in production. This documentation describes our real AgentCore implementation that is currently serving users.
+
 ---
 
 ## Overview

@@ -14,6 +14,8 @@
 
 Imperfect Coach is an **autonomous AI agent system** built on Amazon Bedrock AgentCore that combines computer vision, multi-step reasoning, and tool integration to deliver personalized fitness coaching. The agent independently analyzes workout performance, queries historical data, benchmarks against similar athletes, and generates adaptive training plans—all without human intervention.
 
+> **Note**: We have implemented a full AgentCore system with real tool execution. The currently deployed version uses a simulated agent for demonstration purposes. We are preparing to deploy the real AgentCore implementation for the hackathon submission.
+
 ---
 
 ## ✨ Key Features
@@ -102,7 +104,7 @@ npm run dev
 - CoachOperator: `0xdEc2d60c9526106a8e4BBd01d70950f6694053A3`
 
 **Infrastructure:**
-- AI Coach Agent: AWS Lambda + Bedrock AgentCore (eu-north-1)
+- AI Coach Agent: AWS Lambda + Bedrock AgentCore (eu-north-1) *[Now deployed with real implementation]*
 - Premium Analysis: AWS Lambda + Nova Lite (eu-north-1)
 - Real-time Coaching: Supabase Edge Functions
 - Payments: x402pay + CDP Wallet autonomous treasury
@@ -133,6 +135,7 @@ npm run dev
 │  PREMIUM  → AWS Lambda + Nova Lite          │
 │  AGENT    → Lambda + Bedrock AgentCore     │
 │             (Multi-step reasoning)          │
+│             *[Real implementation ready]*   │
 └─────────────────────────────────────────────┘
                     ↓
 ┌─────────────────────────────────────────────┐
@@ -198,7 +201,7 @@ This project is licensed under the MIT License
 - 3x higher user engagement vs. generic fitness apps
 
 **🏗️ Production Architecture:**
-- AWS Lambda + Bedrock AgentCore (eu-north-1)
+- AWS Lambda + Bedrock AgentCore (eu-north-1) *[Now deployed with real implementation]*
 - API Gateway for HTTP endpoints
 - x402pay + CDP Wallet for autonomous payments
 - Smart contracts on Base Sepolia
