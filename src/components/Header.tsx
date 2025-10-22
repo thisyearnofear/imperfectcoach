@@ -8,6 +8,7 @@ import SettingsStatusBar from "@/components/SettingsStatusBar";
 import SettingsModal from "@/components/SettingsModal";
 import { HeaderWallet } from "@/components/UnifiedWallet";
 import { NetworkStatus } from "@/components/NetworkStatus";
+import { FeatureSpotlight } from "@/components/FeatureSpotlight";
 
 interface HeaderProps {
   exercise: Exercise;
@@ -81,6 +82,11 @@ const Header = ({
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* Feature Spotlight - Compact version for persistent discovery */}
+      <div className="container mx-auto mt-3 hidden lg:block">
+        <FeatureSpotlight variant="compact" autoDismiss={true} />
       </div>
     </header>
   );

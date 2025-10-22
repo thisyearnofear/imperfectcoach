@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Exercise, CoachPersonality, WorkoutMode } from "@/lib/types";
+import { FeatureSpotlight } from "@/components/FeatureSpotlight";
 
 interface MobileControlsProps {
   workoutMode: WorkoutMode;
@@ -64,6 +65,9 @@ const MobileControls = ({
         <SheetHeader>
           <SheetTitle>Workout Settings</SheetTitle>
         </SheetHeader>
+        <div className="py-2">
+          <FeatureSpotlight variant="compact" />
+        </div>
         <div className="grid gap-6 py-6">
           <WorkoutModeSelector
             selectedMode={workoutMode}

@@ -4,6 +4,7 @@ import CoachFeedback from "@/components/CoachFeedback";
 import CoreControls from "@/components/CoreControls";
 import Leaderboard from "@/components/Leaderboard";
 import PoseDetectionGuide from "@/components/PoseDetectionGuide";
+import { ContextualSuggestion } from "@/components/ContextualSuggestion";
 import {
   Exercise,
   CoachPersonality,
@@ -64,9 +65,33 @@ export const TopSection = (props: TopSectionProps) => {
             onSessionReset={props.onSessionReset}
             heightUnit={props.heightUnit}
           />
+          
+          {/* Contextual Suggestions - Appear during workout based on performance */}
+          <div className="lg:hidden">
+            <ContextualSuggestion 
+              context={{
+                exercise: props.exercise,
+                formScore: props.formScore,
+                sessionCount: props.reps
+              }}
+              variant="compact"
+              autoDismiss={true}
+            />
+          </div>
 
           {/* Desktop Leaderboard - Below video, same width */}
           <div className="hidden lg:block">
+            <div className="mb-4">
+              <ContextualSuggestion 
+                context={{
+                  exercise: props.exercise,
+                  formScore: props.formScore,
+                  sessionCount: props.reps
+                }}
+                variant="banner"
+                autoDismiss={true}
+              />
+            </div>
             <Leaderboard timeframe="week" />
           </div>
 

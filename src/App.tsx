@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { Web3Providers } from "@/providers";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
+import { ProgressiveOnboarding } from "@/components/ProgressiveOnboarding";
 
 const App = () => (
   <ErrorBoundary
@@ -25,6 +26,17 @@ const App = () => (
           <Sonner />
           {/* First-time user onboarding */}
           <OnboardingFlow onComplete={() => console.log("Onboarding complete")} />
+          {/* Progressive onboarding for returning users */}
+          <ProgressiveOnboarding 
+            onComplete={() => console.log("Progressive onboarding complete")}
+            onTierSelect={(tier) => {
+              console.log("User selected tier:", tier);
+              // Handle tier selection
+              if (tier === "agent") {
+                window.dispatchEvent(new CustomEvent("showAgentUpsell"));
+              }
+            }}
+          />
           <ErrorBoundary
             maxRetries={2}
             onError={(error) => console.error("Router Error:", error)}

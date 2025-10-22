@@ -25,7 +25,7 @@ import {
 import PremiumAnalysisUpsell from "./PremiumAnalysisUpsell";
 import BedrockAnalysisSection from "./BedrockAnalysisSection";
 import { UnifiedActionCTA } from "./UnifiedActionCTA";
-import { SmartTierRecommendation } from "./SmartTierRecommendation";
+import { FeatureSpotlight } from "@/components/FeatureSpotlight";
 import { AgentCoachUpsell } from "./AgentCoachUpsell";
 import { cn } from "@/lib/utils";
 import { CoachSummarySelector } from "./CoachSummarySelector";
@@ -599,6 +599,11 @@ export const PostWorkoutFlow = ({
           </Card>
           </FadeIn>
 
+      {/* Feature Spotlight - Contextual feature discovery */}
+          <FadeIn delay={0.05}>
+            <FeatureSpotlight variant="card" />
+          </FadeIn>
+          
       {/* Smart Tier Recommendation - Personalized suggestion */}
           <FadeIn delay={0.1}>
           <SmartTierRecommendation
