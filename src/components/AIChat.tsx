@@ -1,17 +1,10 @@
 import { useState } from "react";
 import { CoachModel, SessionSummaries, ChatMessage } from "@/lib/types";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Send, MessageSquarePlus, Lock } from "lucide-react";
+import { MessageSquarePlus, Lock } from "lucide-react";
 import { useFeatureAvailability } from "@/hooks/useFeatureGate";
+import { PromptInput } from "@/components/PromptInput";
 import { cn } from "@/lib/utils";
 
 interface AIChatProps {
@@ -36,7 +29,6 @@ export function AIChat({
   onUpgrade,
   isPremiumContext = false,
 }: AIChatProps) {
-  const [input, setInput] = useState("");
   const { tier } = useFeatureAvailability("MULTIPLE_AI_COACHES");
   const allCoachOptions = ["gemini", "openai", "anthropic"] as CoachModel[];
   const availableCoaches = isPremiumContext
@@ -46,10 +38,9 @@ export function AIChat({
     availableCoaches[0] || "gemini"
   );
 
-  const handleSend = () => {
-    if (!input.trim() || remainingQueries <= 0) return;
-    onSendMessage(input, selectedCoach);
-    setInput("");
+  const handleSend = async (message: string) => {
+    if (remainingQueries <= 0) return;
+    await onSendMessage(message, selectedCoach);
   };
 
   if (availableCoaches.length === 0) return null;
@@ -148,28 +139,19 @@ export function AIChat({
               </div>
             )}
 
-          <div className="flex gap-2">
-            <Input
-              placeholder={`Ask ${coachName(selectedCoach)}...`}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) =>
-                e.key === "Enter" &&
-                !isLoading &&
-                remainingQueries > 0 &&
-                handleSend()
-              }
-              disabled={isLoading || remainingQueries <= 0}
-            />
-            <Button
-              onClick={handleSend}
-              disabled={isLoading || !input.trim() || remainingQueries <= 0}
-              size="icon"
-              className="flex-shrink-0"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
+          <PromptInput
+            onSend={handleSend}
+            placeholder={`Ask ${coachName(selectedCoach)}...`}
+            disabled={remainingQueries <= 0}
+            isLoading={isLoading}
+            showExamples={messages.length === 0}
+            examples={[
+              "How can I improve my form?",
+              "What should I focus on next?",
+              "Analyze my performance trends",
+            ]}
+            showRecents={true}
+          />
         </>
       )}
     </div>

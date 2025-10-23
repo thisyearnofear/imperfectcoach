@@ -1,5 +1,5 @@
 import { Achievement, AchievementId } from "@/lib/types";
-import { Star, Award, Trophy, BadgeCheck, Zap } from "lucide-react";
+import { Star, Award, Trophy, BadgeCheck, Zap, Brain, MessageSquare, Sparkles } from "lucide-react";
 
 export const ACHIEVEMENTS: Record<AchievementId, Omit<Achievement, 'id'>> = {
   first_rep: {
@@ -26,5 +26,20 @@ export const ACHIEVEMENTS: Record<AchievementId, Omit<Achievement, 'id'>> = {
     name: "Mr. Consistent",
     description: "Kept a steady rhythm with low rep time deviation over 10 reps.",
     icon: Zap,
+  },
+  first_ai_analysis: {
+    name: "AI Insights",
+    description: "You got your first AI analysis of your workout!",
+    icon: Brain,
+  },
+  ai_conversation: {
+    name: "Coach Chat",
+    description: "You had a conversation with an AI coach.",
+    icon: MessageSquare,
+  },
+  agent_explorer: {
+    name: "Agent Explorer",
+    description: "You tried multiple AI coaches in one session.",
+    icon: Sparkles,
   },
 };

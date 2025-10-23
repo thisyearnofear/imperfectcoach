@@ -28,11 +28,23 @@ import {
 interface CommandPaletteProps {
   onExerciseSelect?: (exercise: "pull-ups" | "jumps") => void;
   onNavigate?: (path: string) => void;
+  onAskAgent?: (context?: string) => void;
+  onOpenApiKeys?: () => void;
+  hasActiveSession?: boolean;
+  lastWorkoutStats?: {
+    exercise: string;
+    reps: number;
+    score: number;
+  };
 }
 
 export const CommandPalette = ({
   onExerciseSelect,
   onNavigate,
+  onAskAgent,
+  onOpenApiKeys,
+  hasActiveSession = false,
+  lastWorkoutStats,
 }: CommandPaletteProps) => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
@@ -147,6 +159,50 @@ export const CommandPalette = ({
         </CommandGroup>
 
         <CommandSeparator />
+
+        {/* AI Agent Commands */}
+        {(hasActiveSession || lastWorkoutStats || onAskAgent || onOpenApiKeys) && (
+          <>
+            <CommandGroup heading="AI Agent">
+              {hasActiveSession && onAskAgent && (
+                <CommandItem
+                  onSelect={() => runCommand(() => onAskAgent?.("current-session"))}
+                >
+                  <Brain className="mr-2 h-4 w-4" />
+                  <span>Ask Agent About Current Session</span>
+                  <CommandShortcut>⇧⌘A</CommandShortcut>
+                </CommandItem>
+              )}
+              {lastWorkoutStats && onAskAgent && (
+                <CommandItem
+                  onSelect={() => runCommand(() => onAskAgent?.("last-workout"))}
+                >
+                  <History className="mr-2 h-4 w-4" />
+                  <span>
+                    Analyze Last Workout ({lastWorkoutStats.reps} {lastWorkoutStats.exercise})
+                  </span>
+                </CommandItem>
+              )}
+              {onAskAgent && (
+                <CommandItem
+                  onSelect={() => runCommand(() => onAskAgent?.())}
+                >
+                  <Brain className="mr-2 h-4 w-4" />
+                  <span>Ask Agent a Question</span>
+                </CommandItem>
+              )}
+              {onOpenApiKeys && (
+                <CommandItem
+                  onSelect={() => runCommand(() => onOpenApiKeys?.())}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Manage API Keys</span>
+                </CommandItem>
+              )}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
 
         {/* Features */}
         <CommandGroup heading="Features">

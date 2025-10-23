@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from "sonner";
 
 export function ApiKeySettings() {
     const [keys, setKeys] = useState({ gemini: '', openai: '', anthropic: '' });
     const [isClient, setIsClient] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
@@ -21,6 +23,17 @@ export function ApiKeySettings() {
         }
     }, []);
 
+    // Listen for global event to open API key settings
+    useEffect(() => {
+        const handleOpenSettings = () => {
+            setIsOpen(true);
+        };
+        window.addEventListener('open-api-key-settings', handleOpenSettings);
+        return () => {
+            window.removeEventListener('open-api-key-settings', handleOpenSettings);
+        };
+    }, []);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setKeys(prev => ({ ...prev, [name]: value }));
@@ -29,13 +42,15 @@ export function ApiKeySettings() {
     const handleSave = () => {
         localStorage.setItem('user-api-keys', JSON.stringify(keys));
         toast.success("API Keys saved successfully!");
+        setIsOpen(false);
     };
     
     if (!isClient) {
         return null; // Don't render on the server
     }
 
-    return (
+    // Render both the inline version (for SettingsModal) and the standalone dialog
+    const content = (
         <div className="space-y-4">
             <div className="space-y-2">
                 <Label htmlFor="gemini-key">Gemini API Key</Label>
@@ -51,5 +66,19 @@ export function ApiKeySettings() {
             </div>
             <Button onClick={handleSave} className="w-full">Save Keys</Button>
         </div>
+    );
+
+    return (
+        <>
+            {content}
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                <DialogContent className="sm:max-w-[450px]">
+                    <DialogHeader>
+                        <DialogTitle>API Key Settings</DialogTitle>
+                    </DialogHeader>
+                    {content}
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

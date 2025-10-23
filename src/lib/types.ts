@@ -78,7 +78,10 @@ export type AchievementId =
   | "ten_reps"
   | "perfect_form_rep"
   | "great_form_session"
-  | "consistent_performer";
+  | "consistent_performer"
+  | "first_ai_analysis"
+  | "ai_conversation"
+  | "agent_explorer";
 
 export type WorkoutMode = "training" | "assessment";
 

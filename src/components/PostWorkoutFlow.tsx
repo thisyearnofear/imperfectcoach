@@ -9,6 +9,7 @@ import {
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { Badge } from "@/components/ui/badge";
 import { FadeIn } from "@/components/ui/fade-in";
+import { toast } from "sonner";
 
 import { Trophy, Brain } from "lucide-react";
 
@@ -27,11 +28,15 @@ import BedrockAnalysisSection from "./BedrockAnalysisSection";
 import { UnifiedActionCTA } from "./UnifiedActionCTA";
 import { FeatureSpotlight } from "@/components/FeatureSpotlight";
 import { AgentCoachUpsell } from "./AgentCoachUpsell";
+import { StatusStrip } from "./StatusStrip";
+import { KeyboardHint } from "./KeyboardHint";
+import { SmartTierRecommendation } from "./SmartTierRecommendation";
 import { cn } from "@/lib/utils";
 import { CoachSummarySelector } from "./CoachSummarySelector";
 import PerformanceAnalytics from "./PerformanceAnalytics";
 import { useAchievements } from "@/hooks/useAchievements";
 import { useAIFeedback } from "@/hooks/useAIFeedback";
+import { useAgentAction } from "@/hooks/useAgentAction";
 import { mapPersonalityToLegacy } from "@/lib/coachPersonalities";
 import { convertHeight } from "@/lib/heightConversion";
 import { JumpRepDetails } from "@/lib/types";
@@ -67,6 +72,7 @@ export const PostWorkoutFlow = ({
   } | null>(null);
   const [remainingQueries, setRemainingQueries] = useState(3);
   const [showAgentUpsell, setShowAgentUpsell] = useState(false);
+  const [agentAchievements, setAgentAchievements] = useState<Set<string>>(new Set());
 
   // Refs for auto-scroll
   const bedrockSectionRef = useRef<HTMLDivElement>(null);
@@ -77,9 +83,7 @@ export const PostWorkoutFlow = ({
   ]);
   const [sessionSummaries, setSessionSummaries] =
     useState<SessionSummaries | null>(null);
-  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [isChatLoading, setIsChatLoading] = useState(false);
 
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -92,6 +96,67 @@ export const PostWorkoutFlow = ({
     coachPersonality: mapPersonalityToLegacy(coachPersonality),
     workoutMode: "training",
     onFormFeedback: () => {}, // Not used in post-workout
+  });
+
+  // Centralized agent action orchestration for session summary
+  const summaryAction = useAgentAction({
+    personality: coachPersonality,
+    onSuccess: (result) => {
+      if (result.type === "session-summary") {
+        setSessionSummaries(result.data.summaries as SessionSummaries);
+        
+        // Trigger achievements
+        if (!agentAchievements.has("first_ai_analysis")) {
+          setAgentAchievements(prev => new Set(prev).add("first_ai_analysis"));
+          toast.success("🏆 Achievement Unlocked!", {
+            description: "AI Insights - You got your first AI analysis!",
+            duration: 5000,
+          });
+        }
+        
+        // Check if multiple coaches were used
+        const coachCount = Object.keys(result.data.summaries).length;
+        if (coachCount > 1 && !agentAchievements.has("agent_explorer")) {
+          setAgentAchievements(prev => new Set(prev).add("agent_explorer"));
+          toast.success("🏆 Achievement Unlocked!", {
+            description: "Agent Explorer - You tried multiple AI coaches!",
+            duration: 5000,
+          });
+        }
+      }
+    },
+  });
+
+  // Centralized agent action orchestration for chat
+  const chatAction = useAgentAction({
+    personality: coachPersonality,
+    onSuccess: (result) => {
+      if (result.type === "chat") {
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: result.data.reply, model: result.data.model },
+        ]);
+        
+        // Trigger achievement for first chat
+        if (chatMessages.length === 0 && !agentAchievements.has("ai_conversation")) {
+          setAgentAchievements(prev => new Set(prev).add("ai_conversation"));
+          toast.success("🏆 Achievement Unlocked!", {
+            description: "Coach Chat - You had a conversation with an AI coach!",
+            duration: 5000,
+          });
+        }
+      }
+    },
+    onError: () => {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, I couldn't process that message. Please try again.",
+          model: "gemini",
+        },
+      ]);
+    },
   });
 
   // Handle follow-up queries for Bedrock analysis
@@ -237,103 +302,99 @@ export const PostWorkoutFlow = ({
     }
   }, [hasWorkoutEnded, reps]);
 
-  // Handle AI summary generation
+  // Handle AI summary generation using centralized agent action
   const handleGenerateAISummary = useCallback(async () => {
     if (reps === 0 || selectedCoaches.length === 0) return;
 
-    setIsSummaryLoading(true);
-    try {
-      const processedRepHistory = processRepHistoryForAI(repHistory);
+    const processedRepHistory = processRepHistoryForAI(repHistory);
 
-      // Calculate jump-specific analytics for AI
-      let jumpAnalytics = {};
-      if (exercise === "jumps" && processedRepHistory.length > 0) {
-        const jumpDetails = processedRepHistory
-          .map((rep) => rep.details)
-          .filter(
-            (details): details is JumpRepDetails =>
-              details !== undefined && "jumpHeight" in details
-          );
+    // Calculate jump-specific analytics for AI
+    let jumpAnalytics = {};
+    if (exercise === "jumps" && processedRepHistory.length > 0) {
+      const jumpDetails = processedRepHistory
+        .map((rep) => rep.details)
+        .filter(
+          (details): details is JumpRepDetails =>
+            details !== undefined && "jumpHeight" in details
+        );
 
-        if (jumpDetails.length > 0) {
-          const landingAngles = jumpDetails.map((d) => d.landingKneeFlexion);
-          const jumpHeights = jumpDetails.map((d) => d.jumpHeight);
-          const landingScores = jumpDetails
-            .map((d) => d.landingScore)
-            .filter((s) => s !== undefined);
+      if (jumpDetails.length > 0) {
+        const landingAngles = jumpDetails.map((d) => d.landingKneeFlexion);
+        const jumpHeights = jumpDetails.map((d) => d.jumpHeight);
+        const landingScores = jumpDetails
+          .map((d) => d.landingScore)
+          .filter((s) => s !== undefined);
 
-          jumpAnalytics = {
-            totalJumps: jumpDetails.length,
-            avgLandingAngle:
-              landingAngles.reduce((a, b) => a + b, 0) / landingAngles.length,
-            bestLandingAngle: Math.min(...landingAngles),
-            worstLandingAngle: Math.max(...landingAngles),
-            avgJumpHeight:
-              jumpHeights.reduce((a, b) => a + b, 0) / jumpHeights.length,
-            maxJumpHeight: Math.max(...jumpHeights),
-            avgLandingScore:
-              landingScores.length > 0
-                ? landingScores.reduce((a, b) => a + b, 0) /
-                  landingScores.length
-                : 0,
-            goodLandings: landingAngles.filter((angle) => angle < 140).length,
-            landingSuccessRate:
-              (landingAngles.filter((angle) => angle < 140).length /
-                landingAngles.length) *
-              100,
-            landingProgression: landingAngles,
-            heightProgression: jumpHeights,
+        jumpAnalytics = {
+          totalJumps: jumpDetails.length,
+          avgLandingAngle:
+            landingAngles.reduce((a, b) => a + b, 0) / landingAngles.length,
+          bestLandingAngle: Math.min(...landingAngles),
+          worstLandingAngle: Math.max(...landingAngles),
+          avgJumpHeight:
+            jumpHeights.reduce((a, b) => a + b, 0) / jumpHeights.length,
+          maxJumpHeight: Math.max(...jumpHeights),
+          avgLandingScore:
+            landingScores.length > 0
+              ? landingScores.reduce((a, b) => a + b, 0) /
+                landingScores.length
+              : 0,
+          goodLandings: landingAngles.filter((angle) => angle < 140).length,
+          landingSuccessRate:
+            (landingAngles.filter((angle) => angle < 140).length /
+              landingAngles.length) *
+            100,
+          landingProgression: landingAngles,
+          heightProgression: jumpHeights,
+        };
+      }
+    }
+
+    // Debug logging for final AI data
+    if (process.env.NODE_ENV === "development" && exercise === "jumps") {
+      console.log("📤 Final Data Sent to Gemini:", {
+        reps,
+        averageFormScore,
+        totalReps: processedRepHistory.length,
+        jumpAnalytics,
+        jumpData: processedRepHistory.map((rep, i) => {
+          const details = rep.details;
+          const jumpDetails =
+            details && "jumpHeight" in details
+              ? (details as JumpRepDetails)
+              : null;
+          return {
+            rep: i + 1,
+            score: rep.score,
+            jumpHeight: jumpDetails?.jumpHeight ?? "null",
+            landingKnee: jumpDetails?.landingKneeFlexion ?? "null",
+            landingScore: jumpDetails?.landingScore ?? "null",
           };
-        }
-      }
+        }),
+        exercise,
+        sessionDuration,
+      });
+    }
 
-      // Debug logging for final AI data
-      if (process.env.NODE_ENV === "development" && exercise === "jumps") {
-        console.log("📤 Final Data Sent to Gemini:", {
-          reps,
-          averageFormScore,
-          totalReps: processedRepHistory.length,
-          jumpAnalytics,
-          jumpData: processedRepHistory.map((rep, i) => {
-            const details = rep.details;
-            const jumpDetails =
-              details && "jumpHeight" in details
-                ? (details as JumpRepDetails)
-                : null;
-            return {
-              rep: i + 1,
-              score: rep.score,
-              jumpHeight: jumpDetails?.jumpHeight ?? "null",
-              landingKnee: jumpDetails?.landingKneeFlexion ?? "null",
-              landingScore: jumpDetails?.landingScore ?? "null",
-            };
-          }),
-          exercise,
-          sessionDuration,
-        });
-      }
-
-      const summaries = await getAISessionSummary(
-        {
-          reps,
+    await summaryAction.execute({
+      type: "session-summary",
+      params: {
+        reps,
+        workoutMode: "training",
+        exercise,
+        stats: {
           averageFormScore,
           repHistory: processedRepHistory,
-          exercise,
           sessionDuration,
           ...(exercise === "jumps" && { jumpAnalytics }),
         },
-        selectedCoaches
-      );
-      setSessionSummaries(summaries);
-    } catch (error) {
-      console.error("Failed to generate AI summaries:", error);
-    } finally {
-      setIsSummaryLoading(false);
-    }
+        selectedCoaches,
+      },
+    });
   }, [
     reps,
     selectedCoaches,
-    getAISessionSummary,
+    summaryAction,
     averageFormScore,
     repHistory,
     exercise,
@@ -348,85 +409,63 @@ export const PostWorkoutFlow = ({
     }
   }, [hasWorkoutEnded, reps, selectedCoaches, handleGenerateAISummary]);
 
-  // Handle chat messages
-  const handleSendMessage = async (message: string, model: CoachModel) => {
+  // Handle chat messages using centralized agent action
+  const handleSendMessage = useCallback(async (message: string, model: CoachModel) => {
     if (!sessionSummaries) return;
 
-    setIsChatLoading(true);
     setChatMessages((prev) => [
       ...prev,
       { role: "user", content: message, model },
     ]);
 
-    try {
-      const processedRepHistory = processRepHistoryForAI(repHistory);
+    const processedRepHistory = processRepHistoryForAI(repHistory);
 
-      // Calculate jump analytics for chat
-      let jumpAnalytics = {};
-      if (exercise === "jumps" && processedRepHistory.length > 0) {
-        const jumpDetails = processedRepHistory
-          .map((rep) => rep.details)
-          .filter(
-            (details): details is JumpRepDetails =>
-              details !== undefined && "jumpHeight" in details
-          );
+    // Calculate jump analytics for chat
+    let jumpAnalytics = {};
+    if (exercise === "jumps" && processedRepHistory.length > 0) {
+      const jumpDetails = processedRepHistory
+        .map((rep) => rep.details)
+        .filter(
+          (details): details is JumpRepDetails =>
+            details !== undefined && "jumpHeight" in details
+        );
 
-        if (jumpDetails.length > 0) {
-          const landingAngles = jumpDetails.map((d) => d.landingKneeFlexion);
-          const jumpHeights = jumpDetails.map((d) => d.jumpHeight);
-          const landingScores = jumpDetails
-            .map((d) => d.landingScore)
-            .filter((s) => s !== undefined);
+      if (jumpDetails.length > 0) {
+        const landingAngles = jumpDetails.map((d) => d.landingKneeFlexion);
+        const jumpHeights = jumpDetails.map((d) => d.jumpHeight);
+        const landingScores = jumpDetails
+          .map((d) => d.landingScore)
+          .filter((s) => s !== undefined);
 
-          jumpAnalytics = {
-            avgLandingAngle:
-              landingAngles.reduce((a, b) => a + b, 0) / landingAngles.length,
-            landingSuccessRate:
-              (landingAngles.filter((angle) => angle < 140).length /
-                landingAngles.length) *
-              100,
-            avgJumpHeight:
-              jumpHeights.reduce((a, b) => a + b, 0) / jumpHeights.length,
-            avgLandingScore:
-              landingScores.length > 0
-                ? landingScores.reduce((a, b) => a + b, 0) /
-                  landingScores.length
-                : 0,
-          };
-        }
+        jumpAnalytics = {
+          avgLandingAngle:
+            landingAngles.reduce((a, b) => a + b, 0) / landingAngles.length,
+          landingSuccessRate:
+            (landingAngles.filter((angle) => angle < 140).length /
+              landingAngles.length) *
+            100,
+          avgJumpHeight:
+            jumpHeights.reduce((a, b) => a + b, 0) / jumpHeights.length,
+          avgLandingScore:
+            landingScores.length > 0
+              ? landingScores.reduce((a, b) => a + b, 0) /
+                landingScores.length
+              : 0,
+        };
       }
-
-      const response = await getAIChatResponse(
-        chatMessages,
-        {
-          reps,
-          averageFormScore,
-          repHistory: processedRepHistory,
-          exercise,
-          sessionDuration,
-          message,
-          ...(exercise === "jumps" && { jumpAnalytics }),
-        },
-        model
-      );
-      setChatMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: response, model },
-      ]);
-    } catch (error) {
-      console.error("Chat error:", error);
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, I couldn't process that message. Please try again.",
-          model,
-        },
-      ]);
-    } finally {
-      setIsChatLoading(false);
     }
-  };
+
+    await chatAction.execute({
+      type: "chat",
+      params: {
+        messages: [
+          ...chatMessages,
+          { role: "user", content: message, model },
+        ],
+        model,
+      },
+    });
+  }, [sessionSummaries, chatMessages, chatAction, processRepHistoryForAI, repHistory, exercise, reps, averageFormScore, sessionDuration]);
 
   // Calculate rep timings for analytics
   const repTimings = {
@@ -527,6 +566,9 @@ export const PostWorkoutFlow = ({
       {/* Connected/Premium Tier: Simplified Analysis */}
       {tier !== "free" && (
         <div ref={resultsRef} className="space-y-4">
+          {/* Status Strip - Network and CDP status */}
+          <StatusStrip variant="full" showCDP={true} showNetwork={true} />
+          
           <FadeIn>
           <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
             <CardHeader>
@@ -543,7 +585,7 @@ export const PostWorkoutFlow = ({
                   <CoachSummarySelector
                     selectedCoaches={selectedCoaches}
                     onSelectionChange={setSelectedCoaches}
-                    disabled={isSummaryLoading}
+                    disabled={summaryAction.status === "loading"}
                     onUpgrade={handleUpgrade}
                     bedrockSectionRef={bedrockSectionRef}
                   />
@@ -551,22 +593,22 @@ export const PostWorkoutFlow = ({
                   {selectedCoaches.length > 0 && (
                     <AnimatedButton
                       onClick={handleGenerateAISummary}
-                      disabled={isSummaryLoading}
-                      disableAnimation={isSummaryLoading}
+                      disabled={summaryAction.status === "loading"}
+                      disableAnimation={summaryAction.status === "loading"}
                       className="bg-blue-600 hover:bg-blue-700"
                       size="sm"
                       animationPreset="scale"
                     >
-                      {isSummaryLoading ? "Analyzing..." : "Get AI Analysis"}
+                      {summaryAction.status === "loading" ? "Analyzing..." : "Get AI Analysis"}
                     </AnimatedButton>
                   )}
                 </div>
               )}
 
               {/* AI Summaries Display */}
-              {(isSummaryLoading || sessionSummaries) && (
+              {(summaryAction.status === "loading" || sessionSummaries) && (
                 <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-                  {isSummaryLoading && !sessionSummaries && (
+                  {summaryAction.status === "loading" && !sessionSummaries && (
                     <p className="text-sm text-gray-600 animate-pulse text-center">
                       🤖 Analyzing your performance...
                     </p>
@@ -661,6 +703,13 @@ export const PostWorkoutFlow = ({
             achievements={achievements}
             bedrockSectionRef={bedrockSectionRef}
           />
+
+          {/* Keyboard Hint */}
+          <KeyboardHint
+            keys={["⌘", "K"]}
+            description="Quick actions"
+            className="mt-4"
+          />
         </div>
       )}
 
@@ -691,9 +740,9 @@ export const PostWorkoutFlow = ({
             sessionDuration={sessionDuration}
             repTimings={repTimings}
             sessionSummaries={sessionSummaries}
-            isSummaryLoading={isSummaryLoading}
+            isSummaryLoading={summaryAction.status === "loading"}
             chatMessages={chatMessages}
-            isChatLoading={isChatLoading}
+            isChatLoading={chatAction.status === "loading"}
             onSendMessage={handleSendMessage}
             onUpgrade={handleUpgrade}
             onTryAgain={() => window.location.reload()}
