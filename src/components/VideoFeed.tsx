@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Video, VideoOff, SwitchCamera, Timer, Zap, Target, TrendingUp } from "lucide-react";
+import { Video, VideoOff, SwitchCamera, Timer, Zap, Target, TrendingUp, Maximize } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -32,9 +32,10 @@ interface VideoFeedProps {
   onSessionEnd: () => void;
   onSessionReset: () => void;
   heightUnit: HeightUnit;
+  reps?: number;
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset, heightUnit }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset, heightUnit, reps }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [valuePropIndex, setValuePropIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -79,6 +80,16 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
   const handleEnableCamera = () => {
     onSessionReset();
     enableCamera();
+  };
+
+  const handleFullscreen = () => {
+    if (videoRef.current) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        videoRef.current.requestFullscreen();
+      }
+    }
   };
 
   const handleModelFeedback = (message: string) => {
@@ -137,6 +148,14 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
             </div>
           )}
 
+          {/* Mobile Rep Count Display - Prominent on mobile */}
+          <div className="lg:hidden absolute bottom-16 left-2 bg-black/70 text-white p-3 rounded-lg animate-fade-in">
+            <div className="text-xs text-gray-300 uppercase tracking-wide">Reps</div>
+            <div className="text-3xl font-bold text-white">
+              {reps || 0}
+            </div>
+          </div>
+
           {/* Enhanced Loading overlay */}
           {modelStatus === 'loading' && (
             <AILoadingOverlay 
@@ -147,34 +166,45 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
 
           {/* Controls */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <TooltipProvider>
-              {isRecordingEnabled && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={toggleRecording} variant={isRecording ? "destructive" : "secondary"} size="icon">
-                      {isRecording ? <div className="h-3 w-3 rounded-sm bg-white animate-pulse" /> : <Video className="h-4 w-4" />}
-                      <span className="sr-only">{isRecording ? "Stop Recording" : "Start Recording"}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{isRecording ? "Stop Recording" : "Start Recording"}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-              <Tooltip>
+          <TooltipProvider>
+          <Tooltip>
+          <TooltipTrigger asChild>
+          <Button onClick={handleFullscreen} variant="secondary" size="icon" className="lg:hidden">
+          <Maximize className="h-4 w-4" />
+          <span className="sr-only">Toggle Fullscreen</span>
+          </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+          <p>Toggle Fullscreen</p>
+          </TooltipContent>
+          </Tooltip>
+          {isRecordingEnabled && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+              <Button onClick={toggleRecording} variant={isRecording ? "destructive" : "secondary"} size="icon">
+              {isRecording ? <div className="h-3 w-3 rounded-sm bg-white animate-pulse" /> : <Video className="h-4 w-4" />}
+            <span className="sr-only">{isRecording ? "Stop Recording" : "Start Recording"}</span>
+          </Button>
+          </TooltipTrigger>
+            <TooltipContent>
+              <p>{isRecording ? "Stop Recording" : "Start Recording"}</p>
+          </TooltipContent>
+          </Tooltip>
+          )}
+          <Tooltip>
+          <TooltipTrigger asChild>
+          <Button onClick={handleStopCamera} variant="destructive" size="icon">
+          <VideoOff />
+          <span className="sr-only">Finish Workout</span>
+          </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+          <p>Finish Workout (preserves progress)</p>
+          </TooltipContent>
+          </Tooltip>
+          {devices.length > 1 && (
+            <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={handleStopCamera} variant="destructive" size="icon">
-                    <VideoOff />
-                    <span className="sr-only">Stop Camera</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Stop Camera</p>
-                </TooltipContent>
-              </Tooltip>
-              {devices.length > 1 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
                     <Button onClick={flipCamera} variant="secondary" size="icon">
                       <SwitchCamera />
                       <span className="sr-only">Flip Camera</span>

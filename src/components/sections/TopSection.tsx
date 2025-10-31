@@ -64,6 +64,7 @@ export const TopSection = (props: TopSectionProps) => {
             onSessionEnd={props.onSessionEnd}
             onSessionReset={props.onSessionReset}
             heightUnit={props.heightUnit}
+            reps={props.reps}
           />
           
           {/* Contextual Suggestions - Appear during workout based on performance */}
@@ -121,13 +122,14 @@ export const TopSection = (props: TopSectionProps) => {
       <div className="lg:hidden mt-6 space-y-4">
         {/* Live Feedback - Immediately below video for exercise attempt feedback */}
         <div className="bg-card p-4 rounded-lg border">
-          <h3 className="text-lg font-semibold mb-4">Live Feedback</h3>
-          <CoachFeedback
-            reps={props.reps}
-            formFeedback={props.formFeedback}
-            formScore={props.formScore}
-            coachPersonality={props.coachPersonality}
-            workoutMode={props.workoutMode}
+        <h3 className="text-lg font-semibold mb-4">Live Feedback</h3>
+        <CoachFeedback
+        reps={props.reps}
+        formFeedback={props.formFeedback}
+        formScore={props.formScore}
+        coachPersonality={props.coachPersonality}
+        workoutMode={props.workoutMode}
+          variant="compact"
           />
         </div>
 

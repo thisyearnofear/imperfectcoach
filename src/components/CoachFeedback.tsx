@@ -12,6 +12,7 @@ interface CoachFeedbackProps {
   coachPersonality: CoachPersonality;
   workoutMode: WorkoutMode;
   onPremiumUpgrade?: () => void;
+  variant?: "full" | "compact";
 }
 
 const CoachFeedback = ({
@@ -21,6 +22,7 @@ const CoachFeedback = ({
   coachPersonality,
   workoutMode,
   onPremiumUpgrade,
+  variant = "full",
 }: CoachFeedbackProps) => {
   const [currentCoachIndex, setCurrentCoachIndex] = useState(0);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -36,7 +38,8 @@ const CoachFeedback = ({
         "Boost mental resilience through progressive challenges",
         "Improve posture for better spinal health"
       ],
-      description: "Master the king of bodyweight exercises"
+      shortBenefit: "Build upper body strength",
+    description: "Master the king of bodyweight exercises"
     },
     {
       name: "Jumps",
@@ -47,7 +50,8 @@ const CoachFeedback = ({
         "Improve coordination and balance",
         "Release endorphins for mental well-being"
       ],
-      description: "Train for explosive athletic movements"
+      shortBenefit: "Explosive power & cardio",
+      description: "Train for athletic movements"
     }
   ];
 
@@ -210,19 +214,25 @@ const CoachFeedback = ({
                 <p className="text-xs text-muted-foreground">
                   {currentExercise.description}
                 </p>
-                <div className="flex flex-wrap justify-center gap-1">
-                  {currentExercise.benefits.map((benefit, idx) => (
-                    <motion.span
-                      key={benefit}
-                      className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.3 + idx * 0.1 }}
-                    >
-                      {benefit}
-                    </motion.span>
-                  ))}
-                </div>
+                {variant === "compact" ? (
+                  <p className="text-xs text-primary font-medium">
+                    {currentExercise.shortBenefit}
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap justify-center gap-1">
+                    {currentExercise.benefits.map((benefit, idx) => (
+                      <motion.span
+                        key={benefit}
+                        className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3 + idx * 0.1 }}
+                      >
+                        {benefit}
+                      </motion.span>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           </AnimatePresence>
