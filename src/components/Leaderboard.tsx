@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { SmartRefresh, RefreshButton } from "./SmartRefresh";
 import { Badge } from "@/components/ui/badge";
 import { useBasename } from "@/hooks/useBasename";
+import { useMemoryIdentity } from "@/hooks/useMemoryIdentity";
 
 interface LeaderboardEntry {
   address: string;
@@ -26,20 +27,40 @@ interface LeaderboardProps {
   compact?: boolean;
 }
 
-// Simple user display component (basename resolution temporarily disabled)
-// Helper component for displaying user names/addresses
+// Enhanced user display component with social identity support
 const UserDisplay = ({ address }: { address: string }) => {
-  const { basename, isLoading } = useBasename(address);
-  const displayName =
-    basename || `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const { basename, isLoading: basenameLoading } = useBasename(address);
+const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
+  enabled: !basenameLoading && !basename // Only fetch if no basename
+});
+
+const socialIdentity = getPrimarySocialIdentity();
+
+let displayName: string;
+let displayIcon: string | null = null;
+
+if (basenameLoading || identityLoading) {
+displayName = "Loading...";
+} else if (socialIdentity) {
+  displayName = socialIdentity.username || socialIdentity.id;
+    // Add platform indicator
+    if (socialIdentity.platform === 'farcaster') {
+      displayIcon = '🟣'; // Purple circle for Farcaster
+    } else if (socialIdentity.platform === 'twitter') {
+      displayIcon = '🐦'; // Bird for Twitter
+    }
+  } else if (basename) {
+    displayName = basename;
+  } else {
+    displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+  }
 
   return (
-    <span className="truncate font-medium" title={address}>
-      {isLoading ? (
-        <span className="text-muted-foreground">Loading...</span>
-      ) : (
-        displayName
-      )}
+    <span className="truncate font-medium flex items-center gap-1" title={address}>
+      {displayIcon && <span className="text-xs">{displayIcon}</span>}
+      <span className={basenameLoading || identityLoading ? "text-muted-foreground" : ""}>
+        {displayName}
+      </span>
     </span>
   );
 };

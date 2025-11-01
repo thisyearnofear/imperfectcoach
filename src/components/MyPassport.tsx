@@ -2,6 +2,8 @@ import { useAccount, useReadContract } from "wagmi";
 import { IMPERFECT_COACH_PASSPORT_CONFIG } from "@/lib/contracts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { useMemoryIdentity } from "@/hooks/useMemoryIdentity";
 
 // Define a type for the passport data structure to ensure type safety
 type PassportData = {
@@ -16,7 +18,8 @@ type PassportData = {
 };
 
 const MyPassport = () => {
-  const { address, isConnected } = useAccount();
+const { address, isConnected } = useAccount();
+  const { getSocialIdentities, isLoading: identityLoading } = useMemoryIdentity(address);
 
   // 1. Fetch the user's tokenId first
   const { data: tokenId, isLoading: isLoadingTokenId } = useReadContract({
@@ -251,12 +254,55 @@ const MyPassport = () => {
             </div>
 
             {typedPassportData.longestStreak >
-              typedPassportData.currentStreak && (
-              <div className="text-xs text-center text-muted-foreground border-t pt-2">
-                Best streak: {typedPassportData.longestStreak.toString()} days
+            typedPassportData.currentStreak && (
+            <div className="text-xs text-center text-muted-foreground border-t pt-2">
+            Best streak: {typedPassportData.longestStreak.toString()} days
+            </div>
+            )}
+            </>
+            )}
+
+        {/* Social Identities Section */}
+        {isConnected && (
+          <div className="border-t pt-3 mt-3">
+            <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <span className="text-lg">🌐</span>
+              Connected Identities
+            </h4>
+            {identityLoading ? (
+              <div className="flex gap-2">
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-6 w-18" />
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {getSocialIdentities().map((identity) => (
+                  <Badge
+                    key={identity.id}
+                    variant="secondary"
+                    className="text-xs flex items-center gap-1"
+                  >
+                    {identity.platform === 'farcaster' && '🟣'}
+                    {identity.platform === 'twitter' && '🐦'}
+                    {identity.platform === 'github' && '💻'}
+                    {identity.platform === 'lens' && '👁️'}
+                    {identity.username || identity.id}
+                    {identity.social?.followers && (
+                      <span className="text-muted-foreground ml-1">
+                        ({identity.social.followers})
+                      </span>
+                    )}
+                  </Badge>
+                ))}
+                {getSocialIdentities().length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No social identities found. Connect your profiles to enhance your passport!
+                  </p>
+                )}
               </div>
             )}
-          </>
+          </div>
         )}
       </CardContent>
     </Card>
