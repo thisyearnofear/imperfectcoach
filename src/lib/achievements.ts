@@ -1,5 +1,5 @@
 import { Achievement, AchievementId } from "@/lib/types";
-import { Star, Award, Trophy, BadgeCheck, Zap, Brain, MessageSquare, Sparkles } from "lucide-react";
+import { Star, Award, Trophy, BadgeCheck, Zap, Brain, MessageSquare, Sparkles, Flame, Target, TrendingUp, Heart } from "lucide-react";
 
 export const ACHIEVEMENTS: Record<AchievementId, Omit<Achievement, 'id'>> = {
   first_rep: {
@@ -38,8 +38,28 @@ export const ACHIEVEMENTS: Record<AchievementId, Omit<Achievement, 'id'>> = {
     icon: MessageSquare,
   },
   agent_explorer: {
-    name: "Agent Explorer",
-    description: "You tried multiple AI coaches in one session.",
-    icon: Sparkles,
+  name: "Agent Explorer",
+  description: "You tried multiple AI coaches in one session.",
+  icon: Sparkles,
+  },
+  streak_master: {
+    name: "Streak Master",
+    description: "Maintained a 7-day workout streak! 🔥",
+    icon: Flame,
+  },
+  goal_crusher: {
+    name: "Goal Crusher",
+    description: "Hit your personal best in pull-ups or jumps!",
+    icon: Target,
+  },
+  form_perfectionist: {
+    name: "Form Perfectionist",
+    description: "Achieved 95%+ form score for 10 consecutive reps.",
+    icon: TrendingUp,
+  },
+  community_champion: {
+    name: "Community Champion",
+    description: "Shared your workout and inspired others!",
+    icon: Heart,
   },
 };
