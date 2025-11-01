@@ -278,24 +278,30 @@ const ConnectedNotAuthenticatedState = ({
           displayName={displayName}
           size="sm"
         />
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={signInWithEthereum}
-                disabled={isLoading}
-                className="h-7 px-2 text-xs shrink-0"
-              >
-                {isLoading ? "Signing..." : "SIWE"}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Sign-In with Ethereum for enhanced security</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {isLoading ? (
+          <Badge variant="secondary" className="text-xs">
+            <Clock className="h-3 w-3 mr-1" />
+            Signing...
+          </Badge>
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signInWithEthereum}
+                  className="h-7 px-2 text-xs shrink-0"
+                >
+                  Retry SIWE
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Retry Sign-In with Ethereum if auto-signing failed</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -321,26 +327,29 @@ const ConnectedNotAuthenticatedState = ({
         <AlertDescription>
           <div className="space-y-2">
             <p className="font-medium text-green-800 text-center">
-              🎯 Submit Score
+              {isLoading ? "🔐 Authenticating..." : "🎯 Submit Score"}
             </p>
             <p className="text-sm text-green-700">
-              Your wallet is connected! Authenticate (sign in with Ethereum) so
-              we know its you for sure.
+              {isLoading
+                ? "Please sign the message in your wallet to complete authentication."
+                : "Your wallet is connected! Authentication is required to submit scores."
+              }
             </p>
           </div>
         </AlertDescription>
       </Alert>
 
       <div className="space-y-2">
-        <Button
-          onClick={signInWithEthereum}
-          disabled={isLoading}
-          className="w-full"
-          variant="default"
-        >
-          <Shield className="h-4 w-4 mr-2" />
-          {isLoading ? "Signing..." : "Sign In with Ethereum"}
-        </Button>
+        {!isLoading && (
+          <Button
+            onClick={signInWithEthereum}
+            className="w-full"
+            variant="outline"
+          >
+            <Shield className="h-4 w-4 mr-2" />
+            Retry Sign-In with Ethereum
+          </Button>
+        )}
 
         <Button
           onClick={signOut}
