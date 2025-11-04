@@ -63,6 +63,14 @@ export const useMemoryIdentity = (
           }
         );
 
+        // Gracefully handle "not found" by treating as empty identity graph
+        if (response.status === 404) {
+          // No identity graph exists yet for this wallet
+          setIdentityGraph({ identities: [] });
+          setError(null);
+          return;
+        }
+
         if (!response.ok) {
           throw new Error(`Memory API error: ${response.status}`);
         }
