@@ -6,20 +6,12 @@ import MobileControls from "@/components/MobileControls";
 import { useIndexPage } from "@/hooks/useIndexPage";
 import { TopSection, BottomSection } from "@/components/sections";
 import { FadeIn } from "@/components/ui/fade-in";
-import WelcomeMessage from "@/components/WelcomeMessage";
 
 const Index = () => {
   const page = useIndexPage();
   const [gradientClass, setGradientClass] = useState("dynamic-gradient");
-  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    // Check if user has already seen the welcome message
-    const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
-    if (!hasSeenWelcome) {
-      setShowWelcome(true);
-    }
-
     const hour = new Date().getHours();
     if (hour >= 6 && hour < 12) {
       setGradientClass("dynamic-gradient-warm");
@@ -29,11 +21,6 @@ const Index = () => {
       setGradientClass("dynamic-gradient");
     }
   }, []);
-
-  const handleWelcomeComplete = () => {
-    localStorage.setItem('hasSeenWelcome', 'true');
-    setShowWelcome(false);
-  };
 
   return (
     <div className={`min-h-screen text-foreground flex flex-col animate-fade-in ${gradientClass}`}>
@@ -126,11 +113,6 @@ const Index = () => {
           onHighContrastChange={page.setIsHighContrast}
         />
       </div>
-
-      {/* Welcome Message for new users */}
-      {showWelcome && (
-        <WelcomeMessage onComplete={handleWelcomeComplete} />
-      )}
     </div>
   );
 };
