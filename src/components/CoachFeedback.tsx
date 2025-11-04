@@ -15,6 +15,9 @@ interface CoachFeedbackProps {
   variant?: "full" | "compact";
   showModeExplanation?: boolean;
   onModeExplanationShown?: () => void;
+  showFocusExplanation?: boolean;
+  onFocusExplanationShown?: () => void;
+  isFocusMode?: boolean;
 }
 
 const CoachFeedback = ({
@@ -27,9 +30,19 @@ const CoachFeedback = ({
   variant = "full",
   showModeExplanation = false,
   onModeExplanationShown,
+  showFocusExplanation = false,
+  onFocusExplanationShown,
+  isFocusMode = false,
 }: CoachFeedbackProps) => {
   const [currentCoachIndex, setCurrentCoachIndex] = useState(0);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+
+  // Debug focus explanation
+  useEffect(() => {
+    if (showFocusExplanation) {
+      console.log('🎯 CoachFeedback: showFocusExplanation is true, isFocusMode:', isFocusMode);
+    }
+  }, [showFocusExplanation, isFocusMode]);
 
   const coaches = Object.values(COACH_PERSONALITIES);
   const exercises = [
@@ -110,7 +123,26 @@ const CoachFeedback = ({
     }
   };
 
+  const getFocusExplanation = () => {
+    if (isFocusMode) {
+      return {
+        title: "🎯 Focus Mode ON",
+        description: "Minimalist interface activated. Only essential workout info is shown to reduce distractions.",
+        benefits: ["Clean interface", "Essential metrics only", "Better concentration", "Reduced visual clutter"]
+      };
+    } else {
+      return {
+        title: "🎯 Focus Mode OFF",
+        description: "Full interface with all controls and information visible for complete workout management.",
+        benefits: ["All controls visible", "Complete information", "Full customization", "Rich feedback"]
+      };
+    }
+  };
+
   const getTitle = () => {
+    if (showFocusExplanation) {
+      return getFocusExplanation().title;
+    }
     if (showModeExplanation) {
       return getModeExplanation().title;
     }
@@ -190,7 +222,44 @@ const CoachFeedback = ({
       </motion.h3>
 
       <div className="flex-grow flex items-center justify-center p-2 min-h-[60px]">
-        {showModeExplanation ? (
+        {showFocusExplanation ? (
+          // Show focus mode explanation when toggled
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`focus-${isFocusMode}`}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.4 }}
+              className="text-center space-y-3 w-full"
+              onAnimationComplete={() => {
+                // Auto-hide explanation after 4 seconds
+                setTimeout(() => {
+                  onFocusExplanationShown?.();
+                }, 4000);
+              }}
+            >
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {getFocusExplanation().description}
+                </p>
+                <div className="flex flex-wrap justify-center gap-1">
+                  {getFocusExplanation().benefits.map((benefit, idx) => (
+                    <motion.span
+                      key={benefit}
+                      className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 + idx * 0.1 }}
+                    >
+                      {benefit}
+                    </motion.span>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        ) : showModeExplanation ? (
           // Show mode explanation when toggled
           <AnimatePresence mode="wait">
             <motion.div

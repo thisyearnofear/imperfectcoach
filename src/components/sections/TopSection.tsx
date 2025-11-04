@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle, useRef } from "react";
 import VideoFeed from "@/components/VideoFeed";
 import WorkoutSidebar from "@/components/WorkoutSidebar";
 import CoachFeedback from "@/components/CoachFeedback";
@@ -38,19 +38,41 @@ interface TopSectionProps {
   onWorkoutModeChange: (mode: WorkoutMode) => void;
   onExerciseChange: (exercise: Exercise) => void;
   onCoachPersonalityChange: (personality: CoachPersonality) => void;
+  onFocusModeChange?: (enabled: boolean) => void;
   reps: number;
   formScore: number;
   formFeedback: string;
 }
 
-export const TopSection = (props: TopSectionProps) => {
+export const TopSection = forwardRef<
+  { triggerFocusExplanation: () => void },
+  TopSectionProps
+>((props, ref) => {
   const [showModeExplanation, setShowModeExplanation] = useState(false);
+  const [showFocusExplanation, setShowFocusExplanation] = useState(false);
+  const workoutSidebarRef = useRef<{ triggerFocusExplanation: () => void }>(null);
 
   const handleModeChange = (mode: WorkoutMode) => {
     props.onWorkoutModeChange(mode);
     // Show explanation when mode changes
     setShowModeExplanation(true);
   };
+
+  const handleFocusModeChange = (enabled: boolean) => {
+    props.onFocusModeChange?.(enabled);
+    // Show explanation when focus mode changes
+    setShowFocusExplanation(true);
+  };
+
+  // Expose method to trigger focus explanation from parent
+  useImperativeHandle(ref, () => ({
+    triggerFocusExplanation: () => {
+      // Trigger focus explanation in WorkoutSidebar (desktop)
+      workoutSidebarRef.current?.triggerFocusExplanation();
+      // Also trigger for mobile version
+      setShowFocusExplanation(true);
+    }
+  }));
 
   return (
     <div className="w-full">
@@ -117,6 +139,7 @@ export const TopSection = (props: TopSectionProps) => {
         {/* Right: Workout Sidebar - Controls + Live Feedback (~40% width) */}
         <div className="lg:col-span-1 hidden lg:block">
           <WorkoutSidebar
+            ref={workoutSidebarRef}
             workoutMode={props.workoutMode}
             onWorkoutModeChange={props.onWorkoutModeChange}
             selectedExercise={props.exercise}
@@ -126,6 +149,8 @@ export const TopSection = (props: TopSectionProps) => {
             reps={props.reps}
             formScore={props.formScore}
             formFeedback={props.formFeedback}
+            isFocusMode={props.isFocusMode}
+            onFocusModeChange={handleFocusModeChange}
           />
         </div>
       </div>
@@ -133,18 +158,16 @@ export const TopSection = (props: TopSectionProps) => {
       {/* Mobile: Stacked layout with setup first, then feedback */}
       <div className="lg:hidden mt-6 space-y-4">
         {/* Workout Setup - First so users configure before starting */}
-        <div className="bg-card p-4 rounded-lg border">
-          <h3 className="text-lg font-semibold mb-4">Workout Setup</h3>
-          <div className="space-y-4">
-            <CoreControls
-              workoutMode={props.workoutMode}
-              onWorkoutModeChange={handleModeChange}
-              selectedExercise={props.exercise}
-              onExerciseChange={props.onExerciseChange}
-              coachPersonality={props.coachPersonality}
-              onCoachPersonalityChange={props.onCoachPersonalityChange}
-            />
-          </div>
+        <div className="bg-card p-3 rounded-lg border">
+          <h3 className="text-base font-semibold mb-3">Workout Setup</h3>
+          <CoreControls
+            workoutMode={props.workoutMode}
+            onWorkoutModeChange={handleModeChange}
+            selectedExercise={props.exercise}
+            onExerciseChange={props.onExerciseChange}
+            coachPersonality={props.coachPersonality}
+            onCoachPersonalityChange={props.onCoachPersonalityChange}
+          />
         </div>
 
         {/* Live Feedback - Below setup for workout feedback */}
@@ -157,6 +180,9 @@ export const TopSection = (props: TopSectionProps) => {
           variant="compact"
           showModeExplanation={showModeExplanation}
           onModeExplanationShown={() => setShowModeExplanation(false)}
+          showFocusExplanation={showFocusExplanation}
+          onFocusExplanationShown={() => setShowFocusExplanation(false)}
+          isFocusMode={props.isFocusMode}
         />
 
         {/* Mobile Visual Guide - After feedback for reference */}
@@ -167,4 +193,4 @@ export const TopSection = (props: TopSectionProps) => {
       </div>
     </div>
   );
-};
+});

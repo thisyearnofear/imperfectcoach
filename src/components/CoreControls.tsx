@@ -22,8 +22,8 @@ const CoreControls = ({
 }: CoreControlsProps) => {
     return (
         <div className="w-full">
-            {/* Core workout controls - stacked vertically for sidebar or horizontal for mobile */}
-            <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Core workout controls - compact spacing */}
+            <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-3">
                 <ExerciseSelector
                     selectedExercise={selectedExercise}
                     onExerciseChange={onExerciseChange}

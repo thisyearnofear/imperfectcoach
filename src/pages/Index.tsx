@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
@@ -12,6 +12,7 @@ const Index = () => {
   const page = useIndexPage();
   const [gradientClass, setGradientClass] = useState("dynamic-gradient");
   const [showPRCelebration, setShowPRCelebration] = useState(false);
+  const topSectionRef = useRef<{ triggerFocusExplanation: () => void }>(null);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -60,6 +61,12 @@ const Index = () => {
     return 0;
   };
 
+  const handleFocusModeChange = (enabled: boolean) => {
+    page.setIsFocusMode(enabled);
+    // Trigger focus explanation in TopSection
+    topSectionRef.current?.triggerFocusExplanation();
+  };
+
   return (
     <div className={`min-h-screen text-foreground flex flex-col animate-fade-in ${gradientClass}`}>
       <FadeIn>
@@ -77,7 +84,7 @@ const Index = () => {
           isDebugMode={page.isDebugMode}
           onDebugChange={page.setIsDebugMode}
           isFocusMode={page.isFocusMode}
-          onFocusModeChange={page.setIsFocusMode}
+          onFocusModeChange={handleFocusModeChange}
         />
       </FadeIn>
       <main className="flex-grow container mx-auto p-4">
@@ -85,6 +92,7 @@ const Index = () => {
           {/* Top Section: Hero VideoFeed + Controls */}
           <FadeIn direction="up" delay={0.2}>
             <TopSection
+              ref={topSectionRef}
               exercise={page.selectedExercise}
               onRepCount={page.setReps}
               onFormFeedback={page.setFormFeedback}
@@ -107,6 +115,7 @@ const Index = () => {
               onWorkoutModeChange={page.handleWorkoutModeChange}
               onExerciseChange={page.handleExerciseChange}
               onCoachPersonalityChange={page.setCoachPersonality}
+              onFocusModeChange={page.setIsFocusMode}
             />
           </FadeIn>
 

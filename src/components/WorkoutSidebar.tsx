@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import CoreControls from "@/components/CoreControls";
 import CoachFeedback from "@/components/CoachFeedback";
 import MyPassport from "@/components/MyPassport";
@@ -24,10 +24,16 @@ interface WorkoutSidebarProps {
   reps: number;
   formScore: number;
   formFeedback: string;
+  isFocusMode?: boolean;
+  onFocusModeChange?: (enabled: boolean) => void;
 }
 
-const WorkoutSidebar = (props: WorkoutSidebarProps) => {
+const WorkoutSidebar = forwardRef<
+  { triggerFocusExplanation: () => void },
+  WorkoutSidebarProps
+>((props, ref) => {
   const [showModeExplanation, setShowModeExplanation] = useState(false);
+  const [showFocusExplanation, setShowFocusExplanation] = useState(false);
 
   const handleModeChange = (mode: WorkoutMode) => {
     props.onWorkoutModeChange(mode);
@@ -35,21 +41,32 @@ const WorkoutSidebar = (props: WorkoutSidebarProps) => {
     setShowModeExplanation(true);
   };
 
+  const handleFocusModeChange = (enabled: boolean) => {
+    props.onFocusModeChange?.(enabled);
+    // Show explanation when focus mode changes
+    setShowFocusExplanation(true);
+  };
+
+  // Expose method to trigger focus explanation from parent
+  useImperativeHandle(ref, () => ({
+    triggerFocusExplanation: () => {
+      setShowFocusExplanation(true);
+    }
+  }));
+
   return (
     <div className="flex flex-col gap-4 h-full">
       {/* Workout Setup - Moved to top so users configure before starting */}
-      <div className="bg-card p-4 rounded-lg border">
-        <h3 className="text-lg font-semibold mb-4">Workout Setup</h3>
-        <div className="space-y-4">
-          <CoreControls
-            workoutMode={props.workoutMode}
-            onWorkoutModeChange={handleModeChange}
-            selectedExercise={props.selectedExercise}
-            onExerciseChange={props.onExerciseChange}
-            coachPersonality={props.coachPersonality}
-            onCoachPersonalityChange={props.onCoachPersonalityChange}
-          />
-        </div>
+      <div className="bg-card p-3 rounded-lg border">
+        <h3 className="text-base font-semibold mb-3">Workout Setup</h3>
+        <CoreControls
+          workoutMode={props.workoutMode}
+          onWorkoutModeChange={handleModeChange}
+          selectedExercise={props.selectedExercise}
+          onExerciseChange={props.onExerciseChange}
+          coachPersonality={props.coachPersonality}
+          onCoachPersonalityChange={props.onCoachPersonalityChange}
+        />
       </div>
 
       {/* Live Feedback - Below setup so users see feedback during workout */}
@@ -62,6 +79,9 @@ const WorkoutSidebar = (props: WorkoutSidebarProps) => {
           workoutMode={props.workoutMode}
           showModeExplanation={showModeExplanation}
           onModeExplanationShown={() => setShowModeExplanation(false)}
+          showFocusExplanation={showFocusExplanation}
+          onFocusExplanationShown={() => setShowFocusExplanation(false)}
+          isFocusMode={props.isFocusMode}
         />
       </div>
 
@@ -69,6 +89,6 @@ const WorkoutSidebar = (props: WorkoutSidebarProps) => {
       <MyPassport />
     </div>
   );
-};
+});
 
 export default WorkoutSidebar;

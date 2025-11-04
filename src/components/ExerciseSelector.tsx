@@ -14,15 +14,16 @@ interface ExerciseSelectorProps {
 
 const ExerciseSelector = ({ selectedExercise, onExerciseChange }: ExerciseSelectorProps) => {
   return (
-    <div className="bg-card p-4 rounded-lg border border-border/40">
-      <h3 className="text-lg font-semibold mb-3 text-center">Select Your Exercise</h3>
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-2">
+      <h4 className="text-sm font-medium text-muted-foreground">Exercise</h4>
+      <div className="grid grid-cols-2 gap-2">
         {exercises.map((exercise) => (
           <AnimatedButton
             key={exercise}
             variant={selectedExercise === exercise ? "default" : "secondary"}
             onClick={() => onExerciseChange(exercise)}
             className="capitalize"
+            size="sm"
             animationPreset="scale"
           >
             {exercise}
