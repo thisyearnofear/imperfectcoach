@@ -38,6 +38,9 @@ export const usePoseDetection = ({
 }: UsePoseDetectionProps) => {
   const animationFrameId = useRef<number | null>(null);
   const keypointHistoryRef = useRef<posedetection.Keypoint[][]>([]);
+  // Performance optimization: frame skip counter to reduce processing frequency
+  const frameSkipCounter = useRef(0);
+  const FRAME_SKIP = 2; // Process every 3rd frame (0, 1, 2 -> process on 2)
 
   const { detector, modelStatus } = useModelLoader(cameraStatus === 'granted');
 
@@ -70,23 +73,32 @@ export const usePoseDetection = ({
       const canvas = canvasRef.current;
 
       if (detector && video && video.readyState === 4 && canvas) {
+        // Performance optimization: skip frames to reduce CPU usage
+        frameSkipCounter.current = (frameSkipCounter.current + 1) % (FRAME_SKIP + 1);
+        if (frameSkipCounter.current !== FRAME_SKIP) {
+          // Skip this frame, just request the next animation frame
+          animationFrameId.current = requestAnimationFrame(detect);
+          return;
+        }
+
         const videoDimensions = { width: video.videoWidth, height: video.videoHeight };
         const poses = await detector.estimatePoses(video);
         const pose = poses && poses.length > 0 ? poses[0] : null;
 
-        processPose(pose, videoDimensions);
+        if (pose) {
+          processPose(pose, videoDimensions);
 
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-          if (pose) {
             if (isDebugMode) {
               keypointHistoryRef.current.push(pose.keypoints);
+              // Limit keypoint history to prevent memory bloat
               if (keypointHistoryRef.current.length > 20) {
-                keypointHistoryRef.current.shift();
+                keypointHistoryRef.current = keypointHistoryRef.current.slice(-20);
               }
             }
             
@@ -103,8 +115,14 @@ export const usePoseDetection = ({
               undefined, // renderParticleEffects
               jumpCalibrationData
             );
-          } else {
-            keypointHistoryRef.current = [];
+          }
+        } else {
+          // Clear keypoint history when no pose is detected
+          keypointHistoryRef.current = [];
+          
+          // Provide feedback when no pose is detected but workout is active
+          if (isWorkoutActive) {
+            onFormFeedback("I can't see you. Please step back into view!");
           }
         }
       }
@@ -120,7 +138,7 @@ export const usePoseDetection = ({
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose, jumpGroundLevel, currentJumpHeight, jumpCalibrationData]);
+  }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose, jumpGroundLevel, currentJumpHeight, jumpCalibrationData, isWorkoutActive, onFormFeedback]);
 
   useEffect(() => {
     keypointHistoryRef.current = [];

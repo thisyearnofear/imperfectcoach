@@ -47,12 +47,15 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     { text: "Track Progress", icon: TrendingUp }
   ];
 
+  // Performance optimization: Use useCallback to prevent unnecessary re-renders
+  const nextValueProp = useCallback(() => {
+    setValuePropIndex((prev) => (prev + 1) % valueProps.length);
+  }, [valueProps.length]);
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setValuePropIndex((prev) => (prev + 1) % valueProps.length);
-    }, 3000);
+    const interval = setInterval(nextValueProp, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [nextValueProp]);
 
   const onCameraStatusChange = useCallback((status: CameraStatus) => {
     if (status === 'idle' || status === 'denied') {
@@ -117,11 +120,11 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     isWorkoutActive,
   });
 
-  const formatTime = (seconds: number) => {
+  const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
     const secs = (seconds % 60).toString().padStart(2, '0');
     return `${mins}:${secs}`;
-  };
+  }, []);
 
   return (
     <div className="bg-card p-4 rounded-lg border border-border/40 flex flex-col items-center justify-center aspect-[4/3] lg:aspect-video w-full">

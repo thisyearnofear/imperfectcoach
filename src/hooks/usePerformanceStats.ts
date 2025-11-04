@@ -26,14 +26,20 @@ export const usePerformanceStats = (
       };
     }
 
-    const timings = repHistory
-      .slice(1)
-      .map((rep, i) => (rep.timestamp - repHistory[i].timestamp) / 1000);
+    // Performance optimization: calculate rep timings efficiently
+    const timings = [];
+    for (let i = 1; i < repHistory.length; i++) {
+      timings.push((repHistory[i].timestamp - repHistory[i - 1].timestamp) / 1000);
+    }
+    
     const avg = timings.reduce((a, b) => a + b, 0) / timings.length;
-    const stdDev = Math.sqrt(
-      timings.map((t) => Math.pow(t - avg, 2)).reduce((a, b) => a + b, 0) /
-        timings.length
-    );
+    
+    // Performance optimization: calculate std dev with single pass
+    let sumOfSquares = 0;
+    for (const t of timings) {
+      sumOfSquares += Math.pow(t - avg, 2);
+    }
+    const stdDev = Math.sqrt(sumOfSquares / timings.length);
 
     return {
       repTimings: { avg, stdDev },

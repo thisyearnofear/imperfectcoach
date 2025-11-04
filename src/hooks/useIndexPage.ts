@@ -65,6 +65,12 @@ export const useIndexPage = () => {
   const { speak } = useAudioFeedback();
   const wasWorkoutActive = useRef(isWorkoutActive);
 
+  // Missing state variables that were referenced but not defined
+  const [sessionSummaries, setSessionSummaries] = useState<any>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [selectedCoaches, setSelectedCoaches] = useState<any[]>([]);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+
   const handleTryAgain = () => {
     resetSession();
     setIsAnalyticsOpen(false);
@@ -118,8 +124,6 @@ export const useIndexPage = () => {
       root.classList.remove("high-contrast");
     }
   }, [isHighContrast]);
-
-
 
   return {
     // State
