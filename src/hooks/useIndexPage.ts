@@ -47,6 +47,12 @@ export const useIndexPage = () => {
     handleNewRepData,
     resetSession,
     endSession,
+    hasNewRepRecord,
+    hasNewFormRecord,
+    hasNewJumpRecord,
+    personalBestReps,
+    personalBestFormScore,
+    personalBestJumpHeight,
   } = useWorkout(coachPersonality);
 
   const analyticsRef = useRef<HTMLDivElement>(null);
@@ -155,13 +161,6 @@ export const useIndexPage = () => {
     topRef,
     heightUnit,
     sessionHasConcluded,
-    // Personal records from workout hook
-    hasNewRepRecord,
-    hasNewFormRecord,
-    hasNewJumpRecord,
-    personalBestReps,
-    personalBestFormScore,
-    personalBestJumpHeight,
     // Setters
     setIsDebugMode,
     setIsRecordingEnabled,
