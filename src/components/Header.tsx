@@ -11,7 +11,8 @@ import SettingsModal from "@/components/SettingsModal";
 import { HeaderWallet } from "@/components/UnifiedWallet";
 import { NetworkStatus } from "@/components/NetworkStatus";
 import { FeatureSpotlight } from "@/components/FeatureSpotlight";
-import { Dumbbell, Activity, Target } from "lucide-react";
+import { Dumbbell, Activity, Target, Focus, FocusOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   exercise: Exercise;
@@ -27,6 +28,8 @@ interface HeaderProps {
   onRecordingChange?: (enabled: boolean) => void;
   isDebugMode?: boolean;
   onDebugChange?: (enabled: boolean) => void;
+  isFocusMode?: boolean;
+  onFocusModeChange?: (enabled: boolean) => void;
 }
 
 const Header = ({
@@ -42,6 +45,8 @@ const Header = ({
   onRecordingChange = () => {},
   isDebugMode = false,
   onDebugChange = () => {},
+  isFocusMode = false,
+  onFocusModeChange = () => {},
 }: HeaderProps) => {
   const [titleIndex, setTitleIndex] = useState(0);
   const [displayedTitle, setDisplayedTitle] = useState("");
@@ -180,6 +185,26 @@ const Header = ({
 
             {/* Wallet Connection */}
             <HeaderWallet size="sm" />
+
+            {/* Focus Mode Toggle */}
+            <Button
+              variant={isFocusMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => onFocusModeChange(!isFocusMode)}
+              className="hidden md:flex"
+            >
+              {isFocusMode ? (
+                <>
+                  <Focus className="h-4 w-4 mr-1" />
+                  Exit Focus
+                </>
+              ) : (
+                <>
+                  <Focus className="h-4 w-4 mr-1" />
+                  Focus
+                </>
+              )}
+            </Button>
 
             {/* Desktop Settings Modal */}
             <div className="hidden lg:block">

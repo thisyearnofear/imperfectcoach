@@ -34,9 +34,10 @@ interface VideoFeedProps {
   heightUnit: HeightUnit;
   reps?: number;
   formScore: number; // Added formScore prop
+  isFocusMode?: boolean; // Added focus mode prop
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset, heightUnit, reps, formScore }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset, heightUnit, reps, formScore, isFocusMode = false }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [valuePropIndex, setValuePropIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -141,27 +142,59 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full rounded-md object-cover" />
           <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full rounded-md" />
           
-          {/* Timer */}
-          {isWorkoutActive && timeLeft >= 0 && (
-             <div className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-lg flex items-center gap-2 animate-fade-in">
-                <Timer className="h-5 w-5" />
-                <span className="font-mono text-lg font-semibold">{formatTime(timeLeft)}</span>
-            </div>
-          )}
-
-          {/* Jump Height Display for Jumps Exercise - Increased size for better visibility */}
-          {exercise === 'jumps' && jumpGroundLevel && isWorkoutActive && (
-            <div className="absolute top-2 left-2 bg-black/70 text-white p-3 rounded-lg animate-fade-in">
-              <div className="text-xs text-gray-300">Jump Height</div>
-              <div className={`text-2xl font-bold ${currentJumpHeight > 0 ? 'text-green-400 animate-pulse' : 'text-white'}`}>
-                {formatHeight(currentJumpHeight, heightUnit)}
+          {/* Focus Mode: Top Information Overlay */}
+          {isWorkoutActive && isFocusMode && (
+            <div className="absolute top-0 left-0 right-0 flex justify-between items-center p-4 pointer-events-none z-20">
+              {/* Timer - Top Left */}
+              <div className="bg-black/50 text-white p-2 rounded-lg flex items-center gap-2">
+                <Timer className="h-4 w-4" />
+                <span className="font-mono text-base font-semibold">{formatTime(timeLeft)}</span>
               </div>
+              
+              {/* Jump Height - Top Center (only for jumps) */}
+              {exercise === 'jumps' && jumpGroundLevel && (
+                <div className="bg-black/50 text-white p-2 rounded-lg">
+                  <div className="text-xs text-gray-300">Height</div>
+                  <div className={`text-lg font-bold ${currentJumpHeight > 0 ? 'text-green-400' : 'text-white'}`}>
+                    {formatHeight(currentJumpHeight, heightUnit)}
+                  </div>
+                </div>
+              )}
             </div>
           )}
+          
+          {/* Non-focus mode: Original positioning */}
+          {!isFocusMode && (
+            <>
+              {/* Timer */}
+              {isWorkoutActive && timeLeft >= 0 && (
+                 <div className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-lg flex items-center gap-2 animate-fade-in">
+                    <Timer className="h-5 w-5" />
+                    <span className="font-mono text-lg font-semibold">{formatTime(timeLeft)}</span>
+                </div>
+              )}
 
-          {/* Form Score Display - Prominent during workouts */}
+              {/* Jump Height Display for Jumps Exercise - Increased size for better visibility */}
+              {exercise === 'jumps' && jumpGroundLevel && isWorkoutActive && (
+                <div className="absolute top-2 left-2 bg-black/70 text-white p-3 rounded-lg animate-fade-in">
+                  <div className="text-xs text-gray-300">Jump Height</div>
+                  <div className={`text-2xl font-bold ${currentJumpHeight > 0 ? 'text-green-400 animate-pulse' : 'text-white'}`}>
+                    {formatHeight(currentJumpHeight, heightUnit)}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Form Score Display - Different positioning in focus mode */}
           {isWorkoutActive && (
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
+            <div 
+              className={`absolute ${
+                isFocusMode 
+                  ? "top-1/2 right-4 transform -translate-y-1/2" 
+                  : "top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10"
+              }`}
+            >
               <div className="bg-black/70 text-white p-4 rounded-full backdrop-blur-sm">
                 <div className="text-xs text-gray-300 text-center">Form Score</div>
                 <div className={`text-4xl font-bold ${getFormScoreColor()} text-center`}>
@@ -171,13 +204,21 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
             </div>
           )}
 
-          {/* Mobile Rep Count Display - Prominent on mobile */}
-          <div className="lg:hidden absolute bottom-16 left-2 bg-black/70 text-white p-3 rounded-lg animate-fade-in">
-            <div className="text-xs text-gray-300 uppercase tracking-wide">Reps</div>
-            <div className="text-3xl font-bold text-white">
-              {reps || 0}
+          {/* Rep Count - Positioned differently in focus mode */}
+          {isWorkoutActive && (
+            <div 
+              className={`absolute ${
+                isFocusMode 
+                  ? "bottom-4 left-4" 
+                  : "lg:hidden absolute bottom-16 left-2"
+              } bg-black/70 text-white p-3 rounded-lg animate-fade-in`}
+            >
+              <div className="text-xs text-gray-300 uppercase tracking-wide">Reps</div>
+              <div className="text-3xl font-bold text-white">
+                {reps || 0}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Enhanced Loading overlay */}
           {modelStatus === 'loading' && (
@@ -187,59 +228,68 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
             />
           )}
 
-          {/* Controls */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
-          <TooltipProvider>
-          <Tooltip>
-          <TooltipTrigger asChild>
-          <Button onClick={handleFullscreen} variant="secondary" size="icon" className="lg:hidden">
-          <Maximize className="h-4 w-4" />
-          <span className="sr-only">Toggle Fullscreen</span>
-          </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-          <p>Toggle Fullscreen</p>
-          </TooltipContent>
-          </Tooltip>
-          {isRecordingEnabled && (
+          {/* Controls - Only show in non-focus mode */}
+          {!isFocusMode && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
+            <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
-              <Button onClick={toggleRecording} variant={isRecording ? "destructive" : "secondary"} size="icon">
-              {isRecording ? <div className="h-3 w-3 rounded-sm bg-white animate-pulse" /> : <Video className="h-4 w-4" />}
-            <span className="sr-only">{isRecording ? "Stop Recording" : "Start Recording"}</span>
-          </Button>
-          </TooltipTrigger>
+            <TooltipTrigger asChild>
+            <Button onClick={handleFullscreen} variant="secondary" size="icon" className="lg:hidden">
+            <Maximize className="h-4 w-4" />
+            <span className="sr-only">Toggle Fullscreen</span>
+            </Button>
+            </TooltipTrigger>
             <TooltipContent>
-              <p>{isRecording ? "Stop Recording" : "Start Recording"}</p>
-          </TooltipContent>
-          </Tooltip>
-          )}
-          <Tooltip>
-          <TooltipTrigger asChild>
-          <Button onClick={handleStopCamera} variant="destructive" size="icon">
-          <VideoOff />
-          <span className="sr-only">Finish Workout</span>
-          </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-          <p>Finish Workout (preserves progress)</p>
-          </TooltipContent>
-          </Tooltip>
-          {devices.length > 1 && (
-            <Tooltip>
+            <p>Toggle Fullscreen</p>
+            </TooltipContent>
+            </Tooltip>
+            {isRecordingEnabled && (
+              <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button onClick={flipCamera} variant="secondary" size="icon">
-                      <SwitchCamera />
-                      <span className="sr-only">Flip Camera</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Flip Camera</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </TooltipProvider>
-          </div>
+                <Button onClick={toggleRecording} variant={isRecording ? "destructive" : "secondary"} size="icon">
+                {isRecording ? <div className="h-3 w-3 rounded-sm bg-white animate-pulse" /> : <Video className="h-4 w-4" />}
+              <span className="sr-only">{isRecording ? "Stop Recording" : "Start Recording"}</span>
+            </Button>
+            </TooltipTrigger>
+              <TooltipContent>
+                <p>{isRecording ? "Stop Recording" : "Start Recording"}</p>
+              </TooltipContent>
+            </Tooltip>
+            )}
+            <Tooltip>
+            <TooltipTrigger asChild>
+            <Button onClick={handleStopCamera} variant="destructive" size="icon">
+            <VideoOff />
+            <span className="sr-only">Finish Workout</span>
+            </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+            <p>Finish Workout (preserves progress)</p>
+            </TooltipContent>
+            </Tooltip>
+            {devices.length > 1 && (
+              <Tooltip>
+                  <TooltipTrigger asChild>
+                      <Button onClick={flipCamera} variant="secondary" size="icon">
+                        <SwitchCamera />
+                        <span className="sr-only">Flip Camera</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Flip Camera</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </TooltipProvider>
+            </div>
+          )}
+          
+          {/* Focus Mode Indicator */}
+          {isFocusMode && (
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0 opacity-10">
+              <Dumbbell className="h-32 w-32 text-white" />
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center relative">

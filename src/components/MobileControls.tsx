@@ -37,6 +37,8 @@ interface MobileControlsProps {
   onAudioFeedbackChange: (enabled: boolean) => void;
   isHighContrast: boolean;
   onHighContrastChange: (enabled: boolean) => void;
+  isFocusMode: boolean;
+  onFocusModeChange: (enabled: boolean) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -154,6 +156,21 @@ const MobileControls = ({
                 id="show-debug-mobile"
                 checked={isDebugMode}
                 onCheckedChange={onDebugChange}
+              />
+            </div>
+            
+            {/* Focus Mode Toggle */}
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor="focus-mode-mobile" className="text-base">
+                  Focus Mode
+                </Label>
+                <p className="text-xs text-muted-foreground">Minimize distractions during workout</p>
+              </div>
+              <Switch
+                id="focus-mode-mobile"
+                checked={isFocusMode}
+                onCheckedChange={onFocusModeChange}
               />
             </div>
           </div>

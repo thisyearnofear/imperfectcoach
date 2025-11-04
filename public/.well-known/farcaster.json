@@ -1,0 +1,29 @@
+{
+  "miniapp": {
+    "version": "1",
+    "name": "Imperfect Coach Workout Share",
+    "iconUrl": "https://imperfectcoach.xyz/icon.png",
+    "homeUrl": "https://imperfectcoach.xyz/miniapp/workout-share",
+    "imageUrl": "https://imperfectcoach.xyz/og-image.png",
+    "buttonTitle": "View Workout",
+    "splashImageUrl": "https://imperfectcoach.xyz/icon.png",
+    "splashBackgroundColor": "#000000",
+    "requiredChains": [
+      "eip155:8453"
+    ],
+    "requiredCapabilities": [
+      "actions.composeCast",
+      "actions.openUrl",
+      "wallet.getEthereumProvider"
+    ],
+    "description": "Share your workout achievements directly from Imperfect Coach",
+    "primaryCategory": "fitness",
+    "tags": [
+      "fitness",
+      "workout",
+      "ai",
+      "form analysis",
+      "health"
+    ]
+  }
+}

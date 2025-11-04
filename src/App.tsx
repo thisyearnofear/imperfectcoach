@@ -9,6 +9,8 @@ import { Web3Providers } from "@/providers";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { ProgressiveOnboarding } from "@/components/ProgressiveOnboarding";
+import WorkoutShareApp from "./miniapps/workout-share/WorkoutShareApp";
+import { SocialProvider } from "./contexts/SocialContext";
 
 const App = () => (
   <ErrorBoundary
@@ -37,18 +39,21 @@ const App = () => (
               }
             }}
           />
-          <ErrorBoundary
-            maxRetries={2}
-            onError={(error) => console.error("Router Error:", error)}
-          >
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </ErrorBoundary>
+          <SocialProvider>
+            <ErrorBoundary
+              maxRetries={2}
+              onError={(error) => console.error("Router Error:", error)}
+            >
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/miniapp/workout-share" element={<WorkoutShareApp />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </ErrorBoundary>
+          </SocialProvider>
         </TooltipProvider>
       </ThemeProvider>
     </Web3Providers>

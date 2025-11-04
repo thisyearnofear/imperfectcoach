@@ -20,6 +20,7 @@ export const useIndexPage = () => {
   const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState(false);
   const [isHighContrast, setIsHighContrast] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
 
   const [sessionHasConcluded, setSessionHasConcluded] = useState(false);
   const [heightUnit, setHeightUnit] = useState<HeightUnit>(() => {
@@ -135,6 +136,7 @@ export const useIndexPage = () => {
     isAudioFeedbackEnabled,
     isHighContrast,
     isAnalyticsOpen,
+    isFocusMode,
     sessionSummaries,
     isSummaryLoading,
     selectedCoaches,
@@ -169,6 +171,7 @@ export const useIndexPage = () => {
     setIsAudioFeedbackEnabled,
     setIsHighContrast,
     setIsAnalyticsOpen,
+    setIsFocusMode,
     setReps,
     setFormFeedback,
     setFormScore,

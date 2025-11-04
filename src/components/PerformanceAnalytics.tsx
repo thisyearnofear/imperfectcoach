@@ -42,6 +42,9 @@ import {
   Crown,
   ChevronDown,
   Info,
+  Users,
+  Target,
+  TrendingUp,
 } from "lucide-react";
 import { BlockchainScoreSubmission } from "./BlockchainScoreSubmission";
 import {
@@ -71,11 +74,22 @@ import {
   exportToCSV,
   shareCardImage,
   exportChartImage,
+  shareToMiniApp,
+  shareToTwitter,
+  shareToFarcaster,
 } from "@/lib/exportUtils";
+import { toast } from "sonner";
 import { AIChat } from "@/components/AIChat";
 import { useFeatureAvailability } from "@/hooks/useFeatureGate";
 import { cn } from "@/lib/utils";
 import { PADDING } from "@/lib/constants/design-system";
+import { useSocialContext } from "@/contexts/SocialContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PerformanceAnalyticsProps {
   repHistory: RepData[];
@@ -117,6 +131,9 @@ const PerformanceAnalytics = ({
   const [showRepDetails, setShowRepDetails] = useState(false);
   const [selectedRepIndex, setSelectedRepIndex] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+
+  const { addSocialActivity, friendAddresses } = useSocialContext();
 
   // Detect mobile on mount
   React.useEffect(() => {
@@ -771,25 +788,125 @@ const PerformanceAnalytics = ({
           <RotateCw />
           Try Again
         </AnimatedButton>
-        <AnimatedButton
-          onClick={
-            canUseAdvancedExports
-              ? () =>
-                  shareCardImage(cardRef, exercise, totalReps, averageFormScore)
-              : onUpgrade
-          }
-          variant="outline"
-          size="sm"
-          className={cn(
-            "flex-grow min-w-[calc(50%-0.25rem)] relative",
-            !canUseAdvancedExports && "opacity-60"
-          )}
-          disabled={repHistory.length === 0}
-        >
-          {!canUseAdvancedExports && <Lock className="h-3 w-3 mr-1" />}
-          <Share2 className={cn(!canUseAdvancedExports && "ml-1")} />
-          Share Summary
-        </AnimatedButton>
+        <div className="flex flex-col min-w-[calc(50%-0.25rem)]">
+          <DropdownMenu open={isShareMenuOpen} onOpenChange={setIsShareMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <AnimatedButton
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "flex-grow relative",
+                  !canUseAdvancedExports && "opacity-60"
+                )}
+                disabled={repHistory.length === 0}
+              >
+                {!canUseAdvancedExports && <Lock className="h-3 w-3 mr-1" />}
+                <Share2 className={cn(!canUseAdvancedExports && "ml-1")} />
+                Share Summary
+              </AnimatedButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem 
+                onClick={() => {
+                  if (canUseAdvancedExports) {
+                    shareCardImage(cardRef, exercise, totalReps, averageFormScore, 'general');
+                    // Add to social activity
+                    addSocialActivity({
+                      type: 'workout',
+                      userId: 'current_user', // This would be the actual user ID
+                      timestamp: Date.now(),
+                      exercise: exercise,
+                      reps: totalReps,
+                      score: averageFormScore,
+                      message: `Just completed ${totalReps} ${exercise} with ${averageFormScore}% form accuracy!`,
+                    });
+                  } else {
+                    onUpgrade?.();
+                  }
+                }}
+              >
+                <ImageIcon className="mr-2 h-4 w-4" />
+                <span>Share Card</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  shareToTwitter(exercise, totalReps, averageFormScore);
+                  // Add to social activity
+                  addSocialActivity({
+                    type: 'workout',
+                    userId: 'current_user', // This would be the actual user ID
+                    timestamp: Date.now(),
+                    exercise: exercise,
+                    reps: totalReps,
+                    score: averageFormScore,
+                    message: `Shared workout to Twitter`,
+                  });
+                }}
+              >
+                <span className="mr-2">🐦</span>
+                <span>Share to Twitter</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  shareToFarcaster(exercise, totalReps, averageFormScore);
+                  // Add to social activity
+                  addSocialActivity({
+                    type: 'workout',
+                    userId: 'current_user', // This would be the actual user ID
+                    timestamp: Date.now(),
+                    exercise: exercise,
+                    reps: totalReps,
+                    score: averageFormScore,
+                    message: `Shared workout to Farcaster`,
+                  });
+                }}
+              >
+                <span className="mr-2">🟣</span>
+                <span>Share to Farcaster</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  const miniAppUrl = shareToMiniApp(exercise, totalReps, averageFormScore);
+                  navigator.clipboard.writeText(miniAppUrl);
+                  toast.success("Mini App URL copied to clipboard!");
+                  // Add to social activity
+                  addSocialActivity({
+                    type: 'workout',
+                    userId: 'current_user', // This would be the actual user ID
+                    timestamp: Date.now(),
+                    exercise: exercise,
+                    reps: totalReps,
+                    score: averageFormScore,
+                    message: `Copied Mini App link to share`,
+                  });
+                }}
+              >
+                <span className="mr-2">📱</span>
+                <span>Copy Mini App Link</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  // Challenge friends
+                  toast.info(`Challenge ${friendAddresses.length} friends!`);
+                  // Add to social activity
+                  addSocialActivity({
+                    type: 'challenge',
+                    userId: 'current_user', // This would be the actual user ID
+                    timestamp: Date.now(),
+                    exercise: exercise,
+                    reps: totalReps,
+                    score: averageFormScore,
+                    message: `Started a challenge with ${exercise}`,
+                  });
+                }}
+                disabled={friendAddresses.length === 0}
+              >
+                <Users className="mr-2 h-4 w-4" />
+                <span>Challenge Friends ({friendAddresses.length})</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         <AnimatedButton
           onClick={
             canUseAdvancedExports ? () => exportChartImage(chartRef) : onUpgrade

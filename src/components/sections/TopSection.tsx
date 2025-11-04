@@ -31,6 +31,7 @@ interface TopSectionProps {
   onSessionEnd: () => void;
   onSessionReset: () => void;
   heightUnit: HeightUnit;
+  isFocusMode?: boolean;
 
   // WorkoutSidebar props
   onWorkoutModeChange: (mode: WorkoutMode) => void;
@@ -66,6 +67,7 @@ export const TopSection = (props: TopSectionProps) => {
             heightUnit={props.heightUnit}
             reps={props.reps}
             formScore={props.formScore}
+            isFocusMode={props.isFocusMode}
           />
           
           {/* Contextual Suggestions - Appear during workout based on performance */}

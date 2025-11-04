@@ -4,6 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useMemoryIdentity } from "@/hooks/useMemoryIdentity";
+import { useSocialContext } from "@/contexts/SocialContext";
+import { Activity, TrendingUp, Users, Target } from "lucide-react";
+import { format } from "date-fns";
 
 // Define a type for the passport data structure to ensure type safety
 type PassportData = {
@@ -20,6 +23,10 @@ type PassportData = {
 const MyPassport = () => {
 const { address, isConnected } = useAccount();
   const { getSocialIdentities, isLoading: identityLoading } = useMemoryIdentity(address);
+  const { getFriendActivity, socialActivities, friendAddresses } = useSocialContext();
+  
+  // Get recent friend activities
+  const recentFriendActivities = getFriendActivity(5);
 
   // 1. Fetch the user's tokenId first
   const { data: tokenId, isLoading: isLoadingTokenId } = useReadContract({
@@ -302,6 +309,57 @@ const { address, isConnected } = useAccount();
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Social Activity Feed */}
+        {isConnected && friendAddresses.length > 0 && (
+          <div className="border-t pt-3 mt-3">
+            <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Friend Activity
+            </h4>
+            {recentFriendActivities.length > 0 ? (
+              <div className="space-y-2">
+                {recentFriendActivities.map((activity) => (
+                  <div 
+                    key={activity.id} 
+                    className="flex items-center justify-between p-2 bg-muted/30 rounded text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span className="truncate max-w-[120px]">
+                        {activity.username || activity.userId.substring(0, 6)}...
+                      </span>
+                    </div>
+                    <div className="text-muted-foreground truncate text-right max-w-[100px]">
+                      {activity.exercise && activity.reps ? (
+                        <span>{activity.reps} {activity.exercise}</span>
+                      ) : (
+                        <span className="capitalize">{activity.type}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                No recent activity from friends
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Friend Challenges Section */}
+        {isConnected && friendAddresses.length > 0 && (
+          <div className="border-t pt-3 mt-3">
+            <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Friend Challenges
+            </h4>
+            <div className="text-xs text-muted-foreground text-center py-2">
+              {friendAddresses.length} connected friends
+            </div>
           </div>
         )}
       </CardContent>

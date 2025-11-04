@@ -76,6 +76,8 @@ const Index = () => {
           onRecordingChange={page.setIsRecordingEnabled}
           isDebugMode={page.isDebugMode}
           onDebugChange={page.setIsDebugMode}
+          isFocusMode={page.isFocusMode}
+          onFocusModeChange={page.setIsFocusMode}
         />
       </FadeIn>
       <main className="flex-grow container mx-auto p-4">
@@ -98,6 +100,7 @@ const Index = () => {
               onSessionEnd={page.endSession}
               onSessionReset={page.resetSession}
               heightUnit={page.heightUnit}
+              isFocusMode={page.isFocusMode}
               reps={page.reps}
               formScore={page.formScore}
               formFeedback={page.formFeedback}
@@ -149,6 +152,8 @@ const Index = () => {
           onAudioFeedbackChange={page.setIsAudioFeedbackEnabled}
           isHighContrast={page.isHighContrast}
           onHighContrastChange={page.setIsHighContrast}
+          isFocusMode={page.isFocusMode}
+          onFocusModeChange={page.setIsFocusMode}
         />
       </div>
 
