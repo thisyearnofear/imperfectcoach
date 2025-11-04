@@ -161,6 +161,12 @@ export const useIndexPage = () => {
     topRef,
     heightUnit,
     sessionHasConcluded,
+    hasNewRepRecord,
+    hasNewFormRecord,
+    hasNewJumpRecord,
+    personalBestReps,
+    personalBestFormScore,
+    personalBestJumpHeight,
     // Setters
     setIsDebugMode,
     setIsRecordingEnabled,
