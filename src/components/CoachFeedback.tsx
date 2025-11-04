@@ -13,6 +13,8 @@ interface CoachFeedbackProps {
   workoutMode: WorkoutMode;
   onPremiumUpgrade?: () => void;
   variant?: "full" | "compact";
+  showModeExplanation?: boolean;
+  onModeExplanationShown?: () => void;
 }
 
 const CoachFeedback = ({
@@ -23,6 +25,8 @@ const CoachFeedback = ({
   workoutMode,
   onPremiumUpgrade,
   variant = "full",
+  showModeExplanation = false,
+  onModeExplanationShown,
 }: CoachFeedbackProps) => {
   const [currentCoachIndex, setCurrentCoachIndex] = useState(0);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -39,7 +43,7 @@ const CoachFeedback = ({
         "Improve posture for better spinal health"
       ],
       shortBenefit: "Build upper body strength",
-    description: "Master the king of bodyweight exercises"
+      description: "Master the king of bodyweight exercises"
     },
     {
       name: "Jumps",
@@ -90,9 +94,25 @@ const CoachFeedback = ({
   const currentCoach = coaches[currentCoachIndex];
   const currentExercise = exercises[currentExerciseIndex];
 
+  const getModeExplanation = () => {
+    if (workoutMode === "training") {
+      return {
+        title: "🏋️ Training Mode",
+        description: "Focus on building strength and improving form. Get real-time coaching to perfect your technique.",
+        benefits: ["Form corrections", "Progressive overload", "Technique tips", "Motivation"]
+      };
+    } else {
+      return {
+        title: "📊 Assessment Mode",
+        description: "Measure your current fitness level. Get scored on form quality and rep count for benchmarking.",
+        benefits: ["Performance scoring", "Baseline measurement", "Progress tracking", "Objective feedback"]
+      };
+    }
+  };
+
   const getTitle = () => {
-    if (workoutMode === "assessment") {
-      return "Assessment Mode";
+    if (showModeExplanation) {
+      return getModeExplanation().title;
     }
     // Show current cycling coach when not actively working out (reps === 0)
     if (reps === 0) {
@@ -152,8 +172,8 @@ const CoachFeedback = ({
     }
 
     // Default/neutral - still use larger text during workout
-    return reps > 0 
-      ? `text-primary ${textSize} font-medium` 
+    return reps > 0
+      ? `text-primary ${textSize} font-medium`
       : "text-muted-foreground text-lg";
   };
 
@@ -170,8 +190,45 @@ const CoachFeedback = ({
       </motion.h3>
 
       <div className="flex-grow flex items-center justify-center p-2 min-h-[60px]">
-        {reps === 0 ? (
-          // Show cycling content when not actively working out
+        {showModeExplanation ? (
+          // Show mode explanation when toggled
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={workoutMode}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.4 }}
+              className="text-center space-y-3 w-full"
+              onAnimationComplete={() => {
+                // Auto-hide explanation after 4 seconds
+                setTimeout(() => {
+                  onModeExplanationShown?.();
+                }, 4000);
+              }}
+            >
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {getModeExplanation().description}
+                </p>
+                <div className="flex flex-wrap justify-center gap-1">
+                  {getModeExplanation().benefits.map((benefit, idx) => (
+                    <motion.span
+                      key={benefit}
+                      className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 + idx * 0.1 }}
+                    >
+                      {benefit}
+                    </motion.span>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        ) : reps === 0 ? (
+          // Show cycling content when not actively working out (more compact)
           <AnimatePresence mode="wait">
             <motion.div
               key={`${currentCoachIndex}-${currentExerciseIndex}`}
@@ -179,76 +236,39 @@ const CoachFeedback = ({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.5 }}
-              className="text-center space-y-3"
+              className="text-center space-y-2"
             >
-              {/* Coach personality teaser */}
-              <div className="space-y-2">
+              {/* More compact coach personality teaser */}
+              <div className="space-y-1">
                 <motion.div
-                  className="text-2xl"
+                  className="text-xl"
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
                   {currentCoach.emoji}
                 </motion.div>
-                <p className="text-sm text-muted-foreground italic">
+                <p className="text-xs text-muted-foreground italic">
                   "{currentCoach.description}"
                 </p>
                 <p className="text-sm font-medium">
                   {currentCoach.motivationalPhrase}
                 </p>
-                {/* Personality-specific teaser content */}
-                <div className="mt-2 p-2 bg-primary/5 rounded-lg">
-                  {currentCoach.personality === "SNEL" && (
-                    <p className="text-xs text-muted-foreground">
-                      "Remember, every rep is a step toward the person you want to become. Quality over quantity, my friend."
-                    </p>
-                  )}
-                  {currentCoach.personality === "STEDDIE" && (
-                    <p className="text-xs text-muted-foreground">
-                      "In the philosophy of movement, each breath synchronizes with each rep. Find your inner balance."
-                    </p>
-                  )}
-                  {currentCoach.personality === "RASTA" && (
-                    <p className="text-xs text-muted-foreground">
-                      "Haha, look at you go! But seriously though, that last rep was pure fire 🔥 Keep that energy!"
-                    </p>
-                  )}
-                </div>
               </div>
 
-              {/* Exercise showcase */}
+              {/* More compact exercise showcase */}
               <motion.div
-                className="border-t border-border/40 pt-3 space-y-2"
+                className="border-t border-border/40 pt-2 space-y-1"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
                 <div className="flex items-center justify-center gap-2">
                   {currentExercise.icon}
-                  <span className="font-semibold">{currentExercise.name}</span>
+                  <span className="font-semibold text-sm">{currentExercise.name}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {currentExercise.description}
+                <p className="text-xs text-primary font-medium">
+                  {currentExercise.shortBenefit}
                 </p>
-                {variant === "compact" ? (
-                  <p className="text-xs text-primary font-medium">
-                    {currentExercise.shortBenefit}
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap justify-center gap-1">
-                    {currentExercise.benefits.map((benefit, idx) => (
-                      <motion.span
-                        key={benefit}
-                        className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.3 + idx * 0.1 }}
-                      >
-                        {benefit}
-                      </motion.span>
-                    ))}
-                  </div>
-                )}
               </motion.div>
             </motion.div>
           </AnimatePresence>
@@ -261,7 +281,7 @@ const CoachFeedback = ({
             transition={{ duration: 0.3 }}
             className="flex items-center justify-center w-full px-2"
           >
-            <p 
+            <p
               className={`text-center break-words transition-all duration-300 max-w-full ${getFeedbackStyle()}`}
             >
               {formFeedback}
@@ -285,26 +305,24 @@ const CoachFeedback = ({
         </div>
       )}
 
-      <div className="mt-4 space-y-3">
-        <div className="flex justify-between items-baseline">
-          <h4 className="font-semibold">
-            Reps:{" "}
-            <span className="text-primary font-bold text-2xl ml-2">{reps}</span>
-          </h4>
-        </div>
-        <div>
-          <div className="flex justify-between items-baseline mb-1">
-            <h4 className="font-semibold">Form Score:</h4>
-            <span className={`font-bold text-2xl ${getScoreColor()}`}>
+      <div className="mt-3 space-y-2">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center">
+            <h4 className="text-sm font-medium text-muted-foreground">Reps</h4>
+            <span className="text-primary font-bold text-xl">{reps}</span>
+          </div>
+          <div className="text-center">
+            <h4 className="text-sm font-medium text-muted-foreground">Form Score</h4>
+            <span className={`font-bold text-xl ${getScoreColor()}`}>
               {formScore.toFixed(0)}
             </span>
           </div>
-          <Progress
-            value={formScore}
-            className="h-3"
-            indicatorClassName={getProgressColor()}
-          />
         </div>
+        <Progress
+          value={formScore}
+          className="h-2"
+          indicatorClassName={getProgressColor()}
+        />
       </div>
     </div>
   );

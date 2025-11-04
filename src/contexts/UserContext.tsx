@@ -433,67 +433,59 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
 
   // Check authentication on mount and address change
   useEffect(() => {
-  const checkAuth = () => {
-  // Clean up legacy auth
-  if (localStorage.getItem("simple-auth")) {
-  localStorage.removeItem("simple-auth");
-  console.log("🧹 Cleaned up legacy simple-auth data");
-  }
+    const checkAuth = () => {
+      // Clean up legacy auth
+      if (localStorage.getItem("simple-auth")) {
+        localStorage.removeItem("simple-auth");
+        console.log("🧹 Cleaned up legacy simple-auth data");
+      }
 
-  // Connection-only mode
-  if (!requireSiwe && isConnected && address) {
-  setAuthState((prev) => ({
-  ...prev,
-  isAuthenticated: true,
-  isLoading: false,
-  }));
-  return;
-  }
+      // Connection-only mode
+      if (!requireSiwe && isConnected && address) {
+        setAuthState((prev) => ({
+          ...prev,
+          isAuthenticated: true,
+          isLoading: false,
+        }));
+        return;
+      }
 
-  // SIWE mode
-  if (requireSiwe) {
-  const siweAuth = localStorage.getItem("siwe-auth");
-  if (siweAuth && isConnected && address) {
-  try {
-  const authData = JSON.parse(siweAuth);
-  const isValid =
-  authData.address === address &&
-  authData.expiresAt > Date.now() &&
-  authData.domain === window.location.host;
+      // SIWE mode
+      if (requireSiwe) {
+        const siweAuth = localStorage.getItem("siwe-auth");
+        if (siweAuth && isConnected && address) {
+          try {
+            const authData = JSON.parse(siweAuth);
+            const isValid =
+              authData.address === address &&
+              authData.expiresAt > Date.now() &&
+              authData.domain === window.location.host;
 
-  if (isValid) {
-  setAuthState((prev) => ({
-  ...prev,
-  isAuthenticated: true,
-  isLoading: false,
-  }));
-  return;
-  }
-  } catch (error) {
-  console.error("Error parsing SIWE auth:", error);
-  localStorage.removeItem("siwe-auth");
-  }
-  }
-  }
+            if (isValid) {
+              setAuthState((prev) => ({
+                ...prev,
+                isAuthenticated: true,
+                isLoading: false,
+              }));
+              return;
+            }
+          } catch (error) {
+            console.error("Error parsing SIWE auth:", error);
+            localStorage.removeItem("siwe-auth");
+          }
+        }
+      }
 
-  // No valid auth
-  setAuthState((prev) => ({
-  ...prev,
-  isAuthenticated: requireSiwe ? false : isConnected,
-  isLoading: false,
-  }));
-  };
+      // No valid auth
+      setAuthState((prev) => ({
+        ...prev,
+        isAuthenticated: requireSiwe ? false : isConnected,
+        isLoading: false,
+      }));
+    };
 
-  checkAuth();
+    checkAuth();
   }, [isConnected, address, requireSiwe]);
-
-  // Auto-trigger SIWE after wallet connection (modern UX)
-  useEffect(() => {
-    if (requireSiwe && isConnected && address && !authState.isAuthenticated && !authState.isLoading) {
-      console.log("🔐 Auto-triggering SIWE after wallet connection");
-      signInWithEthereum();
-    }
-  }, [requireSiwe, isConnected, address, authState.isAuthenticated, authState.isLoading, signInWithEthereum]);
 
   // Auth actions
   const connectWallet = useCallback(async () => {
@@ -616,6 +608,14 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
     }));
   }, []);
 
+  // Auto-trigger SIWE after wallet connection (modern UX)
+  useEffect(() => {
+    if (requireSiwe && isConnected && address && !authState.isAuthenticated && !authState.isLoading) {
+      console.log("🔐 Auto-triggering SIWE after wallet connection");
+      signInWithEthereum();
+    }
+  }, [requireSiwe, isConnected, address, authState.isAuthenticated, authState.isLoading, signInWithEthereum]);
+
   // Handle transaction submission
   useEffect(() => {
     if (txHash) {
@@ -720,9 +720,9 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
             description: errorAnalysis.helpUrl ? "Click for help" : undefined,
             action: errorAnalysis.helpUrl
               ? {
-                  label: "Get Help",
-                  onClick: () => window.open(errorAnalysis.helpUrl, "_blank"),
-                }
+                label: "Get Help",
+                onClick: () => window.open(errorAnalysis.helpUrl, "_blank"),
+              }
               : undefined,
           });
         } else if (errorAnalysis.severity === "medium") {
@@ -896,9 +896,9 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
             description: errorAnalysis.helpUrl ? "Click for help" : undefined,
             action: errorAnalysis.helpUrl
               ? {
-                  label: "Get Help",
-                  onClick: () => window.open(errorAnalysis.helpUrl, "_blank"),
-                }
+                label: "Get Help",
+                onClick: () => window.open(errorAnalysis.helpUrl, "_blank"),
+              }
               : undefined,
           });
         } else if (errorAnalysis.severity === "medium") {

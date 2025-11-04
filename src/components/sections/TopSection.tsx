@@ -1,3 +1,4 @@
+import { useState } from "react";
 import VideoFeed from "@/components/VideoFeed";
 import WorkoutSidebar from "@/components/WorkoutSidebar";
 import CoachFeedback from "@/components/CoachFeedback";
@@ -43,6 +44,14 @@ interface TopSectionProps {
 }
 
 export const TopSection = (props: TopSectionProps) => {
+  const [showModeExplanation, setShowModeExplanation] = useState(false);
+
+  const handleModeChange = (mode: WorkoutMode) => {
+    props.onWorkoutModeChange(mode);
+    // Show explanation when mode changes
+    setShowModeExplanation(true);
+  };
+
   return (
     <div className="w-full">
       {/* Desktop: Side-by-side layout, Mobile: Stacked */}
@@ -69,10 +78,10 @@ export const TopSection = (props: TopSectionProps) => {
             formScore={props.formScore}
             isFocusMode={props.isFocusMode}
           />
-          
+
           {/* Contextual Suggestions - Appear during workout based on performance */}
           <div className="lg:hidden">
-            <ContextualSuggestion 
+            <ContextualSuggestion
               context={{
                 exercise: props.exercise,
                 formScore: props.formScore,
@@ -86,7 +95,7 @@ export const TopSection = (props: TopSectionProps) => {
           {/* Desktop Leaderboard - Below video, same width */}
           <div className="hidden lg:block">
             <div className="mb-4">
-              <ContextualSuggestion 
+              <ContextualSuggestion
                 context={{
                   exercise: props.exercise,
                   formScore: props.formScore,
@@ -121,20 +130,34 @@ export const TopSection = (props: TopSectionProps) => {
         </div>
       </div>
 
-      {/* Mobile: Stacked layout with live feedback immediately after video */}
+      {/* Mobile: Stacked layout with setup first, then feedback */}
       <div className="lg:hidden mt-6 space-y-4">
-        {/* Live Feedback - Immediately below video for exercise attempt feedback */}
+        {/* Workout Setup - First so users configure before starting */}
         <div className="bg-card p-4 rounded-lg border">
-        <h3 className="text-lg font-semibold mb-4">Live Feedback</h3>
-        <CoachFeedback
-        reps={props.reps}
-        formFeedback={props.formFeedback}
-        formScore={props.formScore}
-        coachPersonality={props.coachPersonality}
-        workoutMode={props.workoutMode}
-          variant="compact"
-          />
+          <h3 className="text-lg font-semibold mb-4">Workout Setup</h3>
+          <div className="space-y-4">
+            <CoreControls
+              workoutMode={props.workoutMode}
+              onWorkoutModeChange={handleModeChange}
+              selectedExercise={props.exercise}
+              onExerciseChange={props.onExerciseChange}
+              coachPersonality={props.coachPersonality}
+              onCoachPersonalityChange={props.onCoachPersonalityChange}
+            />
+          </div>
         </div>
+
+        {/* Live Feedback - Below setup for workout feedback */}
+        <CoachFeedback
+          reps={props.reps}
+          formFeedback={props.formFeedback}
+          formScore={props.formScore}
+          coachPersonality={props.coachPersonality}
+          workoutMode={props.workoutMode}
+          variant="compact"
+          showModeExplanation={showModeExplanation}
+          onModeExplanationShown={() => setShowModeExplanation(false)}
+        />
 
         {/* Mobile Visual Guide - After feedback for reference */}
         <PoseDetectionGuide />

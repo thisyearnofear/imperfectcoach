@@ -58,6 +58,8 @@ const MobileControls = ({
   onAudioFeedbackChange,
   isHighContrast,
   onHighContrastChange,
+  isFocusMode,
+  onFocusModeChange,
   open,
   onOpenChange,
 }: MobileControlsProps) => {
@@ -74,11 +76,11 @@ const MobileControls = ({
             </SheetClose>
           </div>
         </SheetHeader>
-        
+
         <div className="py-2">
           <FeatureSpotlight variant="compact" />
         </div>
-        
+
         <div className="grid gap-6 py-4">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Workout Controls</h3>
@@ -91,7 +93,7 @@ const MobileControls = ({
               onExerciseChange={onExerciseChange}
             />
           </div>
-          
+
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Coach Settings</h3>
             <CoachPersonalitySelector
@@ -102,7 +104,7 @@ const MobileControls = ({
 
           <div className="space-y-4 pt-2">
             <h3 className="text-lg font-semibold">Preferences</h3>
-            
+
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div className="space-y-0.5">
                 <Label htmlFor="enable-high-contrast-mobile" className="text-base">
@@ -116,7 +118,7 @@ const MobileControls = ({
                 onCheckedChange={onHighContrastChange}
               />
             </div>
-            
+
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div className="space-y-0.5">
                 <Label htmlFor="enable-audio-mobile" className="text-base">
@@ -130,7 +132,7 @@ const MobileControls = ({
                 onCheckedChange={onAudioFeedbackChange}
               />
             </div>
-            
+
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div className="space-y-0.5">
                 <Label htmlFor="enable-recording-mobile" className="text-base">
@@ -144,7 +146,7 @@ const MobileControls = ({
                 onCheckedChange={onRecordingChange}
               />
             </div>
-            
+
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div className="space-y-0.5">
                 <Label htmlFor="show-debug-mobile" className="text-base">
@@ -158,7 +160,7 @@ const MobileControls = ({
                 onCheckedChange={onDebugChange}
               />
             </div>
-            
+
             {/* Focus Mode Toggle */}
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div className="space-y-0.5">
