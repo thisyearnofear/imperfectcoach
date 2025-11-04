@@ -65,6 +65,7 @@ export const TopSection = (props: TopSectionProps) => {
             onSessionReset={props.onSessionReset}
             heightUnit={props.heightUnit}
             reps={props.reps}
+            formScore={props.formScore}
           />
           
           {/* Contextual Suggestions - Appear during workout based on performance */}

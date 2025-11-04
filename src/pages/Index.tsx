@@ -6,10 +6,12 @@ import MobileControls from "@/components/MobileControls";
 import { useIndexPage } from "@/hooks/useIndexPage";
 import { TopSection, BottomSection } from "@/components/sections";
 import { FadeIn } from "@/components/ui/fade-in";
+import PersonalRecordCelebration from "@/components/PersonalRecordCelebration";
 
 const Index = () => {
   const page = useIndexPage();
   const [gradientClass, setGradientClass] = useState("dynamic-gradient");
+  const [showPRCelebration, setShowPRCelebration] = useState(false);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -21,6 +23,42 @@ const Index = () => {
       setGradientClass("dynamic-gradient");
     }
   }, []);
+
+  // Check for new personal records and show celebration
+  useEffect(() => {
+    if ((page.hasNewRepRecord || page.hasNewFormRecord || page.hasNewJumpRecord) && !showPRCelebration) {
+      setShowPRCelebration(true);
+    }
+  }, [page.hasNewRepRecord, page.hasNewFormRecord, page.hasNewJumpRecord, showPRCelebration]);
+
+  const handlePRCelebrationComplete = () => {
+    setShowPRCelebration(false);
+  };
+
+  // Determine record type for celebration
+  const getRecordType = () => {
+    if (page.hasNewRepRecord && page.hasNewFormRecord) {
+      return 'combo';
+    } else if (page.hasNewRepRecord) {
+      return 'rep';
+    } else if (page.hasNewFormRecord) {
+      return 'form';
+    } else if (page.hasNewJumpRecord) {
+      return 'jump';
+    }
+    return 'rep'; // default
+  };
+
+  const getRecordValue = () => {
+    if (page.hasNewRepRecord) {
+      return page.reps;
+    } else if (page.hasNewFormRecord) {
+      return page.formScore;
+    } else if (page.hasNewJumpRecord) {
+      return page.personalBestJumpHeight || 0;
+    }
+    return 0;
+  };
 
   return (
     <div className={`min-h-screen text-foreground flex flex-col animate-fade-in ${gradientClass}`}>
@@ -113,6 +151,15 @@ const Index = () => {
           onHighContrastChange={page.setIsHighContrast}
         />
       </div>
+
+      {/* Personal Record Celebration */}
+      <PersonalRecordCelebration
+        isVisible={showPRCelebration}
+        recordType={getRecordType()}
+        exercise={page.selectedExercise}
+        newValue={getRecordValue()}
+        onComplete={handlePRCelebrationComplete}
+      />
     </div>
   );
 };

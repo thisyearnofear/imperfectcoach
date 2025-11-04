@@ -104,14 +104,21 @@ const CoachFeedback = ({
   const getFeedbackStyle = () => {
     const feedbackLower = formFeedback.toLowerCase();
 
+    // During active workout, always use larger text for better readability
+    const textSize = reps > 0 ? "text-2xl" : "text-lg";
+
     // Positive/ready states: bigger and green
     if (
       feedbackLower.includes("ready") ||
       feedbackLower.includes("start position") ||
       feedbackLower.includes("great") ||
-      feedbackLower.includes("nice")
+      feedbackLower.includes("nice") ||
+      feedbackLower.includes("perfect") ||
+      feedbackLower.includes("excellent") ||
+      feedbackLower.includes("amazing") ||
+      feedbackLower.includes("awesome")
     ) {
-      return "text-green-500 text-xl font-semibold";
+      return `text-green-500 ${textSize} font-bold`;
     }
 
     // Error/critical states: red
@@ -119,9 +126,11 @@ const CoachFeedback = ({
       feedbackLower.includes("can't see you") ||
       feedbackLower.includes("trouble seeing") ||
       feedbackLower.includes("denied") ||
-      feedbackLower.includes("poor form")
+      feedbackLower.includes("poor form") ||
+      feedbackLower.includes("form too") ||
+      feedbackLower.includes("fix your form")
     ) {
-      return "text-destructive text-lg font-semibold";
+      return `text-destructive ${textSize} font-bold`;
     }
 
     // Corrective/warning states: yellow
@@ -132,13 +141,20 @@ const CoachFeedback = ({
       feedbackLower.includes("full extension") ||
       feedbackLower.includes("chin over") ||
       feedbackLower.includes("make sure") ||
-      feedbackLower.includes("evenly")
+      feedbackLower.includes("evenly") ||
+      feedbackLower.includes("keep") ||
+      feedbackLower.includes("maintain") ||
+      feedbackLower.includes("try") ||
+      feedbackLower.includes("focus") ||
+      feedbackLower.includes("work on")
     ) {
-      return "text-yellow-500 text-lg font-medium";
+      return `text-yellow-500 ${textSize} font-semibold`;
     }
 
-    // Default/neutral
-    return "text-muted-foreground text-lg";
+    // Default/neutral - still use larger text during workout
+    return reps > 0 
+      ? `text-primary ${textSize} font-medium` 
+      : "text-muted-foreground text-lg";
   };
 
   return (
@@ -238,15 +254,19 @@ const CoachFeedback = ({
           </AnimatePresence>
         ) : (
           // Show active feedback when working out
-          <motion.p
+          <motion.div
             key={formFeedback}
-            className={`text-center transition-all duration-300 ${getFeedbackStyle()}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            className="flex items-center justify-center w-full px-2"
           >
-            {formFeedback}
-          </motion.p>
+            <p 
+              className={`text-center break-words transition-all duration-300 max-w-full ${getFeedbackStyle()}`}
+            >
+              {formFeedback}
+            </p>
+          </motion.div>
         )}
       </div>
 

@@ -153,6 +153,13 @@ export const useIndexPage = () => {
     topRef,
     heightUnit,
     sessionHasConcluded,
+    // Personal records from workout hook
+    hasNewRepRecord,
+    hasNewFormRecord,
+    hasNewJumpRecord,
+    personalBestReps,
+    personalBestFormScore,
+    personalBestJumpHeight,
     // Setters
     setIsDebugMode,
     setIsRecordingEnabled,

@@ -33,9 +33,10 @@ interface VideoFeedProps {
   onSessionReset: () => void;
   heightUnit: HeightUnit;
   reps?: number;
+  formScore: number; // Added formScore prop
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset, heightUnit, reps }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset, heightUnit, reps, formScore }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [valuePropIndex, setValuePropIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -126,6 +127,13 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     return `${mins}:${secs}`;
   }, []);
 
+  // Function to get color based on form score
+  const getFormScoreColor = () => {
+    if (formScore >= 80) return "text-green-400";
+    if (formScore >= 60) return "text-yellow-400";
+    return "text-red-400";
+  };
+
   return (
     <div className="bg-card p-4 rounded-lg border border-border/40 flex flex-col items-center justify-center aspect-[4/3] lg:aspect-video w-full">
       {cameraStatus === "granted" ? (
@@ -141,12 +149,24 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
             </div>
           )}
 
-          {/* Jump Height Display for Jumps Exercise */}
+          {/* Jump Height Display for Jumps Exercise - Increased size for better visibility */}
           {exercise === 'jumps' && jumpGroundLevel && isWorkoutActive && (
-            <div className="absolute top-2 left-2 bg-black/50 text-white p-2 rounded-lg animate-fade-in">
+            <div className="absolute top-2 left-2 bg-black/70 text-white p-3 rounded-lg animate-fade-in">
               <div className="text-xs text-gray-300">Jump Height</div>
-              <div className={`text-lg font-bold ${currentJumpHeight > 0 ? 'text-green-400 animate-pulse' : 'text-white'}`}>
+              <div className={`text-2xl font-bold ${currentJumpHeight > 0 ? 'text-green-400 animate-pulse' : 'text-white'}`}>
                 {formatHeight(currentJumpHeight, heightUnit)}
+              </div>
+            </div>
+          )}
+
+          {/* Form Score Display - Prominent during workouts */}
+          {isWorkoutActive && (
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
+              <div className="bg-black/70 text-white p-4 rounded-full backdrop-blur-sm">
+                <div className="text-xs text-gray-300 text-center">Form Score</div>
+                <div className={`text-4xl font-bold ${getFormScoreColor()} text-center`}>
+                  {Math.round(formScore)}%
+                </div>
               </div>
             </div>
           )}

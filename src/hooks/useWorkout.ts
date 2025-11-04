@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { Exercise, RepData, WorkoutMode, CoachPersonality } from "@/lib/types";
+import { Exercise, RepData, WorkoutMode, CoachPersonality, JumpRepDetails } from "@/lib/types";
 import { getPersonalityFeedback } from "@/lib/coachPersonalities";
+import { usePersonalRecords } from "./usePersonalRecords";
 
 const WORKOUT_DURATION = 120; // 2 minutes in seconds
 
@@ -17,10 +18,41 @@ export const useWorkout = (coachPersonality: CoachPersonality = "SNEL") => {
   const [workoutMode, setWorkoutMode] = useState<WorkoutMode>("training");
   const [timeLeft, setTimeLeft] = useState(WORKOUT_DURATION);
   const [isWorkoutActive, setIsWorkoutActive] = useState(false);
+  
+  // Personal Records
+  const { 
+    updatePersonalRecord, 
+    getBestReps, 
+    getBestFormScore, 
+    getBestJumpHeight 
+  } = usePersonalRecords();
+  
+  // Track if we've achieved records in the current session
+  const [hasNewRepRecord, setHasNewRepRecord] = useState(false);
+  const [hasNewFormRecord, setHasNewFormRecord] = useState(false);
+  const [hasNewJumpRecord, setHasNewJumpRecord] = useState(false);
 
   const endSession = useCallback(() => {
     setIsWorkoutActive(false);
-  }, []);
+    
+    // Update personal records at the end of the session
+    if (workoutMode !== "assessment") { // Don't update records in assessment mode
+      const jumpHeight = selectedExercise === 'jumps' && repHistory.length > 0 
+        ? (repHistory[repHistory.length - 1].details as JumpRepDetails)?.jumpHeight
+        : undefined;
+        
+      const recordResult = updatePersonalRecord(
+        selectedExercise, 
+        reps, 
+        formScore, 
+        jumpHeight
+      );
+      
+      setHasNewRepRecord(recordResult.hasNewRepRecord);
+      setHasNewFormRecord(recordResult.hasNewFormRecord);
+      setHasNewJumpRecord(recordResult.hasNewJumpRecord);
+    }
+  }, [reps, formScore, selectedExercise, repHistory, workoutMode, updatePersonalRecord]);
 
   useEffect(() => {
     if (!isWorkoutActive || timeLeft <= 0) {
@@ -44,6 +76,9 @@ export const useWorkout = (coachPersonality: CoachPersonality = "SNEL") => {
     setRepHistory([]);
     setIsWorkoutActive(false);
     setTimeLeft(WORKOUT_DURATION);
+    setHasNewRepRecord(false);
+    setHasNewFormRecord(false);
+    setHasNewJumpRecord(false);
   }, []);
 
   const handleExerciseChange = useCallback(
@@ -93,9 +128,16 @@ export const useWorkout = (coachPersonality: CoachPersonality = "SNEL") => {
         setIsWorkoutActive(true);
         setTimeLeft(WORKOUT_DURATION);
       }
+      
+      // Check if this rep sets a new record
+      if (reps + 1 > getBestReps(selectedExercise)) {
+        setFormFeedback(prev => `${prev} 🏆 New rep record potential!`);
+      }
+      
       setRepHistory((prev) => [...prev, data]);
+      setReps(prev => prev + 1);
     },
-    [sessionStart, isWorkoutActive]
+    [sessionStart, isWorkoutActive, reps, selectedExercise, getBestReps]
   );
 
   return {
@@ -116,5 +158,12 @@ export const useWorkout = (coachPersonality: CoachPersonality = "SNEL") => {
     handleNewRepData,
     resetSession,
     endSession,
+    // Personal records
+    hasNewRepRecord,
+    hasNewFormRecord,
+    hasNewJumpRecord,
+    personalBestReps: getBestReps(selectedExercise),
+    personalBestFormScore: getBestFormScore(selectedExercise),
+    personalBestJumpHeight: selectedExercise === 'jumps' ? getBestJumpHeight(selectedExercise) : undefined,
   };
 };
