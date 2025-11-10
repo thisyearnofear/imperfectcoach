@@ -6,6 +6,7 @@ import CoreControls from "@/components/CoreControls";
 import Leaderboard from "@/components/Leaderboard";
 import PoseDetectionGuide from "@/components/PoseDetectionGuide";
 import { ContextualSuggestion } from "@/components/ContextualSuggestion";
+import MyPassport from "@/components/MyPassport";
 import {
   Exercise,
   CoachPersonality,
