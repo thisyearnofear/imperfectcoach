@@ -27,16 +27,39 @@ interface SocialChallenge {
   createdAt: number;
 }
 
+interface SocialAchievement {
+  id: string;
+  userId: string;
+  type: 'workout_shared' | 'challenge_completed' | 'social_connected' | 'friend_invited' | 'activity_commented';
+  title: string;
+  description: string;
+  platform: string;
+  timestamp: number;
+  metadata?: Record<string, unknown>;
+}
+
 interface SocialContextType {
   socialActivities: SocialActivity[];
   socialChallenges: SocialChallenge[];
+  socialAchievements: SocialAchievement[];
   friendAddresses: string[];
   isLoading: boolean;
   error: string | null;
   addSocialActivity: (activity: Omit<SocialActivity, 'id'>) => void;
   createChallenge: (challenge: Omit<SocialChallenge, 'id' | 'status' | 'createdAt'>) => string;
   joinChallenge: (challengeId: string) => void;
+  addSocialAchievement: (achievement: Omit<SocialAchievement, 'id'>) => void;
+  getActiveChallenges: () => SocialChallenge[];
+  getCompletedChallenges: () => SocialChallenge[];
+  getUserChallenges: (userId: string) => SocialChallenge[];
+  getFriendChallenges: () => SocialChallenge[];
+  updateChallengeStatus: (challengeId: string, status: 'active' | 'completed' | 'expired') => void;
   getFriendActivity: (limit?: number) => SocialActivity[];
+  getFilteredFriendActivity: (timeFilter: 'today' | 'week' | 'month', limit?: number) => SocialActivity[];
+  getGroupedFriendActivity: (timeFilter: 'today' | 'week' | 'month', limit?: number) => Record<string, SocialActivity[]>;
+  getUserAchievements: (userId: string) => SocialAchievement[];
+  getPlatformAchievements: (platform: string) => SocialAchievement[];
+  getRecentAchievements: (limit?: number) => SocialAchievement[];
   getFriendLeaderboard: () => BlockchainScore[];
   refreshSocialData: () => void;
 }
@@ -54,6 +77,7 @@ export const SocialProvider: React.FC<SocialProviderProps> = ({ children, initia
   
   const [socialActivities, setSocialActivities] = useState<SocialActivity[]>(initialActivities);
   const [socialChallenges, setSocialChallenges] = useState<SocialChallenge[]>([]);
+  const [socialAchievements, setSocialAchievements] = useState<SocialAchievement[]>([]);
   const [friendAddresses, setFriendAddresses] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,12 +136,68 @@ export const SocialProvider: React.FC<SocialProviderProps> = ({ children, initia
     );
   };
 
-  // Get friend activity (activities from connected social identities)
-  const getFriendActivity = (limit = 10): SocialActivity[] => {
-    return socialActivities
-      .filter(activity => friendAddresses.includes(activity.userId))
+  // Get active challenges
+  const getActiveChallenges = (): SocialChallenge[] => {
+    return socialChallenges.filter(challenge => challenge.status === 'active');
+  };
+
+  // Get completed challenges
+  const getCompletedChallenges = (): SocialChallenge[] => {
+    return socialChallenges.filter(challenge => challenge.status === 'completed');
+  };
+
+  // Get challenges created by a specific user
+  const getUserChallenges = (userId: string): SocialChallenge[] => {
+    return socialChallenges.filter(challenge => challenge.creator === userId);
+  };
+
+  // Get challenges involving friends
+  const getFriendChallenges = (): SocialChallenge[] => {
+    return socialChallenges.filter(challenge => 
+      challenge.participants.some(participant => friendAddresses.includes(participant))
+    );
+  };
+
+  // Add social achievement
+  const addSocialAchievement = (achievement: Omit<SocialAchievement, 'id'>) => {
+    const newAchievement: SocialAchievement = {
+      ...achievement,
+      id: `achievement_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    };
+    setSocialAchievements(prev => [newAchievement, ...prev]);
+  };
+
+  // Get user achievements
+  const getUserAchievements = (userId: string): SocialAchievement[] => {
+    return socialAchievements.filter(achievement => achievement.userId === userId);
+  };
+
+  // Get achievements by platform
+  const getPlatformAchievements = (platform: string): SocialAchievement[] => {
+    return socialAchievements.filter(achievement => achievement.platform === platform);
+  };
+
+  // Get recent achievements
+  const getRecentAchievements = (limit = 10): SocialAchievement[] => {
+    return socialAchievements
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, limit);
+  };
+
+  // Get grouped friend activity by day
+  const getGroupedFriendActivity = (timeFilter: 'today' | 'week' | 'month', limit?: number): Record<string, SocialActivity[]> => {
+    const filteredActivities = getFilteredFriendActivity(timeFilter, limit);
+    
+    return filteredActivities.reduce((groups, activity) => {
+      const date = new Date(activity.timestamp);
+      const dateKey = date.toDateString();
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(activity);
+      return groups;
+    }, {} as Record<string, SocialActivity[]>);
   };
 
   // Placeholder for friend leaderboard (would integrate with actual blockchain leaderboard)
@@ -138,13 +218,25 @@ export const SocialProvider: React.FC<SocialProviderProps> = ({ children, initia
   const value = {
     socialActivities,
     socialChallenges,
+    socialAchievements,
     friendAddresses,
     isLoading,
     error,
     addSocialActivity,
     createChallenge,
     joinChallenge,
+    addSocialAchievement,
+    getActiveChallenges,
+    getCompletedChallenges,
+    getUserChallenges,
+    getFriendChallenges,
+    updateChallengeStatus,
     getFriendActivity,
+    getFilteredFriendActivity,
+    getGroupedFriendActivity,
+    getUserAchievements,
+    getPlatformAchievements,
+    getRecentAchievements,
     getFriendLeaderboard,
     refreshSocialData,
   };

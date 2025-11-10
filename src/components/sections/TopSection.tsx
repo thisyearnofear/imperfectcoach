@@ -190,6 +190,9 @@ export const TopSection = forwardRef<
 
         {/* Mobile Leaderboard - At bottom */}
         <Leaderboard timeframe="week" />
+        
+        {/* Mobile Passport - At bottom */}
+        <MyPassport />
       </div>
     </div>
   );

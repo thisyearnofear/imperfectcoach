@@ -13,6 +13,7 @@ import { NetworkStatus } from "@/components/NetworkStatus";
 import { FeatureSpotlight } from "@/components/FeatureSpotlight";
 import { Dumbbell, Activity, Target, Focus, FocusOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import SocialNavigation from "@/components/SocialNavigation";
 
 interface HeaderProps {
   exercise: Exercise;
@@ -205,6 +206,11 @@ const Header = ({
                 </>
               )}
             </Button>
+
+            {/* Social Navigation */}
+            <div className="hidden md:block">
+              <SocialNavigation />
+            </div>
 
             {/* Desktop Settings Modal */}
             <div className="hidden lg:block">

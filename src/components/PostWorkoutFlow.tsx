@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { FadeIn } from "@/components/ui/fade-in";
 import { toast } from "sonner";
 
-import { Trophy, Brain } from "lucide-react";
+import { Trophy, Brain, Share2 } from "lucide-react";
 
 import { useUserAuth, useUserDisplay } from "@/hooks/useUserHooks";
 import { useFeatureGate, useFeatureAvailability } from "@/hooks/useFeatureGate";
@@ -40,6 +40,7 @@ import { useAgentAction } from "@/hooks/useAgentAction";
 import { mapPersonalityToLegacy } from "@/lib/coachPersonalities";
 import { convertHeight } from "@/lib/heightConversion";
 import { JumpRepDetails } from "@/lib/types";
+import SocialShareButton from "@/components/SocialShareButton";
 
 interface PostWorkoutFlowProps {
   exercise: Exercise;
@@ -551,6 +552,28 @@ export const PostWorkoutFlow = ({
           </Card>
           </FadeIn>
 
+          {/* Social Sharing */}
+          <FadeIn delay={0.1}>
+            <Card className="border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-800 justify-center">
+                  <Share2 className="h-5 w-5" />
+                  Share Your Workout
+                </CardTitle>
+                <CardDescription className="text-green-700 text-center">
+                  Celebrate your achievement with friends
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <SocialShareButton 
+                  exercise={exercise}
+                  totalReps={reps}
+                  averageFormScore={Math.round(averageFormScore)}
+                />
+              </CardContent>
+            </Card>
+          </FadeIn>
+
           {/* Unified CTA - handles connection flow */}
           <UnifiedActionCTA
             exercise={exercise}
@@ -644,6 +667,28 @@ export const PostWorkoutFlow = ({
       {/* Feature Spotlight - Contextual feature discovery */}
           <FadeIn delay={0.05}>
             <FeatureSpotlight variant="card" />
+          </FadeIn>
+          
+          {/* Social Sharing */}
+          <FadeIn delay={0.1}>
+            <Card className="border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-800 justify-center">
+                  <Share2 className="h-5 w-5" />
+                  Share Your Workout
+                </CardTitle>
+                <CardDescription className="text-green-700 text-center">
+                  Celebrate your achievement with friends
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <SocialShareButton 
+                  exercise={exercise}
+                  totalReps={reps}
+                  averageFormScore={Math.round(averageFormScore)}
+                />
+              </CardContent>
+            </Card>
           </FadeIn>
           
       {/* Smart Tier Recommendation - Personalized suggestion */}

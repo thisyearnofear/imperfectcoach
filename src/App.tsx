@@ -11,6 +11,7 @@ import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { ProgressiveOnboarding } from "@/components/ProgressiveOnboarding";
 import WorkoutShareApp from "./miniapps/workout-share/WorkoutShareApp";
 import { SocialProvider } from "./contexts/SocialContext";
+import SocialDashboard from "@/components/SocialDashboard";
 
 const App = () => (
   <ErrorBoundary
@@ -47,6 +48,7 @@ const App = () => (
               <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/social" element={<SocialDashboard />} />
                   <Route path="/miniapp/workout-share" element={<WorkoutShareApp />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />

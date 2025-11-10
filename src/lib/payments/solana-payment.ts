@@ -1,6 +1,13 @@
 // Solana Payment Module - NEW implementation following existing patterns
 // MODULAR design with CLEAN separation of concerns
 
+import {
+  Connection,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  LAMPORTS_PER_SOL,
+} from '@solana/web3.js';
 import type { 
   SolanaPaymentDetails,
   PaymentResponse,
@@ -24,7 +31,7 @@ export interface SolanaTransactionResult {
 }
 
 export class SolanaPaymentModule {
-  private connection: any; // Would use @solana/web3.js Connection
+  private connection: Connection;
   private cluster: 'devnet' | 'testnet' | 'mainnet-beta';
 
   constructor(cluster: 'devnet' | 'testnet' | 'mainnet-beta' = 'devnet') {
@@ -36,16 +43,11 @@ export class SolanaPaymentModule {
    * INITIALIZE SOLANA CONNECTION
    * Following PERFORMANT principle with connection pooling
    */
-  private async initializeConnection() {
+  private initializeConnection() {
     try {
-      // Would initialize @solana/web3.js Connection
       const rpcUrl = this.getRpcUrl();
       console.log(`🔌 Connecting to Solana ${this.cluster}:`, rpcUrl);
-      
-      // this.connection = new Connection(rpcUrl, 'confirmed');
-      // For now, placeholder
-      this.connection = { placeholder: true };
-      
+      this.connection = new Connection(rpcUrl, 'confirmed');
     } catch (error) {
       console.error('Failed to initialize Solana connection:', error);
       throw error;
@@ -55,7 +57,7 @@ export class SolanaPaymentModule {
   private getRpcUrl(): string {
     switch (this.cluster) {
       case 'devnet':
-        return 'https://api.devnet.solana.com';
+        return import.meta.env.VITE_SOLANA_RPC_URL || 'https://api.devnet.solana.com';
       case 'testnet':
         return 'https://api.testnet.solana.com';
       case 'mainnet-beta':
@@ -91,23 +93,22 @@ export class SolanaPaymentModule {
     try {
       console.log('💳 Processing Solana payment:', payment);
       
-      // Get wallet adapter
       const wallet = await this.getWallet();
+      if (!wallet.publicKey) {
+        throw new Error('Wallet is not connected or public key is unavailable.');
+      }
       
-      // Create transaction (would use @solana/web3.js)
-      const transaction = await this.createTransaction(payment);
+      const transaction = await this.createTransaction(payment, wallet.publicKey);
       
-      // Sign and send transaction
       const signature = await this.signAndSendTransaction(wallet, transaction);
       
-      // Wait for confirmation
-      const confirmed = await this.confirmTransaction(signature);
+      const confirmation = await this.confirmTransaction(signature);
       
       return {
         signature,
-        confirmed,
-        slot: undefined, // Would get from actual transaction
-        blockTime: Math.floor(Date.now() / 1000)
+        confirmed: !!confirmation,
+        slot: confirmation?.slot,
+        blockTime: confirmation?.blockTime || Math.floor(Date.now() / 1000)
       };
       
     } catch (error) {
@@ -123,13 +124,10 @@ export class SolanaPaymentModule {
   async verifyPayment(signature: string): Promise<boolean> {
     try {
       console.log('🔍 Verifying Solana payment:', signature);
-      
-      // Would use connection.getTransaction() to verify
-      // const transaction = await this.connection.getTransaction(signature);
-      
-      // For now, return true for testing
-      return true;
-      
+      const result = await this.connection.getSignatureStatus(signature, {
+        searchTransactionHistory: true,
+      });
+      return !!result.value && result.value.confirmationStatus === 'confirmed';
     } catch (error) {
       console.error('Solana payment verification failed:', error);
       return false;
@@ -142,71 +140,62 @@ export class SolanaPaymentModule {
    */
   private async getWallet(): Promise<any> {
     if (typeof window !== 'undefined') {
-      // Check for Phantom wallet
-      if ((window as any).solana && (window as any).solana.isPhantom) {
-        const wallet = (window as any).solana;
-        
-        if (!wallet.isConnected) {
-          await wallet.connect();
+      const solana = (window as any).solana;
+      if (solana && solana.isPhantom) {
+        if (!solana.isConnected) {
+          await solana.connect();
         }
-        
-        return wallet;
-      }
-      
-      // Check for other Solana wallets
-      if ((window as any).solflare) {
-        return (window as any).solflare;
+        return solana;
       }
     }
-    
-    throw new Error('No Solana wallet found');
+    throw new Error('Phantom wallet not found. Please install it.');
   }
 
   /**
    * TRANSACTION CREATION
    * Builds Solana transaction
    */
-  private async createTransaction(payment: SolanaPaymentRequest): Promise<any> {
-    // Would use @solana/web3.js to create transaction
-    // const transaction = new Transaction();
-    // transaction.add(SystemProgram.transfer({ ... }));
+  private async createTransaction(payment: SolanaPaymentRequest, fromPublicKey: PublicKey): Promise<Transaction> {
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: fromPublicKey,
+        toPubkey: new PublicKey(payment.recipient),
+        lamports: payment.amount,
+      })
+    );
     
-    return {
-      placeholder: 'transaction',
-      payment
-    };
+    const { blockhash } = await this.connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = fromPublicKey;
+
+    return transaction;
   }
 
-  private async signAndSendTransaction(wallet: any, transaction: any): Promise<string> {
-    // Would sign and send the transaction
-    // const signature = await wallet.signAndSendTransaction(transaction);
-    
-    // For testing, return mock signature
-    return 'mock_signature_' + Date.now();
+  private async signAndSendTransaction(wallet: any, transaction: Transaction): Promise<string> {
+    const { signature } = await wallet.signAndSendTransaction(transaction);
+    console.log('🚀 Transaction sent with signature:', signature);
+    return signature;
   }
 
-  private async confirmTransaction(signature: string): Promise<boolean> {
-    // Would wait for transaction confirmation
-    // const confirmation = await this.connection.confirmTransaction(signature);
-    
+  private async confirmTransaction(signature: string) {
+    const confirmation = await this.connection.confirmTransaction(signature, 'confirmed');
     console.log(`✅ Solana transaction confirmed: ${signature}`);
-    return true;
+    return confirmation.value;
   }
 
   /**
    * UTILITY METHODS
    */
   formatAmount(lamports: bigint): string {
-    // Convert lamports to SOL (9 decimal places)
-    return (Number(lamports) / 1e9).toFixed(9);
+    return (Number(lamports) / LAMPORTS_PER_SOL).toFixed(9);
   }
 
   lamportsToSol(lamports: bigint): number {
-    return Number(lamports) / 1e9;
+    return Number(lamports) / LAMPORTS_PER-SOL;
   }
 
   solToLamports(sol: number): bigint {
-    return BigInt(Math.floor(sol * 1e9));
+    return BigInt(Math.floor(sol * LAMPORTS_PER_SOL));
   }
 
   /**
@@ -214,14 +203,19 @@ export class SolanaPaymentModule {
    */
   async getNetworkHealth(): Promise<{ healthy: boolean; tps: number; slot: number }> {
     try {
-      // Would check actual Solana network health
-      // const health = await this.connection.getHealth();
-      // const performance = await this.connection.getRecentPerformanceSamples(1);
+      const health = await this.connection.getHealth();
+      if (health !== 'ok') {
+        return { healthy: false, tps: 0, slot: 0 };
+      }
       
+      const slot = await this.connection.getSlot();
+      const performanceSamples = await this.connection.getRecentPerformanceSamples(5);
+      const avgTps = performanceSamples.reduce((acc, sample) => acc + sample.numTransactions / sample.samplePeriodSecs, 0) / performanceSamples.length;
+
       return {
         healthy: true,
-        tps: 3000, // Placeholder
-        slot: 123456789 // Placeholder
+        tps: Math.round(avgTps),
+        slot,
       };
       
     } catch (error) {

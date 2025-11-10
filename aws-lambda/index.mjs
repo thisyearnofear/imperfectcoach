@@ -876,38 +876,83 @@ async function verifyAndSettleMultiChainPayment(
   }
 }
 
+import { Connection, PublicKey } from "@solana/web3.js";
+
+// ... (rest of the imports)
+
+// Initialize Solana Connection
+const solanaConnection = new Connection(
+  process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com",
+  "confirmed"
+);
+
+// ... (rest of the file)
+
 /**
  * NEW: Solana payment verification
  */
 async function verifySolanaPayment(paymentHeader, userSignatureVerified = false) {
   try {
-    // Decode Solana payment payload
     const paymentPayload = JSON.parse(
       Buffer.from(paymentHeader, "base64").toString()
     );
     console.log("🔍 Decoded Solana payment payload:", paymentPayload);
 
-    // For now, implement basic verification
-    // In production, this would verify the Solana transaction
-    if (paymentPayload.signature && paymentPayload.amount) {
-      console.log("✅ Solana payment verification successful (mock)");
-      return {
-        success: true,
-        settlementResponse: {
-          success: true,
-          txHash: `solana_${Date.now()}`, // Mock transaction hash
-          networkId: "solana-devnet",
-        },
-        transactionHash: `solana_${Date.now()}`
-      };
-    } else {
-      throw new Error("Invalid Solana payment payload");
+    const { signature, amount, recipient } = paymentPayload;
+
+    if (!signature || !amount || !recipient) {
+      throw new Error("Invalid Solana payment payload. Missing signature, amount, or recipient.");
     }
+
+    console.log(`🔍 Verifying Solana transaction: ${signature}`);
+
+    const tx = await solanaConnection.getParsedTransaction(signature, "confirmed");
+
+    if (!tx) {
+      throw new Error("Transaction not found or not confirmed.");
+    }
+
+    // Verify the transaction details
+    const instruction = tx.transaction.message.instructions.find(
+      (inst) =>
+        inst.program === "system" && inst.parsed.type === "transfer"
+    );
+
+    if (!instruction) {
+      throw new Error("No transfer instruction found in the transaction.");
+    }
+
+    const { source, destination, lamports } = instruction.parsed.info;
+
+    const expectedRecipient = process.env.SOLANA_TREASURY_ADDRESS || "CmGgLQL36Y9ubtTsy2zmE46TAxwCBm66onZmPPhUWNqv";
+
+    if (destination !== expectedRecipient) {
+      throw new Error(
+        `Transaction recipient mismatch. Expected ${expectedRecipient}, got ${destination}.`
+      );
+    }
+
+    if (lamports < amount) {
+      throw new Error(
+        `Transaction amount mismatch. Expected at least ${amount} lamports, got ${lamports}.`
+      );
+    }
+
+    console.log("✅ Solana payment verification successful");
+    return {
+      success: true,
+      settlementResponse: {
+        success: true,
+        txHash: signature,
+        networkId: "solana-devnet",
+      },
+      transactionHash: signature,
+    };
   } catch (error) {
     console.error("❌ Solana payment verification failed:", error);
     return {
       success: false,
-      error: error.message || "Solana payment verification failed"
+      error: error.message || "Solana payment verification failed",
     };
   }
 }
