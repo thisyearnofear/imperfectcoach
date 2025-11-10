@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { UnifiedPaymentFlow } from './UnifiedPaymentFlow';
 import { useAccount } from 'wagmi';
+import { useUnifiedWallet } from '../../hooks/useUnifiedWallet';
 import type { PaymentContext, PaymentResponse } from '../../lib/payments/payment-types';
 
 interface SmartPayButtonProps {
@@ -46,6 +47,7 @@ export function SmartPayButton({
   expertMode = false
 }: SmartPayButtonProps) {
   const { address, isConnected } = useAccount();
+  const { hasAnyWallet, hasBothWallets, smartRoutingAvailable } = useUnifiedWallet();
   const [flowState, setFlowState] = useState<FlowState>('ready');
   const [selectedChain, setSelectedChain] = useState<'base' | 'solana' | null>(null);
   const [optimizationReason, setOptimizationReason] = useState<string>('');
@@ -56,8 +58,8 @@ export function SmartPayButton({
   };
 
   const handleSmartPay = async () => {
-    if (!isConnected || !address) {
-      onError?.('Please connect your wallet first');
+    if (!hasAnyWallet) {
+      onError?.('Please connect a wallet first');
       return;
     }
 

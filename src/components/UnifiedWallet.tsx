@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,6 +28,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useUser } from "@/hooks/useUserHooks";
+import { solanaWalletManager } from "../lib/payments/solana-wallet-adapter";
 import { cn } from "@/lib/utils";
 
 type WalletVariant = "header" | "card" | "inline" | "minimal";
