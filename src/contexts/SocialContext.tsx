@@ -84,13 +84,15 @@ export const SocialProvider: React.FC<SocialProviderProps> = ({ children, initia
 
   // Extract friend addresses from social identities
   useEffect(() => {
-    if (identityGraph?.identities) {
+    if (identityGraph?.identities && Array.isArray(identityGraph.identities)) {
       const addresses = identityGraph.identities
-        .filter(id => ['farcaster', 'twitter', 'lens'].includes(id.platform))
+        .filter(id => id && ['farcaster', 'twitter', 'lens', 'zora', 'github'].includes(id.platform))
         .map(id => id.id)
         .filter((id, index, self) => self.indexOf(id) === index); // Remove duplicates
       
       setFriendAddresses(addresses);
+    } else {
+      setFriendAddresses([]);
     }
   }, [identityGraph]);
 

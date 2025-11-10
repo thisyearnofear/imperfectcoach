@@ -33,9 +33,11 @@ const PrivacySettings = ({ compact = false }: PrivacySettingsProps) => {
   });
 
   // Get user's social identities
-  const socialIdentities = identityGraph?.identities.filter(identity =>
-    ['farcaster', 'twitter', 'github', 'lens'].includes(identity.platform)
-  ) || [];
+  const socialIdentities = (identityGraph?.identities && Array.isArray(identityGraph.identities))
+    ? identityGraph.identities.filter(identity =>
+        identity && ['farcaster', 'twitter', 'github', 'lens', 'zora'].includes(identity.platform)
+      )
+    : [];
 
   const handleSettingChange = (key: keyof typeof settings) => {
     setSettings(prev => ({
@@ -196,6 +198,7 @@ const PrivacySettings = ({ compact = false }: PrivacySettingsProps) => {
                   {identity.platform === 'twitter' && '🐦'}
                   {identity.platform === 'github' && '💻'}
                   {identity.platform === 'lens' && '👁️'}
+                  {identity.platform === 'zora' && '🎨'}
                   <span>{identity.username || identity.id.substring(0, 8)}...</span>
                 </div>
               ))}

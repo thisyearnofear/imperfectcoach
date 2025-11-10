@@ -48,6 +48,8 @@ export const useMemoryIdentity = (
       return;
     }
 
+    console.log('[useMemoryIdentity] Fetching for wallet:', walletAddress, 'enabled:', enabled);
+
     // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -79,7 +81,7 @@ export const useMemoryIdentity = (
         }
 
         const response = await fetch(
-          `https://api.memoryproto.co/v1/identity-graph/wallet/${walletAddress}`,
+          `https://api.memoryproto.co/identities/wallet/${walletAddress}`,
           {
             headers: {
               'Authorization': `Bearer ${apiKey}`,
@@ -104,8 +106,11 @@ export const useMemoryIdentity = (
         }
 
         const data = await response.json();
-        setIdentityGraph(data);
-        identityCache.set(walletAddress, { data, timestamp: now, error: null });
+        console.log('[useMemoryIdentity] Got response with', data?.length || 0, 'identities');
+        // API returns an array directly, wrap it in the IdentityGraph interface
+        const identityGraph = Array.isArray(data) ? { identities: data } : data;
+        setIdentityGraph(identityGraph);
+        identityCache.set(walletAddress, { data: identityGraph, timestamp: now, error: null });
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
           // Request was cancelled, don't update state
@@ -133,13 +138,15 @@ export const useMemoryIdentity = (
 
   // Helper function to get primary social identity
   const getPrimarySocialIdentity = () => {
-    if (!identityGraph?.identities) return null;
+    if (!identityGraph || !identityGraph.identities || !Array.isArray(identityGraph.identities)) {
+      return null;
+    }
 
     // Prioritize Farcaster, then Twitter
-    const farcaster = identityGraph.identities.find(id => id.platform === 'farcaster');
+    const farcaster = identityGraph.identities.find(id => id && id.platform === 'farcaster');
     if (farcaster) return farcaster;
 
-    const twitter = identityGraph.identities.find(id => id.platform === 'twitter');
+    const twitter = identityGraph.identities.find(id => id && id.platform === 'twitter');
     if (twitter) return twitter;
 
     return null;
@@ -147,11 +154,16 @@ export const useMemoryIdentity = (
 
   // Helper to get all social identities
   const getSocialIdentities = () => {
-    if (!identityGraph?.identities) return [];
+    if (!identityGraph || !identityGraph.identities || !Array.isArray(identityGraph.identities)) {
+      console.log('[getSocialIdentities] No identity graph or identities:', { identityGraph, isArray: Array.isArray(identityGraph?.identities) });
+      return [];
+    }
 
-    return identityGraph.identities.filter(identity =>
-      ['farcaster', 'twitter', 'github', 'lens'].includes(identity.platform)
+    const filtered = identityGraph.identities.filter(identity =>
+      identity && ['farcaster', 'twitter', 'github', 'lens', 'zora'].includes(identity.platform)
     );
+    console.log('[getSocialIdentities] Filtered from', identityGraph.identities.length, 'to', filtered.length);
+    return filtered;
   };
 
   return {

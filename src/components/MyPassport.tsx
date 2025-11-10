@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useMemoryIdentity } from "@/hooks/useMemoryIdentity";
 import { useSocialContext } from "@/contexts/SocialContext";
-import { Activity, TrendingUp, Users, Target, Trophy, Calendar, Shield, Verified } from "lucide-react";
+import { Users, Trophy, Calendar, Shield, Verified } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import { useState } from "react";
@@ -27,10 +27,6 @@ type PassportData = {
 const MyPassport = () => {
 const { address, isConnected } = useAccount();
   const { getSocialIdentities, isLoading: identityLoading } = useMemoryIdentity(address);
-  const { getFriendActivity, socialActivities, friendAddresses } = useSocialContext();
-  
-  // Get recent friend activities
-  const recentFriendActivities = getFriendActivity(5);
 
   // 1. Fetch the user's tokenId first
   const { data: tokenId, isLoading: isLoadingTokenId } = useReadContract({
@@ -249,11 +245,12 @@ const { address, isConnected } = useAccount();
                           >
                             <div className="flex items-center gap-2">
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                                {identity.platform === 'farcaster' && <span className="text-lg">🟣</span>}
-                                {identity.platform === 'twitter' && <span className="text-lg">🐦</span>}
-                                {identity.platform === 'github' && <span className="text-lg">💻</span>}
-                                {identity.platform === 'lens' && <span className="text-lg">👁️</span>}
-                              </div>
+                              {identity.platform === 'farcaster' && <span className="text-lg">🟣</span>}
+                              {identity.platform === 'twitter' && <span className="text-lg">🐦</span>}
+                              {identity.platform === 'github' && <span className="text-lg">💻</span>}
+                              {identity.platform === 'lens' && <span className="text-lg">👁️</span>}
+                                {identity.platform === 'zora' && <span className="text-lg">🎨</span>}
+                               </div>
                               <div>
                                 <p className="text-sm font-medium">
                                   {identity.username || identity.id.substring(0, 10) + '...'}
@@ -512,22 +509,23 @@ const { address, isConnected } = useAccount();
                           >
                             <div className="flex items-center gap-2">
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                                {identity.platform === 'farcaster' && <span className="text-lg">🟣</span>}
-                                {identity.platform === 'twitter' && <span className="text-lg">🐦</span>}
-                                {identity.platform === 'github' && <span className="text-lg">💻</span>}
-                                {identity.platform === 'lens' && <span className="text-lg">👁️</span>}
+                              {identity.platform === 'farcaster' && <span className="text-lg">🟣</span>}
+                              {identity.platform === 'twitter' && <span className="text-lg">🐦</span>}
+                              {identity.platform === 'github' && <span className="text-lg">💻</span>}
+                              {identity.platform === 'lens' && <span className="text-lg">👁️</span>}
+                                {identity.platform === 'zora' && <span className="text-lg">🎨</span>}
                               </div>
                               <div>
-                                <p className="text-sm font-medium">
-                                  {identity.username || identity.id.substring(0, 10) + '...'}
-                                </p>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <span className="capitalize">{identity.platform}</span>
-                                  {identity.social?.verified && (
-                                    <Verified className="h-3 w-3 text-blue-500" />
-                                  )}
+                              <p className="text-sm font-medium">
+                                {identity.username || identity.id.substring(0, 10) + '...'}
+                              </p>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <span className="capitalize">{identity.platform}</span>
+                              {identity.social?.verified && (
+                                <Verified className="h-3 w-3 text-blue-500" />
+                                )}
                                 </div>
-                              </div>
+                               </div>
                             </div>
                             {identity.social?.followers && (
                               <Badge variant="secondary" className="text-xs">
@@ -551,66 +549,7 @@ const { address, isConnected } = useAccount();
           </div>
         )}
 
-        {/* Social Activity Feed */}
-        {isConnected && friendAddresses.length > 0 && (
-          <div className="border-t pt-3 mt-3">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                Friend Activity
-              </h4>
-              <Button variant="link" size="sm" className="h-6 p-0 text-xs" asChild>
-                <Link to="/social?tab=activity">View All</Link>
-              </Button>
-            </div>
-            {recentFriendActivities.length > 0 ? (
-              <div className="space-y-2">
-                {recentFriendActivities.map((activity) => (
-                  <div 
-                    key={activity.id} 
-                    className="flex items-center justify-between p-2 bg-muted/30 rounded text-xs"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <span className="truncate max-w-[120px]">
-                        {activity.username || activity.userId.substring(0, 6)}...
-                      </span>
-                    </div>
-                    <div className="text-muted-foreground truncate text-right max-w-[100px]">
-                      {activity.exercise && activity.reps ? (
-                        <span>{activity.reps} {activity.exercise}</span>
-                      ) : (
-                        <span className="capitalize">{activity.type}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground text-center py-2">
-                No recent activity from friends
-              </p>
-            )}
-          </div>
-        )}
 
-        {/* Friend Challenges Section */}
-        {isConnected && friendAddresses.length > 0 && (
-          <div className="border-t pt-3 mt-3">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                Friend Challenges
-              </h4>
-              <Button variant="link" size="sm" className="h-6 p-0 text-xs" asChild>
-                <Link to="/social?tab=challenges">View All</Link>
-              </Button>
-            </div>
-            <div className="text-xs text-muted-foreground text-center py-2">
-              {friendAddresses.length} connected friends
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
