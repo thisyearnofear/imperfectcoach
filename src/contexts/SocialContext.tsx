@@ -177,6 +177,47 @@ export const SocialProvider: React.FC<SocialProviderProps> = ({ children, initia
     return socialAchievements.filter(achievement => achievement.platform === platform);
   };
 
+  // Get friend activity
+  const getFriendActivity = (limit?: number): SocialActivity[] => {
+    const friendActivities = socialActivities.filter(activity =>
+      friendAddresses.includes(activity.userId)
+    );
+    
+    const sortedActivities = friendActivities
+      .sort((a, b) => b.timestamp - a.timestamp);
+    
+    return limit ? sortedActivities.slice(0, limit) : sortedActivities;
+  };
+
+  // Get filtered friend activity
+  const getFilteredFriendActivity = (timeFilter: 'today' | 'week' | 'month', limit?: number): SocialActivity[] => {
+    const now = Date.now();
+    let timeLimit: number;
+    
+    switch (timeFilter) {
+      case 'today':
+        timeLimit = now - (24 * 60 * 60 * 1000);
+        break;
+      case 'week':
+        timeLimit = now - (7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        timeLimit = now - (30 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        timeLimit = 0;
+    }
+    
+    const filteredActivities = socialActivities.filter(activity =>
+      friendAddresses.includes(activity.userId) && activity.timestamp >= timeLimit
+    );
+    
+    const sortedActivities = filteredActivities
+      .sort((a, b) => b.timestamp - a.timestamp);
+    
+    return limit ? sortedActivities.slice(0, limit) : sortedActivities;
+  };
+
   // Get recent achievements
   const getRecentAchievements = (limit = 10): SocialAchievement[] => {
     return socialAchievements
@@ -205,6 +246,17 @@ export const SocialProvider: React.FC<SocialProviderProps> = ({ children, initia
     // This would typically fetch the actual leaderboard and filter for friends
     // For now, returning empty array as a placeholder
     return [];
+  };
+
+  // Update challenge status
+  const updateChallengeStatus = (challengeId: string, status: 'active' | 'completed' | 'expired') => {
+    setSocialChallenges(prev =>
+      prev.map(challenge =>
+        challenge.id === challengeId
+          ? { ...challenge, status }
+          : challenge
+      )
+    );
   };
 
   // Refresh social data (e.g. when new workout is completed)
