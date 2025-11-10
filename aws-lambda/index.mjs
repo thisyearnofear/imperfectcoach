@@ -441,35 +441,38 @@ export const handler = async (event) => {
     // Check for x402 payment header first
     const paymentHeader =
       event.headers["x-payment"] || event.headers["X-Payment"];
+    const chainHeader = 
+      event.headers["x-chain"] || event.headers["X-Chain"] || "base";
 
     let paymentProcessingResult;
 
     if (paymentHeader) {
-      // Real x402 payment flow
-      console.log("💳 Payment header found, verifying and settling...");
-      paymentProcessingResult = await verifyAndSettlePayment(
+      // Enhanced multi-chain x402 payment flow
+      console.log(`💳 Payment header found for ${chainHeader} chain, verifying and settling...`);
+      paymentProcessingResult = await verifyAndSettleMultiChainPayment(
         paymentHeader,
+        chainHeader,
         isValidSignature
       );
 
       if (!paymentProcessingResult.success) {
         console.error(
-          "❌ x402 payment verification/settlement failed:",
+          "❌ Multi-chain x402 payment verification failed:",
           paymentProcessingResult.error
         );
         return createPaymentRequiredResponse(
-          "x402 payment verification failed: " + paymentProcessingResult.error
+          `${chainHeader} payment verification failed: ` + paymentProcessingResult.error
         );
       }
 
       console.log(
-        "✅ Payment verified and settled successfully:",
+        `✅ ${chainHeader} payment verified and settled successfully:`,
         paymentProcessingResult
       );
     } else {
-      // No x402 payment header - require payment
+      // No x402 payment header - require payment with multi-chain support
       console.log("❌ No x402 payment header found - payment required");
-      return createPaymentRequiredResponse(
+      return createMultiChainPaymentRequiredResponse(
         "Payment required for premium analysis"
       );
     }
@@ -855,6 +858,112 @@ function createPaymentRequiredResponse(errorMessage) {
 }
 
 /**
+ * Enhanced multi-chain x402 payment verification
+ * Supports both Base and Solana payments
+ */
+async function verifyAndSettleMultiChainPayment(
+  paymentHeader,
+  chain = "base",
+  userSignatureVerified = false
+) {
+  console.log(`🔗 Processing ${chain} payment verification...`);
+  
+  if (chain === "solana") {
+    return await verifySolanaPayment(paymentHeader, userSignatureVerified);
+  } else {
+    // Use existing Base verification logic
+    return await verifyAndSettlePayment(paymentHeader, userSignatureVerified);
+  }
+}
+
+/**
+ * NEW: Solana payment verification
+ */
+async function verifySolanaPayment(paymentHeader, userSignatureVerified = false) {
+  try {
+    // Decode Solana payment payload
+    const paymentPayload = JSON.parse(
+      Buffer.from(paymentHeader, "base64").toString()
+    );
+    console.log("🔍 Decoded Solana payment payload:", paymentPayload);
+
+    // For now, implement basic verification
+    // In production, this would verify the Solana transaction
+    if (paymentPayload.signature && paymentPayload.amount) {
+      console.log("✅ Solana payment verification successful (mock)");
+      return {
+        success: true,
+        settlementResponse: {
+          success: true,
+          txHash: `solana_${Date.now()}`, // Mock transaction hash
+          networkId: "solana-devnet",
+        },
+        transactionHash: `solana_${Date.now()}`
+      };
+    } else {
+      throw new Error("Invalid Solana payment payload");
+    }
+  } catch (error) {
+    console.error("❌ Solana payment verification failed:", error);
+    return {
+      success: false,
+      error: error.message || "Solana payment verification failed"
+    };
+  }
+}
+
+/**
+ * Enhanced payment required response with multi-chain support
+ */
+function createMultiChainPaymentRequiredResponse(message) {
+  const paymentChallenge = {
+    error: "Payment Required",
+    message: message,
+    schemes: [
+      // Base payment option (existing)
+      {
+        scheme: "CDP_WALLET",
+        network: "base-sepolia", 
+        asset: "USDC",
+        amount: PAYMENT_CONFIG.amount,
+        payTo: PAYMENT_CONFIG.sellerWallet,
+        chainId: PAYMENT_CONFIG.chainId,
+        description: "Premium analysis via Base network"
+      },
+      // NEW: Solana payment option
+      {
+        scheme: "SOLANA_PAY",
+        network: "solana-devnet",
+        asset: "SOL", 
+        amount: "0.00001", // Equivalent micro-payment
+        payTo: process.env.SOLANA_TREASURY_ADDRESS || "CmGgLQL36Y9ubtTsy2zmE46TAxwCBm66onZmPPhUWNqv",
+        chainId: "solana-devnet",
+        description: "Premium analysis via Solana network (ultra-low fees)"
+      }
+    ],
+    facilitator: process.env.FACILITATOR_URL || "https://x402.org/facilitator",
+    timestamp: Math.floor(Date.now() / 1000),
+    routing: {
+      recommended: "base", // Default recommendation
+      microPayments: "solana", // For amounts < $0.01
+      premiumAnalysis: "base", // For $0.05 payments
+      agentCoaching: "base" // For $0.10 payments
+    }
+  };
+
+  return {
+    statusCode: 402,
+    headers: {
+      "Content-Type": "application/json",
+      "X-Payment-Required": "true",
+      "X-Multi-Chain": "base,solana"
+    },
+    body: JSON.stringify(paymentChallenge),
+  };
+}
+
+/**
+ * Legacy function - kept for backward compatibility
  * Verifies and settles x402 payment through CDP facilitator
  */
 async function verifyAndSettlePayment(

@@ -162,9 +162,12 @@ const BedrockAnalysisSection = ({
         body: JSON.stringify(requestBody),
       });
 
-      // If we get a 402 Payment Required, handle the x402 flow manually
+      // Enhanced multi-chain x402 flow - can be replaced with SmartPayButton
       if (response.status === 402) {
-        console.log("💰 Payment required - processing x402 payment...");
+        console.log("💰 Payment required - processing enhanced multi-chain x402 payment...");
+        
+        // TODO: Replace this manual flow with SmartPayIntegration component
+        // Example: <SmartPayIntegration amount={50000} context="premium" onSuccess={...} />
 
         const paymentChallenge = await response.json();
         console.log("🎯 Payment challenge received:", paymentChallenge);

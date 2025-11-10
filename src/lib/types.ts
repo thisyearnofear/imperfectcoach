@@ -108,7 +108,7 @@ export interface Achievement {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-// Blockchain-related types
+// Legacy blockchain types - ENHANCED in payment-types.ts for multi-chain
 export interface BlockchainScore {
   user: string;
   pullups: number;
@@ -129,3 +129,6 @@ export interface ContractConfig {
   address: string;
   abi: readonly unknown[];
 }
+
+// Re-export enhanced payment types for compatibility
+export type { PaymentChain, PaymentContext } from './payments/payment-types';

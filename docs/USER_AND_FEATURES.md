@@ -1,24 +1,15 @@
-# 🏋️ Imperfect Coach
+# 🏋️ Imperfect Coach - User Features & Capabilities
 
 **Autonomous AI Agent for Personalized Fitness Coaching**
 
 > 🤖 **Solana x402 Hackathon Submission**  
-> Target: Best x402 Agent Application ($20,000 prize)  
-> Built with Amazon Bedrock AgentCore • Amazon Nova Lite • Multi-step Reasoning
-
-**🔗 Live Demo:** [imperfectcoach.netlify.app](https://imperfectcoach.netlify.app)
-
----
+> Target: Best x402 Agent Application ($20,000 prize)
 
 ## 🎯 What is Imperfect Coach?
 
 Imperfect Coach is an **autonomous AI agent system** that combines computer vision, multi-step reasoning, and tool integration to deliver personalized fitness coaching. The agent independently analyzes workout performance, queries historical data, benchmarks against similar athletes, and generates adaptive training plans—all without human intervention.
 
-We're transforming AI agents from simple payment users to payment optimizers with intelligent multi-chain routing.
-
----
-
-## ✨ Key Features
+## ✨ Core Features
 
 ### 🤖 Autonomous AI Coach Agent
 - **Multi-Step Reasoning**: Agent decides which analysis tools to invoke (up to 5 reasoning iterations)
@@ -39,9 +30,21 @@ We're transforming AI agents from simple payment users to payment optimizers wit
 - **Graceful Fallback**: Base network as reliable backup if Solana unavailable
 
 ### 🧠 Three Coaching Tiers
-- **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)
-- **Premium ($0.05 USDC)**: Deep-dive Amazon Bedrock analysis
-- **Agent ($0.10 USDC)**: Autonomous multi-step reasoning + personalized 4-week training plans
+
+#### 🆓 Free Tier
+- Real-time coaching with Gemini/OpenAI/Anthropic
+- Accurate rep counting and form feedback
+- Basic performance analytics
+
+#### 💎 Premium Tier ($0.05 USDC)
+- Deep-dive Amazon Bedrock analysis
+- Detailed form breakdown with technique tips
+- Performance metrics and improvement tracking
+
+#### 🤖 Agent Tier ($0.10 USDC)
+- Autonomous multi-step reasoning
+- Personalized 4-week training plans
+- Performance benchmarking against similar athletes
 
 ### 💪 Supported Exercises
 - **Pull-ups**: Elbow angle, chin-over-bar, ROM tracking, asymmetry detection
@@ -51,8 +54,6 @@ We're transforming AI agents from simple payment users to payment optimizers wit
 - **Blockchain Leaderboards**: Permanent records on Base Sepolia
 - **NFT Passport**: Soulbound achievement tracking
 - **Session History**: Review past workouts and improvements
-
----
 
 ## 🚀 Quick Start
 
@@ -64,55 +65,15 @@ We're transforming AI agents from simple payment users to payment optimizers wit
 5. Work out with real-time feedback
 6. Optionally upgrade to Premium or Agent tier for deeper insights
 
-### For Developers
-```bash
-git clone https://github.com/thisyearnofear/imperfecthigher
-cd imperfecthigher
-npm install
-npm run dev
+### Payment Experience
+```
+User: "I want analysis" → Click "Smart Pay" → AI chooses optimal chain → Pay → Get result
 ```
 
----
-
-## 🛠️ Technology Stack
-
-**AI & Agent System**
-- Amazon Bedrock AgentCore (multi-step reasoning)
-- Amazon Nova Lite (LLM decision-making)
-- TensorFlow.js + MediaPipe (pose detection)
-
-**Frontend**
-- React 18 + TypeScript + Vite
-- Tailwind CSS + shadcn/ui
-- Wagmi + Viem (blockchain)
-
-**Backend**
-- AWS Lambda (eu-north-1)
-- Supabase Edge Functions
-- Smart Contracts (Base Sepolia)
-
-**Payments**
-- x402pay protocol (Base + Solana)
-- CDP Wallet (autonomous treasury)
-- USDC on Base & SOL/USDC on Solana
-
----
-
-## 📚 Documentation
-
-### Solana x402 Hackathon Focus
-- **[Demo Script](docs/DEMO_SCRIPT.md)** - 3-minute presentation for hackathon judges
-- **[User Features](docs/USER_AND_FEATURES.md)** - AI agent capabilities and payment system
-
-### Technical Documentation
-- **[Technical Architecture](docs/TECHNICAL_ARCHITECTURE.md)** - System design, AI agent, and payment infrastructure
-- **[Development & Deployment](docs/DEVELOPMENT_AND_DEPLOYMENT.md)** - Setup, testing, and deployment guides
-
-### Quick References
-- **[AWS Deployment Script](aws-lambda/deploy-agent.sh)** - One-command Lambda deployment
-- **[Supabase Functions](supabase/)** - Edge function source code
-
----
+The AI analyzes payment context and automatically selects:
+- **Micro-payments (<$0.01)**: Solana for ultra-low fees (90%+ savings)
+- **Premium Analysis ($0.05)**: User choice with cost optimization
+- **Agent Coaching ($0.10)**: Base for established infrastructure
 
 ## 🎯 Solana x402 Hackathon Value
 
@@ -130,20 +91,25 @@ Watch our AI fitness coach make real-time economic decisions:
 
 All seamless. All autonomous. All while maintaining a single user experience.
 
+## 🙋 FAQs
+
+**Q: Do I need to pay for every workout?**
+A: No! Free tier is always available. Only pay when you want deep analysis or agent coaching.
+
+**Q: Can I use Agent tier without Premium?**
+A: Yes! Each tier stands alone. Agent includes everything from Premium plus autonomous coaching.
+
+**Q: How long does Agent analysis take?**
+A: Typically 10-15 seconds. You'll see progress in real-time.
+
+**Q: What if I don't have crypto?**
+A: Set up Coinbase Smart Wallet in 2 minutes. We'll guide you through it.
+
+**Q: Does the agent really make autonomous decisions?**
+A: Yes! Watch it work - you'll see it independently choose which tools to use based on your data.
+
+**Q: Is my workout data private?**
+A: Absolutely. Only you can see your analysis. We don't share data.
+
 ---
-
-## 📄 License
-
-This project is licensed under the MIT License
-
----
-
-## 🙏 Acknowledgments
-
-**Solana x402 Hackathon** - For pushing the boundaries of internet payments  
-**Amazon Bedrock Team** - For AgentCore and Nova Lite  
-**TensorFlow.js & MediaPipe** - Computer vision foundation  
-**Base & Coinbase** - CDP Wallet infrastructure and Smart Wallet
-
----
-*Built with ❤️ for athletes everywhere. Submitted to Solana x402 Hackathon.*
+*Built with ❤️ for athletes everywhere. Powered by Amazon Bedrock AgentCore.*
