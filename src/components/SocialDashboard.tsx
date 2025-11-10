@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,7 +10,8 @@ import {
   Trophy,
   Settings,
   Bell,
-  Search
+  Search,
+  ArrowLeft
 } from "lucide-react";
 import PrivacySettings from "@/components/PrivacySettings";
 import { Input } from "@/components/ui/input";
@@ -17,15 +19,27 @@ import MyPassport from "@/components/MyPassport";
 
 const SocialDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Social Dashboard</h1>
-          <p className="text-muted-foreground">
-            Connect with friends and track your social fitness journey
-          </p>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/")}
+            className="h-9 w-9"
+            title="Back to workout"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Social Dashboard</h1>
+            <p className="text-muted-foreground">
+              Connect with friends and track your social fitness journey
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <div className="relative">
@@ -91,13 +105,33 @@ const SocialDashboard = () => {
 
         <TabsContent value="activity" className="space-y-6">
           <div className="grid gap-6">
-            <SocialActivityFeed />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Activity Feed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Activity className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm">No activity yet</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="challenges" className="space-y-6">
           <div className="grid gap-6">
-            <SocialChallenges />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Challenges</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Target className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm">No active challenges</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 

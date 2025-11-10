@@ -9,6 +9,7 @@ import {
   Target,
   Brain,
   TrendingUp,
+  Trophy,
   Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";

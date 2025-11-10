@@ -10,6 +10,7 @@ import {
   Lock,
   Globe,
   User,
+  Trophy,
   Settings as SettingsIcon
 } from "lucide-react";
 import { useMemoryIdentity } from "@/hooks/useMemoryIdentity";
