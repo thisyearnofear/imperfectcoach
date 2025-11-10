@@ -12,6 +12,7 @@ import {
   useWaitForTransactionReceipt,
   useSwitchChain,
 } from "wagmi";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { cbWalletConnector } from "@/wagmi";
 import {
   getContractConfig,
@@ -27,6 +28,10 @@ import {
   analyzeTransactionError,
   getCDPStatus,
 } from "@/lib/cdp";
+import { 
+  submitScoreToSolana,
+  SOLANA_LEADERBOARD_PROGRAM_ID 
+} from "@/lib/solana/leaderboard";
 import type { Hex } from "viem";
 
 export interface BlockchainScore {
@@ -37,12 +42,17 @@ export interface BlockchainScore {
 }
 
 interface UserState {
-  // Auth state
+  // Auth state - Base (EVM)
   isConnected: boolean;
   isAuthenticated: boolean;
   address?: string;
   isLoading: boolean;
   error?: string;
+
+  // Auth state - Solana
+  solanaAddress?: string;
+  isSolanaConnected: boolean;
+  isSolanaLoading: boolean;
 
   // Basename state
   basename?: string;
@@ -69,12 +79,16 @@ interface UserState {
 }
 
 interface UserActions {
-  // Auth actions
+  // Auth actions - Base (EVM)
   connectWallet: () => Promise<void>;
   signInWithEthereum: () => Promise<void>;
   signOut: () => void;
   connectAndSignIn: () => Promise<void>;
   resetAuth: () => void;
+
+  // Auth actions - Solana
+  connectSolanaWallet: () => Promise<void>;
+  disconnectSolana: () => void;
 
   // Blockchain actions
   submitScore: (pullups: number, jumps: number) => Promise<{ hash?: string }>;
@@ -113,11 +127,20 @@ interface UserProviderProps {
 export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
   const { requireSiwe = true, enableSmartRefresh = true } = options;
 
-  // Wagmi hooks
+  // Wagmi hooks (Base/EVM)
   const { address, isConnected, chain } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { signMessage } = useSignMessage();
+
+  // Solana wallet hooks
+  const {
+    publicKey: solanaPublicKey,
+    connected: isSolanaConnected,
+    connecting: isSolanaConnecting,
+    connect: connectSolanaAdapter,
+    disconnect: disconnectSolanaAdapter,
+  } = useWallet();
   const {
     writeContract,
     data: txHash,
@@ -177,6 +200,12 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
   >({
     isAuthenticated: false,
     isLoading: false,
+  });
+
+  // Solana auth state
+  const [solanaAuthState, setSolanaAuthState] = useState({
+    isSolanaLoading: false,
+    solanaError: undefined as string | undefined,
   });
   const [blockchainState, setBlockchainState] = useState<
     Pick<
@@ -600,6 +629,31 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
     requireSiwe,
   ]);
 
+  // Solana wallet actions
+  const connectSolanaWallet = useCallback(async () => {
+    try {
+      setSolanaAuthState({ isSolanaLoading: true, solanaError: undefined });
+      await connectSolanaAdapter();
+      toast.success("Solana wallet connected successfully!");
+      setSolanaAuthState({ isSolanaLoading: false, solanaError: undefined });
+    } catch (error) {
+      console.error("Error connecting Solana wallet:", error);
+      const errorMsg = error instanceof Error ? error.message : "Failed to connect Solana wallet";
+      setSolanaAuthState({ isSolanaLoading: false, solanaError: errorMsg });
+      toast.error(errorMsg);
+    }
+  }, [connectSolanaAdapter]);
+
+  const disconnectSolana = useCallback(() => {
+    try {
+      disconnectSolanaAdapter();
+      toast.success("Solana wallet disconnected");
+    } catch (error) {
+      console.error("Error disconnecting Solana wallet:", error);
+      toast.error("Failed to disconnect Solana wallet");
+    }
+  }, [disconnectSolanaAdapter]);
+
   const resetAuth = useCallback(() => {
     setAuthState((prev) => ({
       ...prev,
@@ -796,123 +850,183 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
   // Blockchain actions
   const submitScore = useCallback(
     async (pullups: number, jumps: number): Promise<{ hash?: string }> => {
-      if (!isConnected || !address) {
+      // Check which wallet is connected and route accordingly
+      if (isSolanaConnected && solanaPublicKey) {
+        // Solana wallet is connected - route to Solana
+        if (!connection) {
+          toast.error("Solana connection not available");
+          return {};
+        }
+        
+        if (blockchainState.timeUntilNextSubmission > 0) {
+          toast.error(
+            `Please wait ${Math.ceil(
+              blockchainState.timeUntilNextSubmission / 60
+            )} minutes before submitting again`
+          );
+          return {};
+        }
+
+        try {
+          setBlockchainState((prev) => ({
+            ...prev,
+            isSubmitting: true,
+            currentTxHash: undefined,
+          }));
+
+          // Submit to Solana
+          console.log("🔄 Submitting to Solana...");
+          console.log("📍 Solana Public Key:", solanaPublicKey.toString());
+          console.log("📊 Args:", { pullups, jumps });
+
+          // Use the actual deployed program ID
+          const signature = await submitScoreToSolana(
+            connection,
+            { publicKey: solanaPublicKey, connected: isSolanaConnected },
+            SOLANA_LEADERBOARD_PROGRAM_ID, // Use program ID from constants
+            pullups,
+            jumps
+          );
+
+          // Update blockchain state
+          setBlockchainState((prev) => ({
+            ...prev,
+            currentTxHash: signature,
+            isSubmitting: false,
+          }));
+
+          toast.success("Score submitted successfully to Solana!");
+          await refreshLeaderboard(); // Refresh to see the new score
+
+          return { hash: signature };
+        } catch (error) {
+          console.error("Error submitting to Solana:", error);
+          setBlockchainState((prev) => ({ ...prev, isSubmitting: false }));
+
+          const errorMsg = error instanceof Error ? error.message : "Failed to submit to Solana";
+          toast.error(errorMsg);
+          setAuthState((prev) => ({ ...prev, error: errorMsg }));
+          throw error;
+        }
+      } else if (isConnected && address) {
+        // Base/EVM wallet is connected - route to Base
+        if (blockchainState.timeUntilNextSubmission > 0) {
+          toast.error(
+            `Please wait ${Math.ceil(
+              blockchainState.timeUntilNextSubmission / 60
+            )} minutes before submitting again`
+          );
+          return {};
+        }
+
+        try {
+          // Clear previous transaction hash
+          setBlockchainState((prev) => ({
+            ...prev,
+            isSubmitting: true,
+            currentTxHash: undefined,
+          }));
+
+          // Debug logging
+          console.log("🔄 Submitting transaction to Base...");
+          console.log("📍 Current chain:", chain?.name, "ID:", chain?.id);
+          console.log("🎯 Contract address:", contractConfig.address);
+          console.log("📊 Args:", [BigInt(pullups), BigInt(jumps)]);
+
+          // Check if we're on the correct chain
+          if (chain?.id !== 84532) {
+            throw new Error("WRONG_NETWORK");
+          }
+
+          // Prepare workout session data
+          const exercises: `0x${string}`[] = [];
+          const scores: number[] = [];
+
+          if (pullups > 0) {
+            exercises.push(
+              "0x58857c61e1c66c3364b0e545b626ef16ecce5b7b1b9ab12c0857bcb9ee9d12d5"
+            ); // pullups hash
+            scores.push(pullups);
+          }
+
+          if (jumps > 0) {
+            exercises.push(
+              "0x6b3e0e693d98ab1b983d1bfa5a9cbeb4004247dfd98cdb9ae7b2595f64132e41"
+            ); // jumps hash
+            scores.push(jumps);
+          }
+
+          const workoutSession = {
+            exercises,
+            scores,
+            timestamp: BigInt(Math.floor(Date.now() / 1000)),
+            nonce: BigInt(0),
+            signature: "0x" as `0x${string}`,
+          };
+
+          // Submit transaction using wagmi v2 proper way
+          writeContract({
+            ...contractConfig,
+            functionName: "submitWorkoutSession",
+            args: [workoutSession],
+            account: address as `0x${string}`,
+            chain,
+          });
+
+          // Return empty object for now - we'll handle success in useEffect
+          return {};
+        } catch (error) {
+          console.error("Error in submitScore:", error);
+          setBlockchainState((prev) => ({ ...prev, isSubmitting: false }));
+
+          // Check for wrong network error first
+          if (error.message === "WRONG_NETWORK") {
+            toast.error("Wrong Network", {
+              description: "Please switch to Base Sepolia to submit scores",
+              action: {
+                label: "Switch Network",
+                onClick: switchToBaseSepolia,
+              },
+            });
+            setAuthState((prev) => ({
+              ...prev,
+              error: "Please switch to Base Sepolia network",
+            }));
+            throw new Error("Wrong network");
+          }
+
+          // Use CDP error analysis for other errors
+          const errorAnalysis = await analyzeTransactionError(error);
+          const errorMessage = errorAnalysis.suggestion;
+
+          // Show appropriate toast based on severity
+          if (errorAnalysis.severity === "high") {
+            toast.error(errorMessage, {
+              description: errorAnalysis.helpUrl ? "Click for help" : undefined,
+              action: errorAnalysis.helpUrl
+                ? {
+                  label: "Get Help",
+                  onClick: () => window.open(errorAnalysis.helpUrl, "_blank"),
+                }
+                : undefined,
+            });
+          } else if (errorAnalysis.severity === "medium") {
+            toast.error(errorMessage);
+          } else {
+            toast(errorMessage, {
+              description: errorAnalysis.retryable
+                ? "You can try again"
+                : undefined,
+            });
+          }
+
+          setAuthState((prev) => ({ ...prev, error: errorMessage }));
+          throw new Error(errorMessage);
+        }
+      } else {
+        // Neither wallet is connected
         toast.error("Please connect your wallet first");
         return {};
-      }
-
-      if (blockchainState.timeUntilNextSubmission > 0) {
-        toast.error(
-          `Please wait ${Math.ceil(
-            blockchainState.timeUntilNextSubmission / 60
-          )} minutes before submitting again`
-        );
-        return {};
-      }
-
-      try {
-        // Clear previous transaction hash
-        setBlockchainState((prev) => ({
-          ...prev,
-          isSubmitting: true,
-          currentTxHash: undefined,
-        }));
-
-        // Debug logging
-        console.log("🔄 Submitting transaction...");
-        console.log("📍 Current chain:", chain?.name, "ID:", chain?.id);
-        console.log("🎯 Contract address:", contractConfig.address);
-        console.log("📊 Args:", [BigInt(pullups), BigInt(jumps)]);
-
-        // Check if we're on the correct chain
-        if (chain?.id !== 84532) {
-          throw new Error("WRONG_NETWORK");
-        }
-
-        // Prepare workout session data
-        const exercises: `0x${string}`[] = [];
-        const scores: number[] = [];
-
-        if (pullups > 0) {
-          exercises.push(
-            "0x58857c61e1c66c3364b0e545b626ef16ecce5b7b1b9ab12c0857bcb9ee9d12d5"
-          ); // pullups hash
-          scores.push(pullups);
-        }
-
-        if (jumps > 0) {
-          exercises.push(
-            "0x6b3e0e693d98ab1b983d1bfa5a9cbeb4004247dfd98cdb9ae7b2595f64132e41"
-          ); // jumps hash
-          scores.push(jumps);
-        }
-
-        const workoutSession = {
-          exercises,
-          scores,
-          timestamp: BigInt(Math.floor(Date.now() / 1000)),
-          nonce: BigInt(0),
-          signature: "0x" as `0x${string}`,
-        };
-
-        // Submit transaction using wagmi v2 proper way
-        writeContract({
-          ...contractConfig,
-          functionName: "submitWorkoutSession",
-          args: [workoutSession],
-          account: address as `0x${string}`,
-          chain,
-        });
-
-        // Return empty object for now - we'll handle success in useEffect
-        return {};
-      } catch (error) {
-        console.error("Error in submitScore:", error);
-        setBlockchainState((prev) => ({ ...prev, isSubmitting: false }));
-
-        // Check for wrong network error first
-        if (error.message === "WRONG_NETWORK") {
-          toast.error("Wrong Network", {
-            description: "Please switch to Base Sepolia to submit scores",
-            action: {
-              label: "Switch Network",
-              onClick: switchToBaseSepolia,
-            },
-          });
-          setAuthState((prev) => ({
-            ...prev,
-            error: "Please switch to Base Sepolia network",
-          }));
-          throw new Error("Wrong network");
-        }
-
-        // Use CDP error analysis for other errors
-        const errorAnalysis = await analyzeTransactionError(error);
-        const errorMessage = errorAnalysis.suggestion;
-
-        // Show appropriate toast based on severity
-        if (errorAnalysis.severity === "high") {
-          toast.error(errorMessage, {
-            description: errorAnalysis.helpUrl ? "Click for help" : undefined,
-            action: errorAnalysis.helpUrl
-              ? {
-                label: "Get Help",
-                onClick: () => window.open(errorAnalysis.helpUrl, "_blank"),
-              }
-              : undefined,
-          });
-        } else if (errorAnalysis.severity === "medium") {
-          toast.error(errorMessage);
-        } else {
-          toast(errorMessage, {
-            description: errorAnalysis.retryable
-              ? "You can try again"
-              : undefined,
-          });
-        }
-
-        setAuthState((prev) => ({ ...prev, error: errorMessage }));
-        throw new Error(errorMessage);
       }
     },
     [
@@ -923,6 +1037,10 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
       blockchainState.timeUntilNextSubmission,
       writeContract,
       switchToBaseSepolia,
+      isSolanaConnected,
+      solanaPublicKey,
+      connection,
+      refreshLeaderboard,
     ]
   );
 
@@ -986,12 +1104,17 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
 
   // Combined state
   const state: UserState = {
-    // Auth state
+    // Auth state - Base (EVM)
     isConnected,
     isAuthenticated: authState.isAuthenticated,
     address,
     isLoading: authState.isLoading,
     error: authState.error,
+
+    // Auth state - Solana
+    solanaAddress: solanaPublicKey?.toString(),
+    isSolanaConnected,
+    isSolanaLoading: isSolanaConnecting || solanaAuthState.isSolanaLoading,
 
     // Basename state
     basename,
@@ -1020,11 +1143,18 @@ export const UserProvider = ({ children, options = {} }: UserProviderProps) => {
   const displayName = getDisplayName();
 
   const actions: UserActions = {
+    // Base (EVM) actions
     connectWallet,
     signInWithEthereum,
     signOut,
     connectAndSignIn,
     resetAuth,
+
+    // Solana actions
+    connectSolanaWallet,
+    disconnectSolana,
+
+    // Shared actions
     submitScore,
     refreshLeaderboard,
     getDisplayName,

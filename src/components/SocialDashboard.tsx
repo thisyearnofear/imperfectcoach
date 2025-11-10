@@ -21,11 +21,12 @@ import { Input } from "@/components/ui/input";
 import MyPassport from "@/components/MyPassport";
 import { useSocialContext } from "@/contexts/SocialContext";
 import { useMemoryIdentity } from "@/hooks/useMemoryIdentity";
+import { UnifiedWallet } from "@/components/UnifiedWallet";
 
 const SocialDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
   const { getFriendActivity, getFriendChallenges, friendAddresses } = useSocialContext();
   const { identityGraph, isLoading: isIdentityLoading } = useMemoryIdentity(address);
 
@@ -170,21 +171,30 @@ const SocialDashboard = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search friends..."
-              className="pl-8 w-40 md:w-64"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Button variant="outline" size="icon">
-            <Bell className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon">
-            <Settings className="h-4 w-4" />
-          </Button>
+          {!isConnected ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground hidden sm:block">Connect wallet to access social features</span>
+              <UnifiedWallet variant="inline" />
+            </div>
+          ) : (
+            <>
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search friends..."
+                  className="pl-8 w-40 md:w-64"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Button variant="outline" size="icon">
+                <Bell className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

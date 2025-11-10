@@ -11,6 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
@@ -30,7 +37,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Exercise } from "@/lib/types";
-import { useUserBlockchain } from "@/hooks/useUserHooks";
+import { useLeaderboardParallel, ChainFilter } from "@/hooks/useLeaderboardParallel";
 import { useBasename } from "@/hooks/useBasename";
 import { SmartRefresh, RefreshButton } from "./SmartRefresh";
 import { cn } from "@/lib/utils";
@@ -43,6 +50,7 @@ interface LeaderboardEntry {
   timestamp: number;
   rank: number;
   totalScore: number;
+  chain?: "base" | "solana";
 }
 
 type SortField = "rank" | "username" | "pullups" | "jumps" | "total" | "timestamp";
@@ -52,22 +60,41 @@ interface TableLeaderboardProps {
   exercise?: Exercise;
   limit?: number;
   compact?: boolean;
+  chainFilter?: ChainFilter;
 }
 
+// Chain badge component
+const ChainBadge = ({ chain }: { chain?: "base" | "solana" }) => {
+  if (!chain) return null;
+  
+  return chain === "solana" ? (
+    <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 dark:text-purple-400 text-xs">
+      SOL
+    </Badge>
+  ) : (
+    <Badge variant="secondary" className="bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs">
+      BASE
+    </Badge>
+  );
+};
+
 // User display with basename resolution
-const UserDisplay = ({ address }: { address: string }) => {
+const UserDisplay = ({ address, chain }: { address: string; chain?: "base" | "solana" }) => {
   const { basename, isLoading } = useBasename(address);
   const displayName =
     basename || `${address.slice(0, 6)}...${address.slice(-4)}`;
 
   return (
-    <span className="truncate font-medium" title={address}>
-      {isLoading ? (
-        <span className="text-muted-foreground text-xs">Loading...</span>
-      ) : (
-        displayName
-      )}
-    </span>
+    <div className="flex items-center gap-2">
+      <span className="truncate font-medium" title={address}>
+        {isLoading ? (
+          <span className="text-muted-foreground text-xs">Loading...</span>
+        ) : (
+          displayName
+        )}
+      </span>
+      <ChainBadge chain={chain} />
+    </div>
   );
 };
 
@@ -156,23 +183,28 @@ export const TableLeaderboard = ({
   exercise,
   limit = 50,
   compact = false,
+  chainFilter = "all",
 }: TableLeaderboardProps) => {
-  const { leaderboard, isLoading, pendingUpdates } = useUserBlockchain();
+  const { leaderboard, isLoading, error, refetch } = useLeaderboardParallel({
+    chain: chainFilter,
+  });
   const [sortField, setSortField] = useState<SortField>("rank");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [chainFilterView, setChainFilterView] = useState<ChainFilter>(chainFilter);
   const pageSize = compact ? 10 : 50;
 
   // Process and sort leaderboard data
   const processedData = useMemo<LeaderboardEntry[]>(() => {
-    const processed = leaderboard.map((score, index) => ({
+    const processed = leaderboard.map((score) => ({
       address: score.user,
       username: score.user,
       pullups: score.pullups,
       jumps: score.jumps,
-      timestamp: score.timestamp,
-      rank: index + 1,
+      timestamp: score.lastSubmissionTime,
+      rank: score.rank || 0,
       totalScore: score.pullups + score.jumps,
+      chain: score.chain,
     }));
 
     // Apply exercise filter if specified
@@ -247,10 +279,10 @@ export const TableLeaderboard = ({
     return (
       <Card className="w-full">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center justify-between">
-            <span>🏆 Top Athletes</span>
-            <RefreshButton size="sm" />
-          </CardTitle>
+        <CardTitle className="text-sm flex items-center justify-between">
+        <span>🏆 Top Athletes</span>
+        <RefreshButton size="sm" onClick={() => refetch()} />
+        </CardTitle>
         </CardHeader>
         <CardContent className="p-3">
           <Table>
@@ -283,7 +315,7 @@ export const TableLeaderboard = ({
                       <RankBadge rank={entry.rank} />
                     </TableCell>
                     <TableCell>
-                      <UserDisplay address={entry.address} />
+                    <UserDisplay address={entry.address} chain={entry.chain} />
                     </TableCell>
                     <TableCell className="text-right font-semibold">
                       {exercise === "pull-ups"
@@ -307,15 +339,27 @@ export const TableLeaderboard = ({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            🏆 Onchain Olympians
-            {pendingUpdates && (
-              <span className="relative">
-                <span className="absolute top-0 right-0 h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
-              </span>
-            )}
+          <TrendingUp className="h-5 w-5" />
+          🏆 Onchain Olympians
+          {error && (
+          <span className="relative">
+          <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full animate-pulse" />
+          </span>
+          )}
           </CardTitle>
-          <RefreshButton size="sm" />
+          <div className="flex items-center gap-2">
+             <Select value={chainFilterView} onValueChange={(v) => setChainFilterView(v as ChainFilter)}>
+               <SelectTrigger className="w-28 h-8">
+                 <SelectValue />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="all">All Chains</SelectItem>
+                 <SelectItem value="base">Base</SelectItem>
+                 <SelectItem value="solana">Solana</SelectItem>
+               </SelectContent>
+             </Select>
+             <RefreshButton size="sm" onClick={() => refetch()} />
+           </div>
         </div>
         <SmartRefresh
           variant="minimal"
@@ -440,7 +484,7 @@ export const TableLeaderboard = ({
                     <RankBadge rank={entry.rank} />
                   </TableCell>
                   <TableCell>
-                    <UserDisplay address={entry.address} />
+                  <UserDisplay address={entry.address} chain={entry.chain} />
                   </TableCell>
                   {!exercise && (
                     <>

@@ -1,4 +1,5 @@
 import { ContractConfig } from "./types";
+import { PublicKey } from "@solana/web3.js";
 
 export const IMPERFECT_COACH_PASSPORT_ABI = [
   {
@@ -593,6 +594,15 @@ export const REVENUE_SPLITTER_CONFIG: ContractConfig = {
   address: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA", // RevenueSplitter on Base Sepolia
   abi: [] as const, // Add ABI if needed for direct interactions
 };
+
+// Solana Leaderboard configuration
+export const SOLANA_LEADERBOARD_PROGRAM_ID = new PublicKey(
+  "11111111111111111111111111111111" // TODO: Replace with actual deployed program ID
+);
+
+export const SOLANA_LEADERBOARD_ADDRESS = new PublicKey(
+  "11111111111111111111111111111111" // TODO: Replace with actual leaderboard account address
+);
 
 // Helper function to get contract config
 export const getContractConfig = (

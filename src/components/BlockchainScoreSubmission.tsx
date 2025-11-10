@@ -19,9 +19,18 @@ import {
 } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useUserAuth, useUserBlockchain } from "@/hooks/useUserHooks";
+import { useSolanaWallet } from "@/hooks/useSolanaWallet";
 import { InlineWallet } from "./UnifiedWallet";
 import { NetworkStatus } from "./NetworkStatus";
+import { ChainSelector } from "./ChainSelector";
 import { Exercise, RepData } from "@/lib/types";
+import {
+  getDefaultChain,
+  getAvailableChains,
+  validateChainSubmission,
+  showChainRoutingToast,
+  ChainType,
+} from "@/lib/chainRouting";
 
 interface BlockchainScoreSubmissionProps {
   exercise: Exercise;
@@ -39,6 +48,10 @@ export const BlockchainScoreSubmission = ({
   onSubmissionComplete,
 }: BlockchainScoreSubmissionProps) => {
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [selectedChain, setSelectedChain] = useState<ChainType | null>(null);
+  const [showChainSelector, setShowChainSelector] = useState(false);
+  
+  // Base chain hooks
   const { isAuthenticated, isConnected, signInWithEthereum } = useUserAuth();
   const { chain } = useAccount();
   const {
@@ -48,31 +61,86 @@ export const BlockchainScoreSubmission = ({
     timeUntilNextSubmission,
     currentTxHash,
   } = useUserBlockchain();
+
+  // Solana chain hooks
+  const {
+    solanaAddress,
+    isSolanaConnected,
+    isSolanaLoading,
+    submitScoreToSolanaContract,
+  } = useSolanaWallet();
+
   const [error, setError] = useState<string>();
 
   const isOnCorrectNetwork = chain?.id === 84532; // Base Sepolia
+  const availableChains = getAvailableChains({
+    baseAddress: isConnected ? "0x..." : undefined,
+    solanaAddress,
+    isBaseConnected: isConnected && isAuthenticated,
+    isSolanaConnected,
+  });
 
   const formatTime = (seconds: number) => {
     const minutes = Math.ceil(seconds / 60);
     return minutes > 1 ? `${minutes} minutes` : `${seconds} seconds`;
   };
 
-  const handleSubmitScore = async () => {
-    if (!canSubmit || reps === 0) return;
+  const handleChainSelected = async (chain: ChainType) => {
+    setShowChainSelector(false);
+    setSelectedChain(chain);
+
+    const pullups = exercise === "pull-ups" ? reps : 0;
+    const jumps = exercise === "jumps" ? reps : 0;
 
     try {
       setError(undefined);
-      // Calculate scores based on exercise type
-      const pullups = exercise === "pull-ups" ? reps : 0;
-      const jumps = exercise === "jumps" ? reps : 0;
 
-      await submitScore(pullups, jumps);
+      if (chain === "base") {
+        await submitScore(pullups, jumps);
+      } else if (chain === "solana") {
+        // TODO: Get actual Solana leaderboard program address from config
+        const leaderboardAddress = null; // Will be set from contract config
+        if (leaderboardAddress) {
+          await submitScoreToSolanaContract(
+            pullups,
+            jumps,
+            leaderboardAddress
+          );
+        }
+      }
+
       setHasSubmitted(true);
       onSubmissionComplete?.();
     } catch (error) {
       console.error("Failed to submit score:", error);
-      setError("Failed to submit score to blockchain");
+      setError(`Failed to submit score to ${chain}`);
     }
+  };
+
+  const handleSubmitScore = async () => {
+    if (reps === 0) return;
+
+    // Determine which chain to use
+    const defaultChain = getDefaultChain({
+      baseAddress: isConnected ? "0x..." : undefined,
+      solanaAddress,
+      isBaseConnected: isConnected && isAuthenticated,
+      isSolanaConnected,
+    });
+
+    if (defaultChain === "none") {
+      setError("Please connect a wallet first");
+      return;
+    }
+
+    if (defaultChain === null) {
+      // Both chains connected - show selector
+      setShowChainSelector(true);
+      return;
+    }
+
+    // Single chain connected - submit directly
+    await handleChainSelected(defaultChain);
   };
 
   // Don't show if no reps completed
@@ -81,17 +149,31 @@ export const BlockchainScoreSubmission = ({
   }
 
   return (
-    <Card className="w-full border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-primary justify-center">
-          <Trophy className="h-5 w-5" />
-          🎉 Submit to Blockchain Leaderboard
-        </CardTitle>
-        <CardDescription>
-          Record your amazing {exercise} performance permanently on Base Sepolia
-          and compete globally!
-        </CardDescription>
-      </CardHeader>
+    <>
+      <ChainSelector
+        open={showChainSelector}
+        onChainSelected={handleChainSelected}
+        onCancel={() => setShowChainSelector(false)}
+        baseConnected={isConnected && isAuthenticated}
+        solanaConnected={isSolanaConnected}
+      />
+
+      <Card className="w-full border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-primary justify-center">
+            <Trophy className="h-5 w-5" />
+            🎉 Submit to Blockchain Leaderboard
+          </CardTitle>
+          <CardDescription>
+            Record your amazing {exercise} performance permanently on-chain
+            and compete globally!{" "}
+            {availableChains.length > 1 && (
+              <span className="text-xs mt-1 block">
+                (Choose your chain when submitting)
+              </span>
+            )}
+          </CardDescription>
+        </CardHeader>
       <CardContent className="space-y-4">
         {/* Session Summary */}
         <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-lg">
@@ -109,18 +191,18 @@ export const BlockchainScoreSubmission = ({
           </div>
         </div>
 
-        {!isConnected ? (
+        {!isConnected && !isSolanaConnected ? (
           <div className="space-y-3">
             <Alert>
               <Wallet className="h-4 w-4" />
               <AlertDescription>
-                Connect your Coinbase Smart Wallet to submit scores to the
-                blockchain leaderboard.
+                Connect your Coinbase Smart Wallet or Solana wallet to submit
+                scores to the blockchain leaderboard.
               </AlertDescription>
             </Alert>
-            <InlineWallet showOnboarding={false} />
+            <InlineWallet showOnboarding={false} chains="all" />
           </div>
-        ) : !isAuthenticated ? (
+        ) : isConnected && !isAuthenticated ? (
           <div className="space-y-3">
             <Alert>
               <Wallet className="h-4 w-4" />
@@ -191,11 +273,17 @@ export const BlockchainScoreSubmission = ({
 
             <Button
               onClick={handleSubmitScore}
-              disabled={isSubmitting || !canSubmit || !isOnCorrectNetwork}
+              disabled={
+                (isSubmitting || isSolanaLoading) ||
+                (!isConnected && !isSolanaConnected) ||
+                (isConnected && !isOnCorrectNetwork && !isSolanaConnected) ||
+                (isConnected && !canSubmit && !isSolanaConnected) ||
+                reps === 0
+              }
               className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
               size="lg"
             >
-              {isSubmitting ? (
+              {isSubmitting || isSolanaLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Submitting to Blockchain...
@@ -208,16 +296,27 @@ export const BlockchainScoreSubmission = ({
               )}
             </Button>
 
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="outline" className="text-xs">
-                ⛓️ Base Sepolia
-              </Badge>
-              <span>•</span>
-              <span>Gas fees covered by smart wallet</span>
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground flex-wrap">
+              {availableChains.length > 0 && (
+                <>
+                  <Badge variant="outline" className="text-xs">
+                    {availableChains.includes("base") && "⛓️ Base"}
+                    {availableChains.includes("solana") && availableChains.includes("base") && " + "}
+                    {availableChains.includes("solana") && "◎ Solana"}
+                  </Badge>
+                  <span>•</span>
+                </>
+              )}
+              <span>
+                {isSolanaConnected
+                  ? "Solana transaction fees ~0.00025 SOL"
+                  : "Gas fees covered by smart wallet"}
+              </span>
             </div>
           </div>
         )}
       </CardContent>
     </Card>
+    </>
   );
 };

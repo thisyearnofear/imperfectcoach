@@ -6,17 +6,20 @@ import { WagmiProvider } from "wagmi";
 
 import { config } from "@/wagmi";
 import { UserProvider } from "@/contexts/UserContext";
+import { SolanaProvider } from "@/integrations/SolanaProvider";
 
 export function Web3Providers(props: { children: ReactNode }) {
   const queryClient = useMemo(() => new QueryClient(), []);
 
   return (
     <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <UserProvider options={{ requireSiwe: true, enableSmartRefresh: true }}>
-          {props.children}
-        </UserProvider>
-      </QueryClientProvider>
+      <SolanaProvider>
+        <QueryClientProvider client={queryClient}>
+          <UserProvider options={{ requireSiwe: true, enableSmartRefresh: true }}>
+            {props.children}
+          </UserProvider>
+        </QueryClientProvider>
+      </SolanaProvider>
     </WagmiProvider>
   );
 }

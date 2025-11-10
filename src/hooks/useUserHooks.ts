@@ -12,6 +12,7 @@ const useUser = () => {
 // Convenience hooks for specific use cases
 export const useUserAuth = () => {
   const {
+    // Base (EVM)
     isConnected,
     isAuthenticated,
     address,
@@ -22,9 +23,16 @@ export const useUserAuth = () => {
     signOut,
     connectAndSignIn,
     resetAuth,
+    // Solana
+    solanaAddress,
+    isSolanaConnected,
+    isSolanaLoading,
+    connectSolanaWallet,
+    disconnectSolana,
   } = useUser();
 
   return {
+    // Base (EVM)
     isConnected,
     isAuthenticated,
     address,
@@ -35,6 +43,12 @@ export const useUserAuth = () => {
     signOut,
     connectAndSignIn,
     resetAuth,
+    // Solana
+    solanaAddress,
+    isSolanaConnected,
+    isSolanaLoading,
+    connectSolanaWallet,
+    disconnectSolana,
   };
 };
 

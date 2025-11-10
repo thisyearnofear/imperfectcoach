@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award, Loader2, Activity, Users, Target, CalendarDays } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Exercise, BlockchainScore } from "@/lib/types";
-import { useUserBlockchain } from "@/hooks/useUserHooks";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { SmartRefresh, RefreshButton } from "./SmartRefresh";
@@ -26,6 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useLeaderboardParallel, ChainFilter } from "@/hooks/useLeaderboardParallel";
 
 interface LeaderboardEntry {
   address: string;
@@ -34,6 +34,7 @@ interface LeaderboardEntry {
   jumps: number;
   timestamp: number;
   rank: number;
+  chain?: "base" | "solana";
 }
 
 interface LeaderboardProps {
@@ -42,10 +43,26 @@ interface LeaderboardProps {
   currentUserAddress?: string;
   refreshTrigger?: number;
   compact?: boolean;
+  chainFilter?: ChainFilter;
 }
 
+// Chain badge component
+const ChainBadge = ({ chain }: { chain?: "base" | "solana" }) => {
+  if (!chain) return null;
+  
+  return chain === "solana" ? (
+    <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 dark:text-purple-400 text-xs">
+      SOL
+    </Badge>
+  ) : (
+    <Badge variant="secondary" className="bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs">
+      BASE
+    </Badge>
+  );
+};
+
 // Enhanced user display component with social identity support
-const UserDisplay = ({ address, showActions = false }: { address: string; showActions?: boolean }) => {
+const UserDisplay = ({ address, chain, showActions = false }: { address: string; chain?: "base" | "solana"; showActions?: boolean }) => {
   const { basename, isLoading: basenameLoading } = useBasename(address);
   const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
     enabled: !basenameLoading && !basename // Only fetch if no basename
@@ -96,13 +113,14 @@ const UserDisplay = ({ address, showActions = false }: { address: string; showAc
   };
 
   return (
-    <div className="flex items-center justify-between w-full">
+    <div className="flex items-center justify-between w-full gap-2">
       <span className="truncate font-medium flex items-center gap-1" title={address}>
         {displayIcon && <span className="text-xs">{displayIcon}</span>}
         <span className={basenameLoading || identityLoading ? "text-muted-foreground" : ""}>
           {displayName}
         </span>
       </span>
+      <ChainBadge chain={chain} />
       
       {showActions && (
         <Dialog>
@@ -206,7 +224,8 @@ const ExerciseLeaderboard = ({
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
             {getRankIcon(entry.rank)}
             <UserDisplay 
-              address={entry.address} 
+              address={entry.address}
+              chain={entry.chain}
               showActions={true} // Show challenge button for non-compact view
             />
           </div>
@@ -227,12 +246,16 @@ const Leaderboard = ({
   currentUserAddress,
   refreshTrigger,
   compact = false,
+  chainFilter = "all",
 }: LeaderboardProps) => {
-  const { leaderboard, isLoading, pendingUpdates } = useUserBlockchain();
+  const { leaderboard, isLoading, error, refetch } = useLeaderboardParallel({
+    chain: chainFilter,
+  });
   const { friendAddresses } = useSocialContext();
   const previousLeaderboardLength = useRef(leaderboard.length);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'all' | 'friends'>('all');
+  const [chainFilterView, setChainFilterView] = useState<ChainFilter>(chainFilter);
 
   // Basename resolver temporarily disabled to prevent infinite loop
   // const resolver = useBasenameResolver(...);
@@ -240,13 +263,14 @@ const Leaderboard = ({
   // Process and sort leaderboard data
   const { pullupData, jumpData, friendPullupData, friendJumpData } = useMemo(() => {
     const processedData: LeaderboardEntry[] = leaderboard.map(
-      (score, index) => ({
+      (score) => ({
         address: score.user,
         username: score.user,
         pullups: score.pullups,
         jumps: score.jumps,
-        timestamp: score.timestamp,
-        rank: index + 1,
+        timestamp: score.lastSubmissionTime,
+        rank: score.rank || 0,
+        chain: score.chain,
       })
     );
 
@@ -440,37 +464,47 @@ const Leaderboard = ({
   return (
     <Card className="w-full">
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base content-center justify-center font-semibold">
-            🏆 Onchain Olympians (in training)
-            {pendingUpdates && (
-              <span className="ml-2 relative">
-                <div className="absolute -top-1 -right-1 h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
-              </span>
-            )}
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <Button 
-                size="sm" 
-                variant={viewMode === 'all' ? 'default' : 'outline'} 
-                onClick={() => setViewMode('all')}
-                className="h-8 px-3 text-xs"
-              >
-                All
-              </Button>
-              <Button 
-                size="sm" 
-                variant={viewMode === 'friends' ? 'default' : 'outline'} 
-                onClick={() => setViewMode('friends')}
-                className="h-8 px-3 text-xs"
-              >
-                Friends
-              </Button>
-            </div>
-            <RefreshButton size="sm" />
-          </div>
-        </div>
+      <div className="flex items-center justify-between">
+      <CardTitle className="text-base content-center justify-center font-semibold">
+      🏆 Onchain Olympians (in training)
+      {error && (
+      <span className="ml-2 relative">
+      <div className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse" />
+      </span>
+      )}
+      </CardTitle>
+      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
+      <Button 
+      size="sm" 
+      variant={viewMode === 'all' ? 'default' : 'outline'} 
+      onClick={() => setViewMode('all')}
+      className="h-8 px-3 text-xs"
+      >
+      All
+      </Button>
+      <Button 
+      size="sm" 
+      variant={viewMode === 'friends' ? 'default' : 'outline'} 
+      onClick={() => setViewMode('friends')}
+      className="h-8 px-3 text-xs"
+      >
+      Friends
+      </Button>
+      </div>
+      <Select value={chainFilterView} onValueChange={(v) => setChainFilterView(v as ChainFilter)}>
+          <SelectTrigger className="w-24 h-8">
+              <SelectValue />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="all">All Chains</SelectItem>
+                 <SelectItem value="base">Base</SelectItem>
+                 <SelectItem value="solana">Solana</SelectItem>
+               </SelectContent>
+             </Select>
+             <RefreshButton size="sm" onClick={() => refetch()} />
+           </div>
+         </div>
         <SmartRefresh
           variant="minimal"
           size="sm"
@@ -484,7 +518,11 @@ const Leaderboard = ({
             Loading latest scores...
           </p>
         )}
-        {/* Basename stats temporarily disabled */}
+        {error && (
+          <p className="text-xs text-red-500 text-center">
+            Error: {error}
+          </p>
+        )}
       </CardHeader>
       <CardContent className="p-3 space-y-3">
         {/* Desktop: Side by side */}
