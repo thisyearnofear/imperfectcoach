@@ -26,49 +26,74 @@ import {
   Zap,
   Info,
   ChevronRight,
+  Brain,
+  TrendingDown,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { useUser } from "@/hooks/useUserHooks";
 import { solanaWalletManager } from "../lib/payments/solana-wallet-adapter";
+import { useAccount } from "wagmi";
 import { cn } from "@/lib/utils";
 
-type WalletVariant = "header" | "card" | "inline" | "minimal";
+type WalletVariant = "header" | "card" | "inline" | "minimal" | "dual";
 type WalletSize = "sm" | "md" | "lg";
+type ChainType = "base" | "solana" | "all";
 
 interface UnifiedWalletProps {
   variant?: WalletVariant;
   size?: WalletSize;
   className?: string;
   showOnboarding?: boolean;
+  chains?: ChainType;
   onConnect?: () => void;
   onAuthenticated?: () => void;
 }
 
-const WalletOnboarding = ({ onDismiss }: { onDismiss?: () => void }) => (
-  <Alert className="border-primary/20 bg-primary/5">
-    <Info className="h-4 w-4 text-primary" />
-    <AlertDescription className="text-sm">
-      <div className="space-y-2">
-        <p className="font-medium text-primary">
-          Welcome to Blockchain Fitness!
-        </p>
-        <p className="text-muted-foreground">
-          Connect your Coinbase Smart Wallet to compete on the global
-          leaderboard and track your progress permanently on-chain.
-        </p>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Shield className="h-3 w-3" />
-          <span>Secure</span>
-          <span>•</span>
-          <Zap className="h-3 w-3" />
-          <span>Fast</span>
-          <span>•</span>
-          <Trophy className="h-3 w-3" />
-          <span>Competitive</span>
+const WalletOnboarding = ({ 
+  chains = "base",
+  onDismiss 
+}: { 
+  chains?: ChainType;
+  onDismiss?: () => void 
+}) => {
+  const showMultiChain = chains === "all";
+  
+  return (
+    <Alert className="border-primary/20 bg-primary/5">
+      <Info className="h-4 w-4 text-primary" />
+      <AlertDescription className="text-sm">
+        <div className="space-y-2">
+          <p className="font-medium text-primary">
+            Welcome to Blockchain Fitness!
+          </p>
+          <p className="text-muted-foreground">
+            {showMultiChain 
+              ? "Connect your wallets for optimal payment routing and cost savings across multiple blockchains."
+              : "Connect your Coinbase Smart Wallet to compete on the global leaderboard and track your progress permanently on-chain."}
+          </p>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+            {showMultiChain && (
+              <>
+                <Shield className="h-3 w-3" />
+                <span>Multi-Chain</span>
+                <span>•</span>
+              </>
+            )}
+            <Shield className="h-3 w-3" />
+            <span>Secure</span>
+            <span>•</span>
+            <Zap className="h-3 w-3" />
+            <span>Fast</span>
+            <span>•</span>
+            <Trophy className="h-3 w-3" />
+            <span>Competitive</span>
+          </div>
         </div>
-      </div>
-    </AlertDescription>
-  </Alert>
-);
+      </AlertDescription>
+    </Alert>
+  );
+};
 
 const CopyableAddress = ({
   address,
@@ -121,6 +146,128 @@ const CopyableAddress = ({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+};
+
+const SolanaWalletState = ({
+  onConnect,
+  isConnecting,
+  address,
+  displayName,
+  onDisconnect,
+  variant,
+  size = "md",
+}: {
+  onConnect: () => void;
+  isConnecting: boolean;
+  address: string | null;
+  displayName: string;
+  onDisconnect: () => void;
+  variant: WalletVariant;
+  size?: WalletSize;
+}) => {
+  const [copied, setCopied] = React.useState(false);
+  
+  const isPhantomAvailable = () => {
+    return typeof window !== "undefined" && (window as any)?.solana?.isPhantom;
+  };
+
+  const handleCopy = async () => {
+    if (address) {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // Not connected - show install or connect button
+  if (!address) {
+    if (!isPhantomAvailable()) {
+      return (
+        <Card className="border border-amber-200 bg-amber-50">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <div className="text-sm flex-1">
+                <div className="font-medium text-amber-800">Phantom Required</div>
+                <div className="text-amber-700 text-xs">
+                  Install Phantom for Solana support
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open("https://phantom.app/", "_blank")}
+              >
+                Install
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Button
+        onClick={onConnect}
+        disabled={isConnecting}
+        variant="outline"
+        className="w-full bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
+      >
+        {isConnecting ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Connecting...
+          </>
+        ) : (
+          <>
+            <Zap className="h-4 w-4 mr-2" />
+            Connect Phantom (Solana)
+          </>
+        )}
+      </Button>
+    );
+  }
+
+  // Connected state
+  if (variant === "header") {
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+          <Zap className="h-3 w-3 mr-1" />
+          {displayName}
+        </Badge>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDisconnect}
+          className="h-8 px-2 shrink-0"
+        >
+          <LogOut className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="text-center space-y-2">
+        <Badge variant="default" className="bg-purple-600">
+          <Zap className="h-3 w-3 mr-1" />
+          <span>Solana Connected</span>
+        </Badge>
+        <CopyableAddress
+          address={address}
+          displayName={displayName}
+          size={size}
+          showFullAddress
+        />
+      </div>
+      <Button onClick={onDisconnect} variant="outline" className="w-full">
+        <LogOut className="h-4 w-4 mr-2" />
+        Disconnect Solana
+      </Button>
+    </div>
   );
 };
 
@@ -371,11 +518,58 @@ export const UnifiedWallet = ({
   size = "md",
   className,
   showOnboarding = false,
+  chains = "base",
   onConnect,
   onAuthenticated,
 }: UnifiedWalletProps) => {
   const { isConnected, isAuthenticated, isLoading, connectAndSignIn } =
     useUser();
+  const { address: baseAddress } = useAccount();
+  
+  // Solana state
+  const [solanaState, setSolanaState] = React.useState({
+    connected: false,
+    address: null as string | null,
+    connecting: false,
+  });
+
+  // Monitor Solana wallet state
+  React.useEffect(() => {
+    if (chains !== "solana" && chains !== "all") return;
+    
+    const updateSolanaState = () => {
+      const state = solanaWalletManager.getState();
+      setSolanaState({
+        connected: state.connected,
+        address: state.publicKey?.toString() || null,
+        connecting: false,
+      });
+    };
+
+    updateSolanaState();
+    const interval = setInterval(updateSolanaState, 1000);
+    return () => clearInterval(interval);
+  }, [chains]);
+
+  const handleSolanaConnect = async () => {
+    setSolanaState(prev => ({ ...prev, connecting: true }));
+    try {
+      await solanaWalletManager.connect("phantom");
+    } catch (error) {
+      console.error("Solana connection failed:", error);
+      alert("Failed to connect Phantom wallet. Please ensure Phantom is installed.");
+    } finally {
+      setSolanaState(prev => ({ ...prev, connecting: false }));
+    }
+  };
+
+  const handleSolanaDisconnect = async () => {
+    try {
+      await solanaWalletManager.disconnect();
+    } catch (error) {
+      console.error("Solana disconnect failed:", error);
+    }
+  };
 
   // Trigger callbacks
   React.useEffect(() => {
@@ -390,8 +584,293 @@ export const UnifiedWallet = ({
     }
   }, [isAuthenticated, onAuthenticated]);
 
+  // Dual variant: side-by-side Base and Solana
+  if (variant === "dual") {
+    const baseConnected = isConnected || !!baseAddress;
+    const solanaConnected = solanaState.connected;
+    const bothConnected = baseConnected && solanaConnected;
+    const neitherConnected = !baseConnected && !solanaConnected;
+    const oneConnected = (baseConnected && !solanaConnected) || (!baseConnected && solanaConnected);
+
+    return (
+      <div className={cn("space-y-6", className)}>
+        {/* Connection Status Header */}
+        <Card className="border-0 bg-gradient-to-r from-blue-50 to-purple-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-blue-600" />
+              Multi-Chain Wallet Setup
+            </CardTitle>
+            <div className="text-sm text-gray-600">
+              Connect wallets for optimal payment routing and cost savings
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="space-y-1">
+                <div className={`h-3 w-3 rounded-full mx-auto ${baseConnected ? "bg-blue-500" : "bg-gray-300"}`} />
+                <div className="text-xs font-medium">Base Network</div>
+                <div className="text-xs text-gray-500">Coinbase Wallet</div>
+              </div>
+              <div className="space-y-1">
+                <Brain className={`h-6 w-6 mx-auto ${bothConnected ? "text-green-500" : "text-gray-400"}`} />
+                <div className="text-xs font-medium">Smart Routing</div>
+                <div className="text-xs text-gray-500">
+                  {bothConnected ? "Active" : "Pending"}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className={`h-3 w-3 rounded-full mx-auto ${solanaConnected ? "bg-purple-500" : "bg-gray-300"}`} />
+                <div className="text-xs font-medium">Solana Network</div>
+                <div className="text-xs text-gray-500">Phantom Wallet</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Wallet Connection Cards */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Base Wallet */}
+          <Card className="border border-blue-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-700">
+                <Shield className="h-5 w-5" />
+                Base Network
+              </CardTitle>
+              <div className="text-sm text-blue-600">
+                Established • Secure • Premium Services
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isAuthenticated ? (
+                <AuthenticatedState variant="card" size={size} />
+              ) : isConnected ? (
+                <ConnectedNotAuthenticatedState variant="card" size={size} />
+              ) : (
+                <ConnectButton
+                  size={size}
+                  variant="card"
+                  isLoading={isLoading}
+                  onConnect={connectAndSignIn}
+                />
+              )}
+              
+              {baseConnected && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <div className="h-2 w-2 bg-green-500 rounded-full" />
+                    Connected to Base Sepolia
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    • Premium analysis payments
+                    • Agent coaching sessions  
+                    • Established infrastructure
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Solana Wallet */}
+          <Card className="border border-purple-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-purple-700">
+                <Zap className="h-5 w-5" />
+                Solana Network
+              </CardTitle>
+              <div className="text-sm text-purple-600">
+                Ultra-Fast • Low Cost • Micro-Payments
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <SolanaWalletState
+                onConnect={handleSolanaConnect}
+                isConnecting={solanaState.connecting}
+                address={solanaState.address}
+                displayName={solanaState.address?.slice(0, 4) + "..." + solanaState.address?.slice(-4) || "Not Connected"}
+                onDisconnect={handleSolanaDisconnect}
+                variant="card"
+                size={size}
+              />
+              
+              {solanaConnected && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <div className="h-2 w-2 bg-green-500 rounded-full" />
+                    Connected to Solana Devnet
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    • Micro-payment optimization
+                    • 90% fee reduction potential
+                    • Ultra-fast confirmations
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Status and Recommendations */}
+        <Card className={`${bothConnected ? "border-green-200 bg-green-50" : oneConnected ? "border-amber-200 bg-amber-50" : "border-blue-200 bg-blue-50"}`}>
+          <CardContent className="p-4">
+            {bothConnected && (
+              <div className="flex items-center gap-3">
+                <Brain className="h-5 w-5 text-green-600" />
+                <div>
+                  <div className="font-medium text-green-800">Smart Routing Active!</div>
+                  <div className="text-sm text-green-700">
+                    AI will automatically select the optimal network for each payment
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {oneConnected && (
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div>
+                  <div className="font-medium text-amber-800">Enhanced Experience Available</div>
+                  <div className="text-sm text-amber-700 mb-2">
+                    Connect {baseConnected ? "Phantom wallet" : "Coinbase wallet"} for optimal payment routing and cost savings.
+                  </div>
+                  <div className="text-xs text-amber-600">
+                    • Access to both payment networks
+                    • Automatic fee optimization  
+                    • Seamless fallback systems
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {neitherConnected && (
+              <div className="flex items-center gap-3">
+                <Wallet className="h-5 w-5 text-blue-600" />
+                <div>
+                  <div className="font-medium text-blue-800">Get Started</div>
+                  <div className="text-sm text-blue-700">
+                    Connect at least one wallet to access AI fitness coaching features
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Benefits Overview */}
+        {bothConnected && (
+          <Card className="border-dashed border-gray-200">
+            <CardContent className="p-4">
+              <div className="text-center space-y-4">
+                <div className="font-medium text-gray-800">Multi-Chain Benefits Active</div>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="space-y-1">
+                    <TrendingDown className="h-6 w-6 text-green-500 mx-auto" />
+                    <div className="font-medium">Cost Savings</div>
+                    <div className="text-gray-600">Up to 90% on micro-payments</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Clock className="h-6 w-6 text-blue-500 mx-auto" />
+                    <div className="font-medium">Speed</div>
+                    <div className="text-gray-600">1-second Solana confirmations</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Shield className="h-6 w-6 text-purple-500 mx-auto" />
+                    <div className="font-medium">Reliability</div>
+                    <div className="text-gray-600">Automatic fallback systems</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
   // Render based on variant
   if (variant === "header" || variant === "minimal") {
+    // If showing both chains, use exclusive mode (one at a time) for cleaner header
+    if (chains === "all") {
+      const baseActive = isConnected || !!baseAddress;
+      const solanaActive = solanaState.connected;
+
+      // Show whichever is connected, with option to switch
+      if (solanaActive) {
+        return (
+          <div className={cn("flex items-center gap-2", className)}>
+            <SolanaWalletState
+              onConnect={handleSolanaConnect}
+              isConnecting={solanaState.connecting}
+              address={solanaState.address}
+              displayName={solanaState.address?.slice(0, 4) + "..." + solanaState.address?.slice(-4) || "SOL"}
+              onDisconnect={handleSolanaDisconnect}
+              variant={variant}
+              size={size}
+            />
+            {baseActive && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  handleSolanaDisconnect();
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+                title="Switch to Base"
+              >
+                Switch to Base
+              </Button>
+            )}
+          </div>
+        );
+      }
+
+      if (baseActive) {
+        return (
+          <div className={cn("flex items-center gap-2", className)}>
+            <div>
+              {isAuthenticated ? (
+                <AuthenticatedState variant={variant} size={size} />
+              ) : isConnected ? (
+                <ConnectedNotAuthenticatedState variant={variant} size={size} />
+              ) : null}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSolanaConnect}
+              className="text-xs text-purple-600 hover:text-purple-700"
+              title="Switch to Solana"
+            >
+              Switch to Solana
+            </Button>
+          </div>
+        );
+      }
+
+      // Neither connected - show Base connect button with Solana option
+      return (
+        <div className={cn("flex items-center gap-1", className)}>
+          <ConnectButton
+            size={size}
+            variant={variant}
+            isLoading={isLoading}
+            onConnect={connectAndSignIn}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSolanaConnect}
+            disabled={solanaState.connecting}
+            className="text-xs"
+            title="Connect Phantom instead"
+          >
+            {solanaState.connecting ? "..." : "Solana"}
+          </Button>
+        </div>
+      );
+    }
+
+    // Single chain (Base) header
     return (
       <div className={cn("flex items-center", className)}>
         {isAuthenticated ? (
@@ -413,7 +892,7 @@ export const UnifiedWallet = ({
   if (variant === "inline") {
     return (
       <div className={cn("space-y-3", className)}>
-        {showOnboarding && !isConnected && <WalletOnboarding />}
+        {showOnboarding && !isConnected && <WalletOnboarding chains={chains} />}
 
         {isAuthenticated ? (
           <AuthenticatedState variant={variant} size={size} />
@@ -425,6 +904,18 @@ export const UnifiedWallet = ({
             variant={variant}
             isLoading={isLoading}
             onConnect={connectAndSignIn}
+          />
+        )}
+
+        {chains === "all" && (
+          <SolanaWalletState
+            onConnect={handleSolanaConnect}
+            isConnecting={solanaState.connecting}
+            address={solanaState.address}
+            displayName={solanaState.address?.slice(0, 4) + "..." + solanaState.address?.slice(-4) || "Not Connected"}
+            onDisconnect={handleSolanaDisconnect}
+            variant="inline"
+            size={size}
           />
         )}
       </div>
@@ -452,7 +943,7 @@ export const UnifiedWallet = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {showOnboarding && !isConnected && <WalletOnboarding />}
+        {showOnboarding && !isConnected && <WalletOnboarding chains={chains} />}
 
         {isAuthenticated ? (
           <AuthenticatedState variant={variant} size={size} />
@@ -464,6 +955,18 @@ export const UnifiedWallet = ({
             variant={variant}
             isLoading={isLoading}
             onConnect={connectAndSignIn}
+          />
+        )}
+
+        {chains === "all" && (
+          <SolanaWalletState
+            onConnect={handleSolanaConnect}
+            isConnecting={solanaState.connecting}
+            address={solanaState.address}
+            displayName={solanaState.address?.slice(0, 4) + "..." + solanaState.address?.slice(-4) || "Not Connected"}
+            onDisconnect={handleSolanaDisconnect}
+            variant="card"
+            size={size}
           />
         )}
       </CardContent>
@@ -486,4 +989,12 @@ export const InlineWallet = (props: Omit<UnifiedWalletProps, "variant">) => (
 
 export const MinimalWallet = (props: Omit<UnifiedWalletProps, "variant">) => (
   <UnifiedWallet {...props} variant="minimal" />
+);
+
+export const DualWallet = (props: Omit<UnifiedWalletProps, "variant" | "chains">) => (
+  <UnifiedWallet {...props} variant="dual" chains="all" />
+);
+
+export const MultiChainWallet = (props: Omit<UnifiedWalletProps, "chains">) => (
+  <UnifiedWallet {...props} chains="all" />
 );

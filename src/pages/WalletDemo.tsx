@@ -2,7 +2,7 @@
 // Perfect for demonstrating the 2-hour quick integration
 
 import React from 'react';
-import { DualWalletConnector } from '../components/DualWalletConnector';
+import { DualWallet } from '../components/UnifiedWallet';
 import { SmartPayDemo } from '../components/demos/SmartPayDemo';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -30,16 +30,13 @@ export function WalletDemoPage() {
             Connect both for optimal smart payment routing.
           </p>
           <Badge className="mb-4">
-            2-Hour Quick Integration Complete ✅
+            Consolidated Multi-Chain Wallet ✅
           </Badge>
         </div>
 
         {/* Dual Wallet Connector */}
         <div className="mb-12">
-          <DualWalletConnector 
-            showRecommendations={true}
-            showBenefits={true}
-          />
+          <DualWallet />
         </div>
 
         {/* Integration Benefits */}
@@ -82,12 +79,12 @@ export function WalletDemoPage() {
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <h4 className="font-semibold mb-2">Quick Integration (2 hours)</h4>
+                <h4 className="font-semibold mb-2">Consolidated Implementation</h4>
                 <ul className="text-sm space-y-1 text-gray-600">
-                  <li>✅ PhantomWalletButton component</li>
-                  <li>✅ DualWalletConnector interface</li>
-                  <li>✅ useUnifiedWallet hook</li>
-                  <li>✅ Side-by-side wallet support</li>
+                  <li>✅ Single UnifiedWallet component</li>
+                  <li>✅ Multi-chain support (Base + Solana)</li>
+                  <li>✅ Composable variants (dual, card, header, inline)</li>
+                  <li>✅ DRY - No duplicate code</li>
                 </ul>
               </div>
               <div>

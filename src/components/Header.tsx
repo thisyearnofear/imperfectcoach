@@ -8,7 +8,7 @@ import {
 } from "@/lib/types";
 import SettingsStatusBar from "@/components/SettingsStatusBar";
 import SettingsModal from "@/components/SettingsModal";
-import { HeaderWallet } from "@/components/UnifiedWallet";
+import { MultiChainWallet } from "@/components/UnifiedWallet";
 import { NetworkStatus } from "@/components/NetworkStatus";
 import { FeatureSpotlight } from "@/components/FeatureSpotlight";
 import { Dumbbell, Activity, Target, Focus, FocusOff } from "lucide-react";
@@ -184,8 +184,8 @@ const Header = ({
             {/* Network Status - Compact */}
             <NetworkStatus variant="compact" showSwitchButton={true} />
 
-            {/* Wallet Connection */}
-            <HeaderWallet size="sm" />
+            {/* Wallet Connection - Multi-chain (Base + Solana) */}
+            <MultiChainWallet variant="header" size="sm" />
 
             {/* Focus Mode Toggle */}
             <Button
