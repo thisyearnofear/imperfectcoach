@@ -139,12 +139,11 @@ const getChatPrompt = (data) => {
             Jump Session Context:
             - Total Jumps: ${reps}
             - Average Form Score: ${averageFormScore.toFixed(1)}%
-            - Jump Performance: Avg ${jumpStats.avgHeight.toFixed(0)}px, Max ${
-        jumpStats.maxHeight
-      }px
+            - Jump Performance: Avg ${jumpStats.avgHeight.toFixed(0)}px, Max ${jumpStats.maxHeight
+        }px
             - Landing Quality: ${jumpStats.landingSuccessRate.toFixed(
-              1
-            )}% success rate
+          1
+        )}% success rate
             - Consistency: ${jumpStats.consistency.toFixed(1)}%
             - Power Trend: ${jumpStats.powerTrend}
             - Rep-by-rep data: ${JSON.stringify(detailedRepHistory)}
@@ -263,7 +262,7 @@ const generateGeminiFeedback = async (body, apiKey) => {
   }
 
   const { system, user } = promptData;
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${finalApiKey}`;
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${finalApiKey}`;
 
   const requestBody = {
     contents: [{ parts: [{ text: system }, { text: user }] }],
