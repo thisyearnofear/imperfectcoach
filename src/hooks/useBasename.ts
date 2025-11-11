@@ -62,9 +62,6 @@ export const useBasename = (address?: string) => {
         });
 
         setBasename(resolvedName);
-        if (resolvedName) {
-          console.log("✅ Thirdweb basename resolved:", resolvedName);
-        }
       } catch (err) {
         // Cache the null result to prevent repeated failed lookups
         basenameCache.set(address.toLowerCase(), {
