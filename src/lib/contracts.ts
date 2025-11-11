@@ -595,13 +595,13 @@ export const REVENUE_SPLITTER_CONFIG: ContractConfig = {
   abi: [] as const, // Add ABI if needed for direct interactions
 };
 
-// Solana Leaderboard configuration
+// Solana Leaderboard configuration - using the jumps program for leaderboard queries
 export const SOLANA_LEADERBOARD_PROGRAM_ID = new PublicKey(
-  "11111111111111111111111111111111" // TODO: Replace with actual deployed program ID
+  "7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd" // SOLANA_JUMPS_PROGRAM_ID
 );
 
 export const SOLANA_LEADERBOARD_ADDRESS = new PublicKey(
-  "11111111111111111111111111111111" // TODO: Replace with actual leaderboard account address
+  "7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd" // Placeholder - actual leaderboard account would be separate
 );
 
 // Helper function to get contract config

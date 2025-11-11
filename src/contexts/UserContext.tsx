@@ -21,7 +21,10 @@ export interface UserState {
   // Solana wallet state
   isSolanaConnected: boolean;
   isSolanaConnecting: boolean;
-  solanaPublicKey?: any;
+  isSolanaLoading: boolean; // Alias for isSolanaConnecting
+  solanaAddress: string | null; // Alias for solanaPublicKey as string
+  solanaPublicKey: any;
+  connection: any; // For Solana connection
 
   // Blockchain state
   leaderboard: BlockchainScore[];
@@ -31,8 +34,17 @@ export interface UserState {
   isCombinedLeaderboardLoading: boolean;
   combinedLeaderboardError?: string;
 
+  // Submission state
+  canSubmit: boolean;
+  timeUntilNextSubmission: number;
+  isSubmitting: boolean; // Alias for isSubmittingScore
+  currentTxHash?: string;
+  hasSubmittedScore: boolean;
+
   // UI state
   displayName: string;
+  basename?: string;
+  isBasenameLoading: boolean;
 
   // Submission state
   isSubmittingScore: boolean;
@@ -45,12 +57,21 @@ export interface UserState {
     staleness: number;
     pendingUpdates: boolean;
   };
+  lastRefresh: Date | null;
+  dataStale: boolean;
+  staleness: number; // Also in refreshState
+  pendingUpdates: boolean; // Also in refreshState
+  lastUserRefresh: Date | null; // Also in refreshState
 }
 
 export interface UserActions {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => Promise<void>;
+  signOut: () => Promise<void>; // Alias for disconnectWallet for compatibility
   signIn: () => Promise<void>;
+  signInWithEthereum: () => Promise<void>; // Alias for signIn
+  connectAndSignIn: () => Promise<void>;
+  resetAuth: () => Promise<void>; // Alias for disconnectWallet
   connectSolanaWallet: () => Promise<void>;
   disconnectSolanaWallet: () => Promise<void>;
   submitScore: (pullups: number, jumps: number) => Promise<{ hash?: string }>;
@@ -167,7 +188,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
     // Solana wallet state
     isSolanaConnected: solanaWallet.isSolanaConnected,
     isSolanaConnecting: solanaWallet.isSolanaConnecting,
+    isSolanaLoading: solanaWallet.isSolanaConnecting, // Alias
+    solanaAddress: solanaWallet.solanaPublicKey?.toString() || null, // String version
     solanaPublicKey: solanaWallet.solanaPublicKey,
+    connection: solanaWallet.connection,
 
     // Blockchain state
     leaderboard: contracts.leaderboard,
@@ -177,8 +201,17 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
     isCombinedLeaderboardLoading,
     combinedLeaderboardError,
 
+    // Submission state
+    canSubmit: (contracts.cooldownData as any)?.canSubmit || false,
+    timeUntilNextSubmission: (contracts.cooldownData as any)?.timeUntilNextSubmission || 0,
+    isSubmitting: scoreSubmission.isSubmittingScore, // Alias
+    currentTxHash: scoreSubmission.lastHash, // Use lastHash as currentTxHash
+    hasSubmittedScore: (contracts.cooldownData as any)?.hasSubmitted || false,
+
     // UI state
     displayName,
+    basename,
+    isBasenameLoading: basename === undefined, // Simple heuristic
 
     // Submission state
     isSubmittingScore: scoreSubmission.isSubmittingScore,
@@ -186,12 +219,42 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
 
     // Refresh state
     refreshState,
+    lastRefresh: refreshState.lastUserRefresh,
+    dataStale: refreshState.staleness > 300000, // 5 minutes
+    staleness: refreshState.staleness,
+    pendingUpdates: refreshState.pendingUpdates,
+    lastUserRefresh: refreshState.lastUserRefresh,
   };
+
+  // Alias functions for compatibility with existing components
+  const signOut = useCallback(async () => {
+    await baseWallet.disconnectWallet();
+  }, [baseWallet.disconnectWallet]);
+
+  const signInWithEthereum = useCallback(async () => {
+    await baseWallet.signIn();
+  }, [baseWallet.signIn]);
+
+  const connectAndSignIn = useCallback(async () => {
+    await baseWallet.connectWallet();
+    // Wait a moment for connection to complete, then sign in
+    setTimeout(async () => {
+      await baseWallet.signIn();
+    }, 500);
+  }, [baseWallet.connectWallet, baseWallet.signIn]);
+
+  const resetAuth = useCallback(async () => {
+    await baseWallet.disconnectWallet();
+  }, [baseWallet.disconnectWallet]);
 
   const actions: UserActions = {
     connectWallet: baseWallet.connectWallet,
     disconnectWallet: baseWallet.disconnectWallet,
+    signOut,
     signIn: baseWallet.signIn,
+    signInWithEthereum,
+    connectAndSignIn,
+    resetAuth,
     connectSolanaWallet: solanaWallet.connectSolanaWallet,
     disconnectSolanaWallet: solanaWallet.disconnectSolanaWallet,
     submitScore: scoreSubmission.submitScore,

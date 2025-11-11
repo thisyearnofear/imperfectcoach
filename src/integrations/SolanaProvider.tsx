@@ -24,7 +24,7 @@ export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
   // Use devnet to match Base Sepolia (testnet) environment
   // Use Alchemy RPC for consistency with indexer queries
   const endpoint = useMemo(() => 
-    "https://solana-devnet.g.alchemy.com/v2/Tx9luktS3qyIwEKVtjnQrpq8t3MNEV-B", 
+    import.meta.env.VITE_SOLANA_DEVNET_RPC_URL || "https://api.devnet.solana.com", 
     []
   );
 

@@ -20,7 +20,7 @@ export const config = createConfig({
     [base.id]: http(),
     [baseSepolia.id]: http(
       import.meta.env.VITE_BASE_SEPOLIA_RPC_URL ||
-        "https://base-sepolia.g.alchemy.com/v2/L69xEIR9jJjLmdvq798gQCQ1Rq8GI4I2"
+        "https://sepolia.base.org"
     ),
   },
 });
