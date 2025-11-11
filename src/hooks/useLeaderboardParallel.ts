@@ -49,7 +49,8 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
     error: jumpsError,
     refetch: refetchJumpsLeaderboard,
   } = useReadContract({
-    ...JUMPS_LEADERBOARD_CONFIG,
+    address: JUMPS_LEADERBOARD_CONFIG.address as `0x${string}`,
+    abi: JUMPS_LEADERBOARD_CONFIG.abi,
     functionName: "getTopUsers",
     args: [limit],
     chainId: 84532,
@@ -68,7 +69,8 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
     error: pullupsError,
     refetch: refetchPullupsLeaderboard,
   } = useReadContract({
-    ...PULLUPS_LEADERBOARD_CONFIG,
+    address: PULLUPS_LEADERBOARD_CONFIG.address as `0x${string}`,
+    abi: PULLUPS_LEADERBOARD_CONFIG.abi,
     functionName: "getTopUsers",
     args: [limit],
     chainId: 84532,
@@ -94,7 +96,7 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
 
       // For now, return empty array - getTopUsersFromSolana returns [] until program deployed
       // This ensures parallel fetch structure is in place
-      const solanaEntries = await getTopUsersFromSolana(connection, limit);
+      const solanaEntries = await getTopUsersFromSolana(limit);
 
       // Convert Solana entries to unified format
       const unified: UnifiedLeaderboardEntry[] = solanaEntries.map((entry) => ({

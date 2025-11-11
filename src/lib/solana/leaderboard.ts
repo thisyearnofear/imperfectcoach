@@ -8,6 +8,9 @@ import {
 import {
   WalletContextState,
 } from "@solana/wallet-adapter-react";
+import {
+  SOLANA_LEADERBOARD_PROGRAM_ID as UNIFIED_LEADERBOARD_PROGRAM_ID,
+} from "../contracts";
 
 // Solana Program IDs (deploy these separately)
 export const SOLANA_PULLUPS_PROGRAM_ID = new PublicKey(
@@ -20,6 +23,9 @@ export const SOLANA_JUMPS_PROGRAM_ID = new PublicKey(
 
 // Exercise type enum for type safety
 export type ExerciseType = "pullups" | "jumps";
+
+// Export the unified leaderboard program ID for the indexer
+export const SOLANA_LEADERBOARD_PROGRAM_ID = UNIFIED_LEADERBOARD_PROGRAM_ID;
 
 // Common IDL structure for both exercise-specific programs
 const createExerciseIDL = (exerciseName: string, programName: string) => ({
@@ -187,11 +193,11 @@ function buildSubmitScoreInstruction(
   exercise: ExerciseType
 ): TransactionInstruction {
   const programId = getExerciseProgramId(exercise);
-  
+
   // Encode instruction data (submitScore discriminator + args)
   // Discriminator is first 8 bytes of SHA256 hash of "global:submitScore"
   const discriminator = Buffer.from([0xe0, 0x2a, 0x17, 0x1b, 0xd1, 0x4b, 0xc6, 0x64]); // Example - replace with actual
-  
+
   // Encode single score as u32 (4 bytes, little-endian)
   const scoreBuf = Buffer.alloc(4);
   scoreBuf.writeUInt32LE(score, 0);
@@ -257,7 +263,7 @@ export async function submitScoreToSolana(
 
     const signed = await wallet.signTransaction(transaction);
     const signature = await connection.sendRawTransaction(signed.serialize());
-    
+
     // Wait for confirmation
     await connection.confirmTransaction({
       signature,
@@ -289,7 +295,7 @@ export async function getUserScoreFromSolana(
   try {
     // Get user score PDA for this exercise
     const [userScorePda] = getUserScorePDA(userPublicKey, leaderboardAddress, exercise);
-    
+
     const accountInfo = await connection.getAccountInfo(userScorePda);
     if (!accountInfo) return null;
 
@@ -362,9 +368,9 @@ export async function getTopUsersFromSolana(
   try {
     // Import here to avoid circular dependency
     const { getTopUsersFromSolana: getFromIndexer } = await import("./indexer");
-    
+
     const accounts = await getFromIndexer(limit);
-    
+
     // Convert to UnifiedLeaderboardEntry format
     return accounts.map((account) => ({
       user: account.user,
