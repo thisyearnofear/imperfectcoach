@@ -174,13 +174,18 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
                 </div>
               )}
 
-              {/* Jump Height Display for Jumps Exercise - Increased size for better visibility */}
+              {/* Jump Height Display for Jumps Exercise - Enhanced with detection feedback */}
               {exercise === 'jumps' && jumpGroundLevel && isWorkoutActive && (
                 <div className="absolute top-2 left-2 bg-black/70 text-white p-3 rounded-lg animate-fade-in">
                   <div className="text-xs text-gray-300">Jump Height</div>
                   <div className={`text-2xl font-bold ${currentJumpHeight > 0 ? 'text-green-400 animate-pulse' : 'text-white'}`}>
                     {formatHeight(currentJumpHeight, heightUnit)}
                   </div>
+                  {currentJumpHeight === 0 && reps > 0 && (
+                    <div className="text-xs text-yellow-400 mt-1 flex items-center gap-1">
+                      ⚠️ Jump not detected
+                    </div>
+                  )}
                 </div>
               )}
             </>

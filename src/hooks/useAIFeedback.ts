@@ -161,7 +161,8 @@ export const useAIFeedback = ({
               userApiKeys,
               model,
               type: "summary",
-              exercise,
+              // Use exercise from summaryData if provided, otherwise use hook's exercise
+              exercise: (summaryData.exercise as string) || exercise,
               personality: coachPersonality,
               ...summaryData,
             },

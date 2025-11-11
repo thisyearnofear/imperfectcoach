@@ -288,6 +288,12 @@ export const processJumps = ({
         flightSymmetry: flightSymmetryScore,
       },
     };
+  } else if (repState === "GROUNDED" && !isAirborne && internalReps > 0 && jumpHeight === 0) {
+    // Provide guidance when jumps aren't being detected
+    return {
+      ...baseResult,
+      feedback: "Jump higher or step back from camera for better detection",
+    };
   }
 
   // Default case - maintain current state

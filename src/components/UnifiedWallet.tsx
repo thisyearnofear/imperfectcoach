@@ -348,14 +348,23 @@ const AuthenticatedState = ({
             {formatTime(timeUntilNextSubmission)}
           </Badge>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={signOut}
-          className="h-8 px-2 shrink-0"
-        >
-          <LogOut className="h-3 w-3" />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                className="h-8 px-2 shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+              >
+                <LogOut className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Sign out and disconnect wallet</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     );
   }
@@ -436,10 +445,10 @@ const ConnectedNotAuthenticatedState = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={signInWithEthereum}
-                  className="h-7 px-2 text-xs shrink-0"
+                  className="h-7 px-2 text-xs shrink-0 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                 >
                   Retry SIWE
                 </Button>
@@ -450,14 +459,23 @@ const ConnectedNotAuthenticatedState = ({
             </Tooltip>
           </TooltipProvider>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={signOut}
-          className="h-8 px-2 shrink-0"
-        >
-          <LogOut className="h-3 w-3" />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                className="h-8 px-2 shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+              >
+                <LogOut className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Disconnect wallet</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     );
   }
@@ -857,14 +875,18 @@ export const UnifiedWallet = ({
             onConnect={connectAndSignIn}
           />
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={handleSolanaConnect}
             disabled={solanaState.connecting}
-            className="text-xs"
-            title="Connect Phantom instead"
+            className="text-xs border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800 transition-colors"
+            title="Connect Phantom wallet for Solana"
           >
-            {solanaState.connecting ? "..." : "Solana"}
+            {solanaState.connecting ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <>◎ Solana</>
+            )}
           </Button>
         </div>
       );

@@ -1,5 +1,6 @@
 import { useUserAuth, useUserBlockchain, useUserDisplay } from "./useUserHooks";
 import { usePremiumAccess } from "./usePremiumAccess";
+import { useSolanaWallet } from "./useSolanaWallet";
 
 type Feature =
   | "AI_SUMMARY"
@@ -39,12 +40,15 @@ export function useUserTier(): UserTier {
   const { hasSubmittedScore } = useUserBlockchain();
   const { basename } = useUserDisplay();
   const { hasPremiumAccess } = usePremiumAccess();
+  const { isSolanaConnected } = useSolanaWallet();
 
   if (hasPremiumAccess) {
     return "premium";
   }
 
-  if (isAuthenticated && hasSubmittedScore) {
+  // Users with connected wallet (Base or Solana) are "connected" tier
+  // This allows them to see and use the blockchain submission feature
+  if (isAuthenticated || isSolanaConnected) {
     return "connected";
   }
 

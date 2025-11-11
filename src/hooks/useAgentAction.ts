@@ -7,7 +7,7 @@ import { getPersonalityFeedback } from "@/lib/coachPersonalities";
 
 export type AgentRequest =
   | { type: "session-summary"; params: { reps: number; workoutMode: string; exercise: string; stats?: Record<string, unknown>; selectedCoaches: CoachModel[] } }
-  | { type: "chat"; params: { messages: ChatMessage[]; model?: CoachModel } };
+  | { type: "chat"; params: { messages: ChatMessage[]; model?: CoachModel; exercise?: string } };
 
 export type AgentResult =
   | { type: "session-summary"; data: { summaries: Partial<Record<CoachModel, string>> } }
@@ -29,15 +29,14 @@ export const useAgentAction = (opts: UseAgentActionOptions = {}) => {
   const abortRef = useRef<AbortController | null>(null);
   const isMounted = useRef(true);
 
-  // Wire up existing AI feedback domain logic
-  // Note: useAIFeedback is designed for real-time feedback during workouts
-  // For post-workout summaries and chat, we'll call the functions directly
-  // This is a temporary bridge until we refactor useAIFeedback
+  // Note: useAIFeedback expects exercise on init, but we receive it dynamically
+  // The workaround is to pass exercise in the summaryData/sessionData payload
+  // The Supabase function should read exercise from the payload, not the hook init
   const { getAISessionSummary, getAIChatResponse } = useAIFeedback({
-    exercise: "pull-ups", // Default, will be overridden by request params
-    coachPersonality: "competitive", // Default, will be overridden
+    exercise: "pull-ups", // Placeholder - actual exercise comes from request payload
+    coachPersonality: "competitive",
     workoutMode: "training",
-    onFormFeedback: () => { }, // Not used in agent actions
+    onFormFeedback: () => {},
   });
 
   // Get personality-aware success messages
@@ -93,17 +92,26 @@ export const useAgentAction = (opts: UseAgentActionOptions = {}) => {
       let data: AgentResult;
 
       if (request.type === "session-summary") {
-        const { stats, selectedCoaches } = request.params;
-        const result = await getAISessionSummary(
-          stats || {},
-          selectedCoaches
-        );
+        const { stats, selectedCoaches, exercise, reps } = request.params;
+        
+        // Include reps and exercise in stats - the Supabase function reads from payload
+        const statsWithContext = {
+          ...stats,
+          reps,
+          exercise, // This is the key - pass exercise in the payload
+        };
+        
+        const result = await getAISessionSummary(statsWithContext, selectedCoaches);
         data = { type: "session-summary", data: { summaries: result } };
       } else if (request.type === "chat") {
-        const { messages, model } = request.params;
+        const { messages, model, exercise } = request.params;
+        
         // Extract the last user message and session data from messages
         const lastUserMessage = messages.filter(m => m.role === "user").pop();
-        const sessionData = { message: lastUserMessage?.content || "" };
+        const sessionData = { 
+          message: lastUserMessage?.content || "",
+          ...(exercise && { exercise }) // Pass exercise in payload
+        };
 
         const reply = await getAIChatResponse(messages, sessionData, model || "gemini");
         data = { type: "chat", data: { reply, model: model || "gemini" } };

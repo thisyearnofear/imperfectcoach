@@ -72,8 +72,8 @@ export function handleProcessorResult(params: HandleProcessorResultParams) {
     }, 500);
   }
 
-  if (result.aiFeedbackPayload) getAIFeedback(result.aiFeedbackPayload);
-
+  // Only call AI feedback once per rep to prevent duplicate API calls
+  // This happens after rep completion with full context
   if (result.isRepCompleted && result.repCompletionData) {
     incrementReps();
     const { score, issues, details: resultDetails } = result.repCompletionData;
@@ -110,10 +110,14 @@ export function handleProcessorResult(params: HandleProcessorResultParams) {
 
     onNewRepData({ timestamp: Date.now(), score, details });
 
+    // Call AI feedback once with complete rep context
     getAIFeedback({
       reps: internalReps + 1,
       formIssues: lastRepIssues.current,
       ...result.aiFeedbackPayload,
     });
+  } else if (result.aiFeedbackPayload) {
+    // Only call for non-rep-completion feedback (e.g., mid-rep corrections)
+    getAIFeedback(result.aiFeedbackPayload);
   }
 }

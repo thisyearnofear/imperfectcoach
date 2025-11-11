@@ -405,12 +405,24 @@ export const PostWorkoutFlow = ({
     processRepHistoryForAI,
   ]);
 
-  // Auto-generate AI summaries when workout ends
+  // Track if we've already generated the summary to prevent rerenders
+  const hasGeneratedSummary = useRef(false);
+  
+  // Auto-generate AI summaries when workout ends (only once)
   useEffect(() => {
-    if (hasWorkoutEnded && reps > 0 && selectedCoaches.length > 0) {
+    if (hasWorkoutEnded && reps > 0 && selectedCoaches.length > 0 && !hasGeneratedSummary.current) {
+      hasGeneratedSummary.current = true;
       handleGenerateAISummary();
     }
-  }, [hasWorkoutEnded, reps, selectedCoaches, handleGenerateAISummary]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasWorkoutEnded, reps, selectedCoaches]);
+  
+  // Reset the flag when workout state changes (new session)
+  useEffect(() => {
+    if (!hasWorkoutEnded) {
+      hasGeneratedSummary.current = false;
+    }
+  }, [hasWorkoutEnded]);
 
   // Handle chat messages using centralized agent action
   const handleSendMessage = useCallback(async (message: string, model: CoachModel) => {
