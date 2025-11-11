@@ -22,8 +22,11 @@ interface SolanaProviderProps {
  */
 export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
   // Use devnet to match Base Sepolia (testnet) environment
-  const network = "devnet";
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  // Use Alchemy RPC for consistency with indexer queries
+  const endpoint = useMemo(() => 
+    "https://solana-devnet.g.alchemy.com/v2/Tx9luktS3qyIwEKVtjnQrpq8t3MNEV-B", 
+    []
+  );
 
   const wallets = useMemo(
     () => [

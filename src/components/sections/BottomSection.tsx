@@ -14,6 +14,7 @@ interface BottomSectionProps {
   hasWorkoutEnded: boolean;
   sessionDuration: string;
   coachPersonality: CoachPersonality;
+  submitPersonalRecord?: () => void;
 }
 
 export const BottomSection = ({
@@ -27,6 +28,7 @@ export const BottomSection = ({
   hasWorkoutEnded,
   sessionDuration,
   coachPersonality,
+  submitPersonalRecord,
 }: BottomSectionProps) => {
   return (
     <div className="w-full">
@@ -37,6 +39,8 @@ export const BottomSection = ({
           reps={reps}
           repHistory={repHistory}
           averageFormScore={formScore}
+          onSubmissionComplete={undefined}
+          submitPersonalRecord={submitPersonalRecord}
           isWorkoutActive={isWorkoutActive}
           hasWorkoutEnded={hasWorkoutEnded}
           sessionDuration={sessionDuration}

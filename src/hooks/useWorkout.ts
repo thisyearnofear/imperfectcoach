@@ -34,25 +34,27 @@ export const useWorkout = (coachPersonality: CoachPersonality = "SNEL") => {
 
   const endSession = useCallback(() => {
     setIsWorkoutActive(false);
-    
-    // Update personal records at the end of the session
-    if (workoutMode !== "assessment") { // Don't update records in assessment mode
-      const jumpHeight = selectedExercise === 'jumps' && repHistory.length > 0 
+  }, [setIsWorkoutActive]);
+
+  const submitPersonalRecord = useCallback(() => {
+    // Only update personal records in training mode (not assessment)
+    if (workoutMode !== "assessment") {
+      const jumpHeight = selectedExercise === 'jumps' && repHistory.length > 0
         ? (repHistory[repHistory.length - 1].details as JumpRepDetails)?.jumpHeight
         : undefined;
-        
+
       const recordResult = updatePersonalRecord(
-        selectedExercise, 
-        reps, 
-        formScore, 
+        selectedExercise,
+        reps,
+        formScore,
         jumpHeight
       );
-      
+
       setHasNewRepRecord(recordResult.hasNewRepRecord);
       setHasNewFormRecord(recordResult.hasNewFormRecord);
       setHasNewJumpRecord(recordResult.hasNewJumpRecord);
     }
-  }, [reps, formScore, selectedExercise, repHistory, workoutMode, updatePersonalRecord]);
+  }, [selectedExercise, repHistory, reps, formScore, workoutMode, updatePersonalRecord]);
 
   useEffect(() => {
     if (!isWorkoutActive || timeLeft <= 0) {
@@ -79,7 +81,17 @@ export const useWorkout = (coachPersonality: CoachPersonality = "SNEL") => {
     setHasNewRepRecord(false);
     setHasNewFormRecord(false);
     setHasNewJumpRecord(false);
-  }, []);
+  }, [
+    setReps,
+    setFormScore,
+    setSessionStart,
+    setRepHistory,
+    setIsWorkoutActive,
+    setTimeLeft,
+    setHasNewRepRecord,
+    setHasNewFormRecord,
+    setHasNewJumpRecord
+  ]);
 
   const handleExerciseChange = useCallback(
     (exercise: Exercise) => {
@@ -158,6 +170,11 @@ export const useWorkout = (coachPersonality: CoachPersonality = "SNEL") => {
     handleNewRepData,
     resetSession,
     endSession,
+    submitPersonalRecord,
+    // Personal record setters
+    setHasNewRepRecord,
+    setHasNewFormRecord,
+    setHasNewJumpRecord,
     // Personal records
     hasNewRepRecord,
     hasNewFormRecord,

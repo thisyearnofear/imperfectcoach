@@ -48,6 +48,7 @@ interface PostWorkoutFlowProps {
   repHistory: RepData[];
   averageFormScore: number;
   onSubmissionComplete?: () => void;
+  submitPersonalRecord?: () => void;
   isWorkoutActive?: boolean;
   hasWorkoutEnded?: boolean;
   sessionDuration?: string;
@@ -60,6 +61,7 @@ export const PostWorkoutFlow = ({
   repHistory,
   averageFormScore,
   onSubmissionComplete,
+  submitPersonalRecord,
   isWorkoutActive = false,
   hasWorkoutEnded = false,
   sessionDuration = "N/A",
@@ -744,6 +746,7 @@ export const PostWorkoutFlow = ({
             repHistory={repHistory}
             averageFormScore={averageFormScore}
             onSubmissionComplete={onSubmissionComplete}
+            submitPersonalRecord={submitPersonalRecord}
             onPremiumUpgrade={handleUpgrade}
             achievements={achievements}
             bedrockSectionRef={bedrockSectionRef}

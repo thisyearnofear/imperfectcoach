@@ -1,8 +1,12 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { SOLANA_LEADERBOARD_PROGRAM_ID } from "./leaderboard";
 
-// Alchemy RPC endpoint for Solana devnet
+// Alchemy RPC endpoint for Solana devnet with fallbacks
 const ALCHEMY_DEVNET_RPC = "https://solana-devnet.g.alchemy.com/v2/Tx9luktS3qyIwEKVtjnQrpq8t3MNEV-B";
+const FALLBACK_DEVNET_RPCS = [
+  "https://api.devnet.solana.com",
+  "https://devnet.sonic.game", // Fast alternative
+];
 
 // Cache for leaderboard data (5 min TTL)
 interface CachedLeaderboard {
@@ -94,76 +98,98 @@ function deserializeUserScore(
 }
 
 /**
+ * Try fetching from multiple RPC endpoints with fallback
+ */
+async function fetchWithFallback(endpoint: string, params: any[]): Promise<any> {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "getProgramAccounts",
+      params,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`RPC call failed: ${response.statusText}`);
+  }
+
+  const json = await response.json();
+
+  if (json.error) {
+    throw new Error(`RPC error: ${json.error.message}`);
+  }
+
+  return json;
+}
+
+/**
  * Fetch all UserScore accounts from Solana Leaderboard Program using Alchemy's getProgramAccounts
- * Handles pagination automatically
+ * Handles pagination automatically with fallback RPC endpoints
  */
 async function fetchAllUserScoresFromAlchemy(): Promise<UserScoreOnChain[]> {
-  const connection = new Connection(ALCHEMY_DEVNET_RPC, "confirmed");
-
   const allAccounts: UserScoreOnChain[] = [];
   let pageKey: string | undefined;
 
-  try {
-    // Keep fetching until no more pageKey
-    while (true) {
-      const params: any[] = [
-        SOLANA_LEADERBOARD_PROGRAM_ID.toString(),
-        {
-          encoding: "base64",
-          withContext: true,
-          // pageKey for pagination (if available)
-          ...(pageKey && { pageKey }),
-        },
-      ];
+  // Try Alchemy first, then fallback RPCs
+  const rpcEndpoints = [ALCHEMY_DEVNET_RPC, ...FALLBACK_DEVNET_RPCS];
+  
+  for (const endpoint of rpcEndpoints) {
+    try {
+      console.log(`Trying RPC endpoint: ${endpoint.includes('alchemy') ? 'Alchemy' : endpoint}`);
+      
+      // Keep fetching until no more pageKey
+      while (true) {
+        const params: any[] = [
+          SOLANA_LEADERBOARD_PROGRAM_ID.toString(),
+          {
+            encoding: "base64",
+            withContext: true,
+            // pageKey for pagination (if available)
+            ...(pageKey && { pageKey }),
+          },
+        ];
 
-      // Use RPC call directly for getProgramAccounts
-      const response = await fetch(ALCHEMY_DEVNET_RPC, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "getProgramAccounts",
-          params,
-        }),
-      });
+        const json = await fetchWithFallback(endpoint, params);
+        const result = json.result;
+        
+        if (!result || !result.value) {
+          break;
+        }
 
-      if (!response.ok) {
-        throw new Error(`RPC call failed: ${response.statusText}`);
-      }
+        // Process accounts
+        for (const account of result.value) {
+          const data = Buffer.from(account.account.data[0], "base64");
+          const parsed = deserializeUserScore(data, account.pubkey);
+          if (parsed) {
+            allAccounts.push(parsed);
+          }
+        }
 
-      const json = await response.json();
-
-      if (json.error) {
-        throw new Error(`RPC error: ${json.error.message}`);
-      }
-
-      const result = json.result;
-      if (!result || !result.value) {
-        break;
-      }
-
-      // Process accounts
-      for (const account of result.value) {
-        const data = Buffer.from(account.account.data[0], "base64");
-        const parsed = deserializeUserScore(data, account.pubkey);
-        if (parsed) {
-          allAccounts.push(parsed);
+        // Check for pagination
+        pageKey = result.pageKey;
+        if (!pageKey) {
+          break;
         }
       }
 
-      // Check for pagination
-      pageKey = result.pageKey;
-      if (!pageKey) {
-        break;
-      }
+      console.log(`✅ Successfully fetched ${allAccounts.length} accounts from RPC`);
+      return allAccounts;
+      
+    } catch (error) {
+      console.error(`❌ Failed to fetch from ${endpoint.includes('alchemy') ? 'Alchemy' : endpoint}:`, error);
+      // Reset pageKey for next endpoint attempt
+      pageKey = undefined;
+      // Continue to next endpoint
+      continue;
     }
-
-    return allAccounts;
-  } catch (error) {
-    console.error("Error fetching accounts from Alchemy:", error);
-    return [];
   }
+
+  // If all endpoints failed
+  console.error("❌ All RPC endpoints failed");
+  return [];
 }
 
 /**

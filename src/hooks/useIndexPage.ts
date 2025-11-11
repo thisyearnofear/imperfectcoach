@@ -47,6 +47,10 @@ export const useIndexPage = () => {
     handleNewRepData,
     resetSession,
     endSession,
+    submitPersonalRecord,
+    setHasNewRepRecord,
+    setHasNewFormRecord,
+    setHasNewJumpRecord,
     hasNewRepRecord,
     hasNewFormRecord,
     hasNewJumpRecord,
@@ -180,6 +184,9 @@ export const useIndexPage = () => {
     setReps,
     setFormFeedback,
     setFormScore,
+    setHasNewRepRecord,
+    setHasNewFormRecord,
+    setHasNewJumpRecord,
     handleHeightUnitChange,
     // Handlers
     handleExerciseChange,
@@ -187,6 +194,7 @@ export const useIndexPage = () => {
     handleNewRepData,
     resetSession,
     endSession,
+    submitPersonalRecord,
     handleTryAgain,
   };
 };

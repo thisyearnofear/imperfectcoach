@@ -38,6 +38,7 @@ interface BlockchainScoreSubmissionProps {
   repHistory: RepData[];
   averageFormScore: number;
   onSubmissionComplete?: () => void;
+  submitPersonalRecord?: () => void;
 }
 
 export const BlockchainScoreSubmission = ({
@@ -46,6 +47,7 @@ export const BlockchainScoreSubmission = ({
   repHistory,
   averageFormScore,
   onSubmissionComplete,
+  submitPersonalRecord,
 }: BlockchainScoreSubmissionProps) => {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [selectedChain, setSelectedChain] = useState<ChainType | null>(null);
@@ -110,6 +112,8 @@ export const BlockchainScoreSubmission = ({
       }
 
       setHasSubmitted(true);
+      // Submit personal record when blockchain submission is successful
+      submitPersonalRecord?.();
       onSubmissionComplete?.();
     } catch (error) {
       console.error("Failed to submit score:", error);

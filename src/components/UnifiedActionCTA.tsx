@@ -28,6 +28,7 @@ interface UnifiedActionCTAProps {
   repHistory: RepData[];
   averageFormScore: number;
   onSubmissionComplete?: () => void;
+  submitPersonalRecord?: () => void;
   onPremiumUpgrade?: () => void;
   achievements?: Achievement[];
   bedrockSectionRef?: React.RefObject<HTMLDivElement>;
@@ -49,6 +50,7 @@ export const UnifiedActionCTA = ({
   repHistory,
   averageFormScore,
   onSubmissionComplete,
+  submitPersonalRecord,
   onPremiumUpgrade,
   achievements = [],
   bedrockSectionRef,
@@ -301,6 +303,7 @@ export const UnifiedActionCTA = ({
               repHistory={repHistory}
               averageFormScore={averageFormScore}
               onSubmissionComplete={onSubmissionComplete}
+              submitPersonalRecord={submitPersonalRecord}
             />
 
             <div className="pt-2 border-t border-green-200">

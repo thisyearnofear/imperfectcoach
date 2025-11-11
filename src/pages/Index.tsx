@@ -34,6 +34,10 @@ const Index = () => {
 
   const handlePRCelebrationComplete = () => {
     setShowPRCelebration(false);
+    // Reset the personal record flags after celebration
+    page.setHasNewRepRecord(false);
+    page.setHasNewFormRecord(false);
+    page.setHasNewJumpRecord(false);
   };
 
   // Determine record type for celebration
@@ -132,6 +136,7 @@ const Index = () => {
               hasWorkoutEnded={page.sessionHasConcluded}
               sessionDuration={page.sessionDuration}
               coachPersonality={page.coachPersonality}
+              submitPersonalRecord={page.submitPersonalRecord}
             />
           </FadeIn>
         </div>

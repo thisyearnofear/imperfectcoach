@@ -1,43 +1,38 @@
-// Solana Leaderboard Program
-// Matches ExerciseLeaderboard.sol structure for unified display
+// Solana Jumps Leaderboard Program
+// Mirrors ExerciseLeaderboard.sol structure for jumps exercise specifically
 
 use anchor_lang::prelude::*;
-use std::cmp::Ordering;
 
-declare_id!("11111111111111111111111111111111");
+declare_id!("7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd"); // ✅ Deployed jumps program ID
 
 #[program]
-pub mod solana_leaderboard {
+pub mod solana_jumps_leaderboard {
     use super::*;
 
-    // Initialize a new leaderboard
-    pub fn initialize(ctx: Context<Initialize>, exercise_name: String) -> Result<()> {
+    // Initialize a new jumps leaderboard
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let leaderboard = &mut ctx.accounts.leaderboard;
-        leaderboard.exercise_name = exercise_name;
+        leaderboard.exercise_name = "jumps".to_string();
         leaderboard.total_participants = 0;
         leaderboard.total_submissions = 0;
         Ok(())
     }
 
-    // Submit a score for a user
+    // Submit a jumps score for a user
     pub fn submit_score(
         ctx: Context<SubmitScore>,
-        pullups: u32,
-        jumps: u32,
+        score: u32,
     ) -> Result<()> {
         let leaderboard = &mut ctx.accounts.leaderboard;
         let user_score = &mut ctx.accounts.user_score;
         let user_pubkey = ctx.accounts.user.key();
 
-        let score = (pullups as u64) + (jumps as u64);
-        
+        let score_u64 = score as u64;
         let is_new_user = user_score.submission_count == 0;
 
         // Update user score data
         user_score.user = user_pubkey;
-        user_score.total_score += score;
-        user_score.pullups += pullups as u64;
-        user_score.jumps += jumps as u64;
+        user_score.total_score += score_u64;
         user_score.submission_count += 1;
         user_score.last_submission_time = Clock::get()?.unix_timestamp as u64;
 
@@ -47,8 +42,8 @@ pub mod solana_leaderboard {
         }
 
         // Update best single score
-        if score > user_score.best_single_score {
-            user_score.best_single_score = score;
+        if score_u64 > user_score.best_single_score {
+            user_score.best_single_score = score_u64;
         }
 
         leaderboard.total_submissions += 1;
@@ -56,7 +51,7 @@ pub mod solana_leaderboard {
         // Emit event
         emit!(ScoreSubmitted {
             user: user_pubkey,
-            score_added: score,
+            score_added: score_u64,
             new_total_score: user_score.total_score,
             new_best_score: user_score.best_single_score,
             timestamp: user_score.last_submission_time,
@@ -72,8 +67,6 @@ pub mod solana_leaderboard {
             user: user_score.user,
             total_score: user_score.total_score,
             best_single_score: user_score.best_single_score,
-            pullups: user_score.pullups,
-            jumps: user_score.jumps,
             submission_count: user_score.submission_count,
             last_submission_time: user_score.last_submission_time,
             first_submission_time: user_score.first_submission_time,
@@ -84,6 +77,7 @@ pub mod solana_leaderboard {
     pub fn get_stats(ctx: Context<GetStats>) -> Result<LeaderboardStats> {
         let leaderboard = &ctx.accounts.leaderboard;
         Ok(LeaderboardStats {
+            exercise_name: leaderboard.exercise_name.clone(),
             total_participants: leaderboard.total_participants,
             total_submissions: leaderboard.total_submissions,
         })
@@ -94,7 +88,7 @@ pub mod solana_leaderboard {
 
 #[account]
 pub struct Leaderboard {
-    pub exercise_name: String,      // e.g., "pullups" or "jumps"
+    pub exercise_name: String,      // "jumps"
     pub total_participants: u64,    // Number of unique users
     pub total_submissions: u64,     // Total number of submissions
 }
@@ -102,10 +96,8 @@ pub struct Leaderboard {
 #[account]
 pub struct UserScore {
     pub user: Pubkey,                   // User's wallet address
-    pub total_score: u64,               // Cumulative score
-    pub best_single_score: u64,         // Best single submission
-    pub pullups: u64,                   // Total pullups submitted
-    pub jumps: u64,                     // Total jumps submitted
+    pub total_score: u64,               // Cumulative jumps score
+    pub best_single_score: u64,         // Best single jumps submission
     pub submission_count: u64,          // Number of submissions
     pub last_submission_time: u64,      // Unix timestamp
     pub first_submission_time: u64,     // Unix timestamp
@@ -114,7 +106,6 @@ pub struct UserScore {
 // ========================= CONTEXTS =========================
 
 #[derive(Accounts)]
-#[instruction(exercise_name: String)]
 pub struct Initialize<'info> {
     #[account(init, payer = owner, space = 8 + 256)]
     pub leaderboard: Account<'info, Leaderboard>,
@@ -128,8 +119,10 @@ pub struct SubmitScore<'info> {
     #[account(mut)]
     pub leaderboard: Account<'info, Leaderboard>,
     #[account(
-        mut,
-        seeds = [b"user_score", user.key().as_ref()],
+        init_if_needed,
+        payer = user,
+        space = 8 + 144,
+        seeds = [b"user_score", leaderboard.key().as_ref(), user.key().as_ref()],
         bump
     )]
     pub user_score: Account<'info, UserScore>,
@@ -166,8 +159,6 @@ pub struct UserScoreData {
     pub user: Pubkey,
     pub total_score: u64,
     pub best_single_score: u64,
-    pub pullups: u64,
-    pub jumps: u64,
     pub submission_count: u64,
     pub last_submission_time: u64,
     pub first_submission_time: u64,
@@ -175,6 +166,7 @@ pub struct UserScoreData {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct LeaderboardStats {
+    pub exercise_name: String,
     pub total_participants: u64,
     pub total_submissions: u64,
 }
