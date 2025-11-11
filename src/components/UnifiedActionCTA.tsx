@@ -190,13 +190,17 @@ export const UnifiedActionCTA = ({
             <div className="flex items-center justify-center gap-2 mb-2">
               <Wallet className="h-6 w-6 text-blue-600" />
               <CardTitle className="text-blue-800">
-                🚀 Ready to Rumble on Base?
+                🚀 Multi-Chain Coaching Platform
               </CardTitle>
             </div>
             <div className="flex items-center justify-center gap-2 mb-2">
               <Badge variant="outline" className="bg-blue-100 text-blue-800">
                 <Zap className="h-3 w-3 mr-1" />
                 Base Sepolia
+              </Badge>
+              <Badge variant="outline" className="bg-orange-100 text-orange-800">
+                <Zap className="h-3 w-3 mr-1" />
+                Solana Devnet
               </Badge>
               <Badge variant="outline" className="bg-purple-100 text-purple-800">
                 AWS Powered
@@ -265,9 +269,9 @@ export const UnifiedActionCTA = ({
 
               <div className="text-center pt-2 border-t border-gray-200">
                 <p className="text-xs text-gray-500">
-                  <span className="font-medium">Powered by Base Sepolia</span> •{" "}
+                  <span className="font-medium">Powered by Base Sepolia + Solana Devnet</span> •{" "}
                   <span className="font-medium">
-                    Built for Coinbase Agents Hackathon
+                    Professional AI Coaching Platform
                   </span>
                 </p>
               </div>

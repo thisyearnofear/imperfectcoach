@@ -32,27 +32,8 @@ export function useSolanaWallet() {
   }, [publicKey, connected]);
 
   const connectSolanaWallet = useCallback(async () => {
-    setState((prev) => ({
-      ...prev,
-      isSolanaLoading: true,
-      solanaError: undefined,
-    }));
-
-    try {
-      // Wallet adapter handles connection UI
-      // Just wait for the wallet to be connected
-      // This is handled by the Solana wallet adapter modal
-      toast.success("Connect your Solana wallet from the popup");
-    } catch (error) {
-      console.error("Error connecting Solana wallet:", error);
-      const errorMsg = error instanceof Error ? error.message : "Failed to connect Solana wallet";
-      setState((prev) => ({
-        ...prev,
-        isSolanaLoading: false,
-        solanaError: errorMsg,
-      }));
-      toast.error(errorMsg);
-    }
+    // Wallet adapter handles connection UI - nothing to do here
+    toast.success("Connect your Solana wallet from the popup");
   }, []);
 
   const disconnectSolanaWallet = useCallback(async () => {
@@ -81,7 +62,17 @@ export function useSolanaWallet() {
         return {};
       }
 
-      if (pullups === 0 && jumps === 0) {
+      // Determine exercise type based on what's non-zero
+      let exerciseType: "pullups" | "jumps";
+      let score: number;
+
+      if (pullups > 0) {
+        exerciseType = "pullups";
+        score = pullups;
+      } else if (jumps > 0) {
+        exerciseType = "jumps";
+        score = jumps;
+      } else {
         toast.error("Please complete at least one exercise");
         return {};
       }
@@ -96,12 +87,12 @@ export function useSolanaWallet() {
           connection,
           wallet,
           leaderboardAddress,
-          pullups,
-          jumps
+          score,
+          exerciseType
         );
 
         toast.success(
-          `Score submitted to Solana! Signature: ${signature.slice(0, 8)}...`
+          `✅ ${exerciseType.charAt(0).toUpperCase() + exerciseType.slice(1)} score submitted to Solana! Signature: ${signature.slice(0, 8)}...`
         );
 
         return { signature };
@@ -112,7 +103,7 @@ export function useSolanaWallet() {
           ...prev,
           solanaError: errorMsg,
         }));
-        toast.error(errorMsg);
+        toast.error(`❌ Failed to submit ${exerciseType} score: ${errorMsg}`);
         return {};
       } finally {
         setState((prev) => ({
@@ -127,14 +118,14 @@ export function useSolanaWallet() {
   const getSolanaLeaderboard = useCallback(
     async (limit: number = 10) => {
       try {
-        const leaderboard = await getTopUsersFromSolana(connection, limit);
+        const leaderboard = await getTopUsersFromSolana(limit);
         return leaderboard;
       } catch (error) {
         console.error("Error fetching Solana leaderboard:", error);
         return [];
       }
     },
-    [connection]
+    []
   );
 
   return {

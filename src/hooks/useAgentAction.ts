@@ -37,7 +37,7 @@ export const useAgentAction = (opts: UseAgentActionOptions = {}) => {
     exercise: "pull-ups", // Default, will be overridden by request params
     coachPersonality: "competitive", // Default, will be overridden
     workoutMode: "training",
-    onFormFeedback: () => {}, // Not used in agent actions
+    onFormFeedback: () => { }, // Not used in agent actions
   });
 
   // Get personality-aware success messages
@@ -90,47 +90,41 @@ export const useAgentAction = (opts: UseAgentActionOptions = {}) => {
     setSafeState({ status: "loading", error: null });
 
     try {
+      let data: AgentResult;
+
       if (request.type === "session-summary") {
         const { stats, selectedCoaches } = request.params;
         const result = await getAISessionSummary(
           stats || {},
           selectedCoaches
         );
-        const data: AgentResult = { type: "session-summary", data: { summaries: result } };
-        setSafeState({ status: "success" });
-        
-        // Show personality-aware success toast
-        const successMsg = getSuccessMessage("session-summary");
-        if (successMsg) {
-          toast.success(successMsg.title, { description: successMsg.description });
-        }
-        
-        onSuccess?.(data);
-        return data;
-      }
-
-      if (request.type === "chat") {
+        data = { type: "session-summary", data: { summaries: result } };
+      } else if (request.type === "chat") {
         const { messages, model } = request.params;
         // Extract the last user message and session data from messages
         const lastUserMessage = messages.filter(m => m.role === "user").pop();
         const sessionData = { message: lastUserMessage?.content || "" };
-        
+
         const reply = await getAIChatResponse(messages, sessionData, model || "gemini");
-        const data: AgentResult = { type: "chat", data: { reply, model: model || "gemini" } };
-        setSafeState({ status: "success" });
-        
-        // Show personality-aware success toast (optional for chat)
-        const successMsg = getSuccessMessage("chat");
-        if (successMsg && messages.length === 1) {
-          // Only show for first message to avoid spam
-          toast.success(successMsg.title, { description: successMsg.description });
-        }
-        
-        onSuccess?.(data);
-        return data;
+        data = { type: "chat", data: { reply, model: model || "gemini" } };
+      } else {
+        throw new Error("Unsupported agent request type");
       }
 
-      throw new Error("Unsupported agent request type");
+      // Only show success state and toast after successful completion
+      setSafeState({ status: "success", error: null });
+
+      // Show personality-aware success toast only on successful completion
+      const successMsg = getSuccessMessage(request.type);
+      if (successMsg && request.type === "session-summary") {
+        toast.success(successMsg.title, {
+          description: successMsg.description,
+          duration: 3000 // Auto-dismiss after 3 seconds to prevent re-renders
+        });
+      }
+
+      onSuccess?.(data);
+      return data;
     } catch (err: any) {
       if (err?.name === "AbortError") {
         // Silently ignore cancels
@@ -146,6 +140,7 @@ export const useAgentAction = (opts: UseAgentActionOptions = {}) => {
         toast[type](title, {
           description,
           action: actionLabel && actionFn ? { label: actionLabel, onClick: actionFn } : undefined,
+          duration: 5000
         });
       }
       onError?.(err);

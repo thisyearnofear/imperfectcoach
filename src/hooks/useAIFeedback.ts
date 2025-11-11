@@ -26,8 +26,8 @@ const getFallbackFeedback = (
     personality === "supportive"
       ? "SNEL"
       : personality === "zen"
-      ? "STEDDIE"
-      : "RASTA";
+        ? "STEDDIE"
+        : "RASTA";
   // Use personality-driven feedback as fallback
   if (issues.length > 0) {
     return getPersonalityFeedback(newPersonality, "form_feedback", formScore);
@@ -152,36 +152,52 @@ export const useAIFeedback = ({
         localStorage.getItem("user-api-keys") || "{}"
       );
 
-      const promises = models.map((model) =>
-        supabase.functions.invoke("coach-gemini", {
-          body: {
-            userApiKeys,
-            model,
-            type: "summary",
-            exercise,
-            personality: coachPersonality,
-            ...summaryData,
-          },
-        })
-      );
+      // Only try Gemini to reduce API errors
+      const promises = models
+        .filter(model => model === "gemini") // Only try Gemini model
+        .map((model) =>
+          supabase.functions.invoke("coach-gemini", {
+            body: {
+              userApiKeys,
+              model,
+              type: "summary",
+              exercise,
+              personality: coachPersonality,
+              ...summaryData,
+            },
+          })
+        );
+
+      if (promises.length === 0) {
+        // Fallback if no Gemini model
+        return { gemini: getFallbackSummary(exercise, summaryData) };
+      }
 
       const results = await Promise.allSettled(promises);
       const summaries: SessionSummaries = {};
 
       results.forEach((result, index) => {
-        const model = models[index];
+        const model = "gemini"; // We only attempted Gemini
         if (result.status === "fulfilled" && !result.value.error) {
           summaries[model] =
             result.value.data.feedback ||
             `Could not generate summary from ${model}.`;
         } else {
           summaries[model] = getFallbackSummary(exercise, summaryData);
-          console.error(
-            `Error getting AI session summary for ${model}:`,
-            result.status === "rejected" ? result.reason : result.value.error
-          );
+          // Only log in development mode to reduce console spam
+          if (process.env.NODE_ENV === "development") {
+            console.warn(
+              `Error getting AI session summary for ${model}:`,
+              result.status === "rejected" ? result.reason : result.value.error
+            );
+          }
         }
       });
+
+      // Ensure we have at least a Gemini summary
+      if (!summaries.gemini) {
+        summaries.gemini = getFallbackSummary(exercise, summaryData);
+      }
 
       return summaries;
     },
@@ -196,6 +212,11 @@ export const useAIFeedback = ({
     ): Promise<string> => {
       if (!navigator.onLine) {
         return "You're offline. Please connect to the internet to chat with the coach.";
+      }
+
+      // Only try Gemini to reduce API errors
+      if (model !== "gemini") {
+        return getFallbackChatResponse(exercise, sessionData);
       }
 
       const userApiKeys = JSON.parse(
@@ -224,7 +245,10 @@ export const useAIFeedback = ({
           responseData.feedback || "Sorry, I couldn't come up with a response."
         );
       } catch (error) {
-        console.error(`Error getting AI chat response for ${model}:`, error);
+        // Only log in development mode to reduce console spam
+        if (process.env.NODE_ENV === "development") {
+          console.warn(`Error getting AI chat response for ${model}:`, error);
+        }
         return getFallbackChatResponse(exercise, sessionData);
       }
     },

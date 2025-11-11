@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { getContractConfig } from "@/lib/contracts";
 import { trackTransaction, analyzeTransactionError } from "@/lib/cdp";
 import { submitScoreToSolana, type ExerciseType } from "@/lib/solana/leaderboard";
+import { areAddressesConfigured } from "@/lib/solana/config";
 import type { PublicKey } from "@solana/web3.js";
 import type { Connection } from "@solana/web3.js";
 import type { WalletContextState } from "@solana/wallet-adapter-react";
@@ -152,6 +153,12 @@ export const useScoreSubmission = (
         if (!isSolanaConnected || !solanaPublicKey || !connection) {
           toast.error("Please connect your Solana wallet first");
           throw new Error("Solana wallet not connected");
+        }
+
+        // Validate Solana contracts are deployed
+        if (!areAddressesConfigured()) {
+          toast.error("Solana contracts not yet deployed. Please use Base Sepolia.");
+          throw new Error("Solana contracts not deployed");
         }
 
         console.log(`🟣 Submitting ${exercise} score (${score}) to Solana blockchain`);

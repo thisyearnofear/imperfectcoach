@@ -27,8 +27,6 @@ import { Exercise, RepData } from "@/lib/types";
 import {
   getDefaultChain,
   getAvailableChains,
-  validateChainSubmission,
-  showChainRoutingToast,
   ChainType,
 } from "@/lib/chainRouting";
 
@@ -87,6 +85,11 @@ export const BlockchainScoreSubmission = ({
     return minutes > 1 ? `${minutes} minutes` : `${seconds} seconds`;
   };
 
+  // Helper to convert exercise name to Solana exercise type
+  const getExerciseType = (exerciseName: Exercise): "pullups" | "jumps" => {
+    return exerciseName === "pull-ups" ? "pullups" : "jumps";
+  };
+
   const handleChainSelected = async (chain: ChainType) => {
     setShowChainSelector(false);
     setSelectedChain(chain);
@@ -100,15 +103,21 @@ export const BlockchainScoreSubmission = ({
       if (chain === "base") {
         await submitScore(pullups, jumps);
       } else if (chain === "solana") {
-        // TODO: Get actual Solana leaderboard program address from config
-        const leaderboardAddress = null; // Will be set from contract config
-        if (leaderboardAddress) {
-          await submitScoreToSolanaContract(
-            pullups,
-            jumps,
-            leaderboardAddress
-          );
+        // Validate Solana contracts are deployed
+        const { getLeaderboardAddress, areAddressesConfigured } = await import("@/lib/solana/config");
+        
+        if (!areAddressesConfigured()) {
+          throw new Error("Solana contracts not yet deployed. Try Base Sepolia instead.");
         }
+
+        const exerciseType = getExerciseType(exercise);
+        const leaderboardAddress = getLeaderboardAddress(exerciseType);
+
+        await submitScoreToSolanaContract(
+          pullups,
+          jumps,
+          leaderboardAddress
+        );
       }
 
       setHasSubmitted(true);
@@ -117,7 +126,7 @@ export const BlockchainScoreSubmission = ({
       onSubmissionComplete?.();
     } catch (error) {
       console.error("Failed to submit score:", error);
-      setError(`Failed to submit score to ${chain}`);
+      setError(`Failed to submit score to ${chain}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -271,7 +280,12 @@ export const BlockchainScoreSubmission = ({
             <Alert className="border-primary/20 bg-primary/5">
               <Trophy className="h-4 w-4 text-primary" />
               <AlertDescription className="text-primary/90">
-                🚀 BOOM. Go time!
+                {availableChains.length > 1
+                  ? "🚀 Both wallets connected! Choose your chain when submitting."
+                  : isSolanaConnected
+                    ? "🚀 Solana connected! Ready to submit your score to Solana Devnet."
+                    : "🚀 Base connected! Ready to submit your score to Base Sepolia."
+                }
               </AlertDescription>
             </Alert>
 

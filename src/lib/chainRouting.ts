@@ -1,5 +1,3 @@
-import { toast } from "sonner";
-
 export type ChainType = "base" | "solana";
 
 export interface ChainRoutingState {
@@ -45,65 +43,4 @@ export function getDefaultChain(state: ChainRoutingState): ChainType | "none" | 
  */
 export function getChainDisplayName(chain: ChainType): string {
   return chain === "base" ? "Base Sepolia" : "Solana Devnet";
-}
-
-/**
- * Validate submission can be made to a specific chain
- */
-export function validateChainSubmission(
-  chain: ChainType,
-  state: ChainRoutingState
-): { isValid: boolean; error?: string } {
-  if (chain === "base") {
-    if (!state.isBaseConnected || !state.baseAddress) {
-      return { isValid: false, error: "Base wallet not connected" };
-    }
-    return { isValid: true };
-  }
-
-  if (chain === "solana") {
-    if (!state.isSolanaConnected || !state.solanaAddress) {
-      return { isValid: false, error: "Solana wallet not connected" };
-    }
-    return { isValid: true };
-  }
-
-  return { isValid: false, error: "Unknown chain" };
-}
-
-/**
- * Show appropriate toast message for chain routing
- */
-export function showChainRoutingToast(
-  action: "submit_start" | "submit_success" | "submit_error",
-  chain: ChainType,
-  details?: { txHash?: string; signature?: string; error?: string }
-) {
-  const chainName = getChainDisplayName(chain);
-
-  switch (action) {
-    case "submit_start":
-      toast.loading(`Submitting to ${chainName}...`);
-      break;
-
-    case "submit_success":
-      if (chain === "base" && details?.txHash) {
-        toast.success(`✅ Score submitted to ${chainName}!`, {
-          description: `Hash: ${details.txHash.slice(0, 10)}...`,
-        });
-      } else if (chain === "solana" && details?.signature) {
-        toast.success(`✅ Score submitted to ${chainName}!`, {
-          description: `Signature: ${details.signature.slice(0, 8)}...`,
-        });
-      } else {
-        toast.success(`✅ Score submitted to ${chainName}!`);
-      }
-      break;
-
-    case "submit_error":
-      toast.error(`❌ Failed to submit to ${chainName}`, {
-        description: details?.error || "Unknown error occurred",
-      });
-      break;
-  }
 }
