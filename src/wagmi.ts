@@ -4,9 +4,14 @@ import { coinbaseWallet } from "wagmi/connectors";
 // TODO: Add Solana support when wagmi supports it
 // For now, we'll handle Solana separately in payment modules
 
+// App logo URL - use production URL if available, otherwise localhost with common dev port
+const APP_LOGO_URL = import.meta.env.VITE_APP_URL 
+  ? `${import.meta.env.VITE_APP_URL}/IC.png`
+  : 'http://localhost:8080/IC.png';
+
 export const cbWalletConnector = coinbaseWallet({
   appName: "Imperfect Coach - AI Fitness Tracker",
-  appLogoUrl: import.meta.env.VITE_APP_URL + "/IC.png",
+  appLogoUrl: APP_LOGO_URL,
   preference: "smartWalletOnly",
 });
 
