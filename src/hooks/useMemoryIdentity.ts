@@ -40,6 +40,9 @@ const getGlobalCache = (): Map<string, { data: IdentityGraph | null; timestamp: 
   return new Map();
 };
 
+// Global in-flight request tracker to prevent concurrent API calls for the same address
+const inFlightRequests = new Map<string, Promise<IdentityGraph | null>>();
+
 // Cache cleanup function to remove expired entries
 const cleanupExpiredCacheEntries = () => {
   const identityCache = getGlobalCache();
@@ -93,7 +96,6 @@ export const useMemoryIdentity = (
 
     debounceTimeoutRef.current = setTimeout(() => {
       lastRequestTime.current = Date.now();
-      console.log('[useMemoryIdentity] Fetching for wallet:', walletAddress, 'enabled:', enabled);
 
       // Cancel previous request
       if (abortControllerRef.current) {
@@ -115,17 +117,36 @@ export const useMemoryIdentity = (
         const maxAge = cached?.error ? FAILED_CACHE_AGE : MAX_CACHE_AGE;
 
         if (cached && cacheAge < maxAge) {
-          console.log('[useMemoryIdentity] Using cached data');
           setIdentityGraph(cached.data);
           setError(cached.error);
           setIsLoading(false);
           return;
         }
 
+        // Check if there's already a request in-flight for this address
+        const existingRequest = inFlightRequests.get(walletAddress);
+        if (existingRequest) {
+          setIsLoading(true);
+          try {
+            const result = await existingRequest;
+            setIdentityGraph(result);
+            setError(null);
+          } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : 'Failed to fetch identity graph';
+            setError(errorMsg);
+            setIdentityGraph(null);
+          } finally {
+            setIsLoading(false);
+          }
+          return;
+        }
+
         setIsLoading(true);
         setError(null);
 
-        try {
+        // Create the request promise and store it
+        const requestPromise = (async (): Promise<IdentityGraph | null> => {
+          try {
           // Note: Requires MEMORY_API_KEY environment variable
           const apiKey = import.meta.env.VITE_MEMORY_API_KEY;
           if (!apiKey) {
@@ -137,55 +158,65 @@ export const useMemoryIdentity = (
             return;
           }
 
-          console.log('[useMemoryIdentity] Making API request');
-          const response = await fetch(
-            `https://api.memoryproto.co/identities/wallet/${walletAddress}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-              },
-              signal: abortControllerRef.current?.signal,
+            const response = await fetch(
+              `https://api.memoryproto.co/identities/wallet/${walletAddress}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json',
+                },
+                signal: abortControllerRef.current?.signal,
+              }
+            );
+
+            // Gracefully handle "not found" by treating as empty identity graph
+            if (response.status === 404) {
+              const emptyGraph = { identities: [] };
+              identityCache.set(walletAddress, { data: emptyGraph, timestamp: now, error: null });
+              return emptyGraph;
             }
-          );
 
-          // Gracefully handle "not found" by treating as empty identity graph
-          if (response.status === 404) {
-            // No identity graph exists yet for this wallet
-            const emptyGraph = { identities: [] };
-            setIdentityGraph(emptyGraph);
-            setError(null);
-            identityCache.set(walletAddress, { data: emptyGraph, timestamp: now, error: null });
-            return;
+            if (!response.ok) {
+              throw new Error(`Memory API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            // API returns an array directly, wrap it in the IdentityGraph interface
+            const identityGraph = Array.isArray(data) ? { identities: data } : data;
+            identityCache.set(walletAddress, { data: identityGraph, timestamp: now, error: null });
+            return identityGraph;
+          } catch (err) {
+            if (err instanceof Error && err.name === 'AbortError') {
+              throw err;
+            }
+            // Only log errors in development to reduce console spam
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('Failed to fetch identity graph:', err);
+            }
+            const errorMsg = err instanceof Error ? err.message : 'Failed to fetch identity graph';
+            identityCache.set(walletAddress, { data: null, timestamp: now, error: errorMsg });
+            throw new Error(errorMsg);
           }
+        })();
 
-          if (!response.ok) {
-            throw new Error(`Memory API error: ${response.status}`);
-          }
+        // Store the promise so other instances can reuse it
+        inFlightRequests.set(walletAddress, requestPromise);
 
-          const data = await response.json();
-          console.log('[useMemoryIdentity] Got response with', Array.isArray(data) ? data.length : (data?.identities?.length || 0), 'identities');
-          // API returns an array directly, wrap it in the IdentityGraph interface
-          const identityGraph = Array.isArray(data) ? { identities: data } : data;
-          setIdentityGraph(identityGraph);
-          identityCache.set(walletAddress, { data: identityGraph, timestamp: now, error: null });
+        try {
+          const result = await requestPromise;
+          setIdentityGraph(result);
+          setError(null);
         } catch (err) {
           if (err instanceof Error && err.name === 'AbortError') {
-            // Request was cancelled, don't update state
             return;
           }
-
-          // Only log errors in development to reduce console spam
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Failed to fetch identity graph:', err);
-          }
-
           const errorMsg = err instanceof Error ? err.message : 'Failed to fetch identity graph';
           setError(errorMsg);
           setIdentityGraph(null);
-          identityCache.set(walletAddress, { data: null, timestamp: now, error: errorMsg });
         } finally {
           setIsLoading(false);
+          // Clean up the in-flight request
+          inFlightRequests.delete(walletAddress);
         }
       };
 
@@ -222,15 +253,12 @@ export const useMemoryIdentity = (
   // Helper to get all social identities
   const getSocialIdentities = () => {
     if (!identityGraph || !identityGraph.identities || !Array.isArray(identityGraph.identities)) {
-      console.log('[getSocialIdentities] No identity graph or identities:', { identityGraph, isArray: Array.isArray(identityGraph?.identities) });
       return [];
     }
 
-    const filtered = identityGraph.identities.filter(identity =>
+    return identityGraph.identities.filter(identity =>
       identity && ['farcaster', 'twitter', 'github', 'lens', 'zora'].includes(identity.platform)
     );
-    console.log('[getSocialIdentities] Filtered from', identityGraph.identities.length, 'to', filtered.length);
-    return filtered;
   };
 
   return {

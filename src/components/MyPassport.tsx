@@ -345,7 +345,7 @@ const { address, isConnected } = useAccount();
             !jsonString.trim().startsWith("{") &&
             !jsonString.trim().startsWith("[")
           ) {
-            console.warn("Decoded base64 data is not valid JSON format");
+            // Silently return null for non-JSON data (expected for some tokens)
             return null;
           }
 

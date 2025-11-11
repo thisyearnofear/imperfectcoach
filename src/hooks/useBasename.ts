@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   resolveL2Name,
   BASENAME_RESOLVER_ADDRESS,
@@ -12,10 +12,15 @@ const client = createThirdwebClient({
     "cd2fc16a6b59aa67ccaa3c76eaa421f3",
 });
 
+// Cache to prevent redundant fetches
+const basenameCache = new Map<string, { name: string | null; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export const useBasename = (address?: string) => {
   const [basename, setBasename] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     const resolveBasename = async () => {
@@ -24,6 +29,19 @@ export const useBasename = (address?: string) => {
         return;
       }
 
+      // Check cache first
+      const cached = basenameCache.get(address.toLowerCase());
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        setBasename(cached.name);
+        return;
+      }
+
+      // Prevent duplicate concurrent fetches
+      if (isFetchingRef.current) {
+        return;
+      }
+
+      isFetchingRef.current = true;
       setIsLoading(true);
       setError(null);
 
@@ -35,19 +53,29 @@ export const useBasename = (address?: string) => {
           resolverChain: base,
         });
 
-        if (name && name.length > 0) {
-          setBasename(name);
-          console.log("✅ Thirdweb basename resolved:", name);
-        } else {
-          setBasename(null);
-          console.log("ℹ️ No basename found for address:", address);
+        const resolvedName = name && name.length > 0 ? name : null;
+        
+        // Update cache
+        basenameCache.set(address.toLowerCase(), {
+          name: resolvedName,
+          timestamp: Date.now(),
+        });
+
+        setBasename(resolvedName);
+        if (resolvedName) {
+          console.log("✅ Thirdweb basename resolved:", resolvedName);
         }
       } catch (err) {
-        console.log("ℹ️ No basename found for address:", address);
+        // Cache the null result to prevent repeated failed lookups
+        basenameCache.set(address.toLowerCase(), {
+          name: null,
+          timestamp: Date.now(),
+        });
         setBasename(null);
-        setError(null); // Don't treat this as an error, just no basename
+        setError(null);
       } finally {
         setIsLoading(false);
+        isFetchingRef.current = false;
       }
     };
 
