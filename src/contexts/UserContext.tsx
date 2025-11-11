@@ -232,16 +232,56 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
   }, [baseWallet.disconnectWallet]);
 
   const signInWithEthereum = useCallback(async () => {
+    // Add a small delay to ensure wallet state is properly updated
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Add defensive checks
+    if (!baseWallet.isConnected) {
+      console.error("Cannot sign in with Ethereum: Wallet not connected");
+      toast.error("Please connect your wallet first");
+      return;
+    }
+    
+    if (!baseWallet.address) {
+      console.error("Cannot sign in with Ethereum: No address available");
+      toast.error("Wallet connected but no address available");
+      return;
+    }
+    
     await baseWallet.signIn();
-  }, [baseWallet.signIn]);
+  }, [baseWallet]);
 
   const connectAndSignIn = useCallback(async () => {
-    await baseWallet.connectWallet();
-    // Wait a moment for connection to complete, then sign in
-    setTimeout(async () => {
+    try {
+      await baseWallet.connectWallet();
+      
+      // Wait for connection to be fully established
+      let attempts = 0;
+      const maxAttempts = 20; // 10 seconds max wait
+      
+      while (!baseWallet.isConnected && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        attempts++;
+      }
+      
+      if (!baseWallet.isConnected) {
+        throw new Error("Wallet connection timeout");
+      }
+      
+      // Wait a bit more for the address to be available
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (!baseWallet.address) {
+        throw new Error("Wallet connected but address not available");
+      }
+      
+      // Now sign in
       await baseWallet.signIn();
-    }, 500);
-  }, [baseWallet.connectWallet, baseWallet.signIn]);
+    } catch (error) {
+      console.error("Connect and sign in error:", error);
+      toast.error("Failed to connect and sign in: " + (error as Error).message);
+    }
+  }, [baseWallet]);
 
   const resetAuth = useCallback(async () => {
     await baseWallet.disconnectWallet();

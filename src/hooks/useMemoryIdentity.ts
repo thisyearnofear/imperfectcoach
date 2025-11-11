@@ -26,14 +26,34 @@ interface UseMemoryIdentityOptions {
   enabled?: boolean;
 }
 
-// Cache for identity graph requests with global singleton
-let identityCache: Map<string, { data: IdentityGraph | null; timestamp: number; error: string | null }>;
-let cacheInitialized = false;
+// Create a global cache using window object to ensure it's shared across all instances
+// This prevents multiple API calls for the same wallet address across different components
+const getGlobalCache = (): Map<string, { data: IdentityGraph | null; timestamp: number; error: string | null }> => {
+  if (typeof window !== 'undefined') {
+    // Create a property on the window object to share the cache
+    if (!(window as any).__memoryIdentityCache) {
+      (window as any).__memoryIdentityCache = new Map();
+    }
+    return (window as any).__memoryIdentityCache;
+  }
+  // Fallback for SSR or environments without window
+  return new Map();
+};
 
-if (!cacheInitialized) {
-  identityCache = new Map();
-  cacheInitialized = true;
-}
+// Cache cleanup function to remove expired entries
+const cleanupExpiredCacheEntries = () => {
+  const identityCache = getGlobalCache();
+  const now = Date.now();
+  
+  for (const [walletAddress, cacheEntry] of identityCache.entries()) {
+    const cacheAge = now - cacheEntry.timestamp;
+    const maxAge = cacheEntry.error ? FAILED_CACHE_AGE : MAX_CACHE_AGE;
+    
+    if (cacheAge >= maxAge) {
+      identityCache.delete(walletAddress);
+    }
+  }
+};
 
 const MAX_CACHE_AGE = 5 * 60 * 1000; // 5 minutes
 const FAILED_CACHE_AGE = 5 * 60 * 1000; // 5 minutes for failed requests (increased to reduce API calls)
@@ -82,6 +102,12 @@ export const useMemoryIdentity = (
       abortControllerRef.current = new AbortController();
 
       const fetchIdentityGraph = async () => {
+        // Clean up expired cache entries before checking
+        cleanupExpiredCacheEntries();
+        
+        // Get the shared global cache
+        const identityCache = getGlobalCache();
+        
         // Check cache first
         const cached = identityCache.get(walletAddress);
         const now = Date.now();
@@ -138,7 +164,7 @@ export const useMemoryIdentity = (
           }
 
           const data = await response.json();
-          console.log('[useMemoryIdentity] Got response with', data?.length || 0, 'identities');
+          console.log('[useMemoryIdentity] Got response with', Array.isArray(data) ? data.length : (data?.identities?.length || 0), 'identities');
           // API returns an array directly, wrap it in the IdentityGraph interface
           const identityGraph = Array.isArray(data) ? { identities: data } : data;
           setIdentityGraph(identityGraph);
