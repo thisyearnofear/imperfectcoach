@@ -266,11 +266,11 @@ const getFallbackSummary = (
 ): string => {
   const reps = (data.reps as number) || 0;
   const avgScore = (data.averageFormScore as number) || 0;
+  
+  // Format exercise name properly
+  const exerciseName = exercise === "pull-ups" ? "pull ups" : exercise;
 
-  return `Session complete! You finished ${reps} ${exercise.replace(
-    "-",
-    " "
-  )} with ${avgScore.toFixed(
+  return `Session complete! You finished ${reps} ${exerciseName} with ${avgScore.toFixed(
     1
   )}% average form score. Keep up the consistent training!`;
 };

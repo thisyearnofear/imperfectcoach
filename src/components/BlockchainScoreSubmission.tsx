@@ -99,6 +99,7 @@ export const BlockchainScoreSubmission = ({
 
     try {
       setError(undefined);
+      setHasSubmitted(false); // Reset submission state
 
       if (chain === "base") {
         await submitScore(pullups, jumps);
@@ -120,12 +121,14 @@ export const BlockchainScoreSubmission = ({
         );
       }
 
+      // Only set success if we reach here without errors
       setHasSubmitted(true);
       // Submit personal record when blockchain submission is successful
       submitPersonalRecord?.();
       onSubmissionComplete?.();
     } catch (error) {
       console.error("Failed to submit score:", error);
+      setHasSubmitted(false); // Ensure we don't show success on error
       setError(`Failed to submit score to ${chain}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
@@ -297,7 +300,7 @@ export const BlockchainScoreSubmission = ({
                 (isConnected && !isOnCorrectNetwork && !isSolanaConnected) ||
                 reps === 0
               }
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
+              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 animate-pulse hover:animate-none transition-all shadow-lg hover:shadow-xl"
               size="lg"
             >
               {isSubmitting || isSolanaLoading ? (
