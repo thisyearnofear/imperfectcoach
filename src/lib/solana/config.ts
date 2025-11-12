@@ -6,10 +6,10 @@
 import { PublicKey } from "@solana/web3.js";
 import type { ExerciseType } from "./leaderboard";
 
-// Leaderboard addresses for each exercise (update after deployment)
+// Leaderboard addresses for each exercise (initialized on devnet)
 export const SOLANA_LEADERBOARD_ADDRESSES = {
-  pullups: new PublicKey("GDSkDgf6Q5mMN5kHZiKTXaAs2CLAkopDRDkSCM1tpcQa"), // ✅ Deployed pullups program ID
-  jumps: new PublicKey("7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd"),   // ✅ Deployed jumps program ID
+  pullups: new PublicKey("7ohw3tXESGWNNsJwJ2CoNwbgGz9ygjDbUFP23yMeNs76"), // ✅ Initialized leaderboard account
+  jumps: new PublicKey("6djmqGnS67Am52V2aEhw9qkNZBMrgCxTf198DjX7KccC"),   // ✅ Initialized leaderboard account
 } as const;
 
 /**
@@ -36,12 +36,14 @@ export function areAddressesConfigured(): boolean {
 export const DEPLOYMENT_CHECKLIST = {
   "1. Deploy SolanaPullupsLeaderboard contract": "✅ Complete - GDSkDgf6Q5mMN5kHZiKTXaAs2CLAkopDRDkSCM1tpcQa",
   "2. Deploy SolanaJumpsLeaderboard contract": "✅ Complete - 7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd", 
-  "3. Update SOLANA_LEADERBOARD_ADDRESSES.pullups": "✅ Complete - GDSkDgf6Q5mMN5kHZiKTXaAs2CLAkopDRDkSCM1tpcQa",
-  "4. Update SOLANA_LEADERBOARD_ADDRESSES.jumps": "✅ Complete - 7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd",
-  "5. Update SOLANA_PULLUPS_PROGRAM_ID in leaderboard.ts": "✅ Complete - GDSkDgf6Q5mMN5kHZiKTXaAs2CLAkopDRDkSCM1tpcQa",
-  "6. Update SOLANA_JUMPS_PROGRAM_ID in leaderboard.ts": "✅ Complete - 7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd",
-  "7. Test submission flow on devnet": "❌ Pending",
-  "8. Verify PDA derivation works correctly": "❌ Pending",
+  "3. Initialize pullups leaderboard account": "✅ Complete - 7ohw3tXESGWNNsJwJ2CoNwbgGz9ygjDbUFP23yMeNs76",
+  "4. Initialize jumps leaderboard account": "✅ Complete - 6djmqGnS67Am52V2aEhw9qkNZBMrgCxTf198DjX7KccC",
+  "5. Update SOLANA_LEADERBOARD_ADDRESSES.pullups": "✅ Complete - 7ohw3tXESGWNNsJwJ2CoNwbgGz9ygjDbUFP23yMeNs76",
+  "6. Update SOLANA_LEADERBOARD_ADDRESSES.jumps": "✅ Complete - 6djmqGnS67Am52V2aEhw9qkNZBMrgCxTf198DjX7KccC",
+  "7. Update SOLANA_PULLUPS_PROGRAM_ID in leaderboard.ts": "✅ Complete - GDSkDgf6Q5mMN5kHZiKTXaAs2CLAkopDRDkSCM1tpcQa",
+  "8. Update SOLANA_JUMPS_PROGRAM_ID in leaderboard.ts": "✅ Complete - 7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd",
+  "9. Test submission flow on devnet": "❌ Pending",
+  "10. Verify PDA derivation works correctly": "❌ Pending",
 } as const;
 
 export default {
