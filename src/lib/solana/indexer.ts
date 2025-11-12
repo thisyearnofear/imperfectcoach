@@ -1,5 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { SOLANA_JUMPS_PROGRAM_ID, SOLANA_PULLUPS_PROGRAM_ID } from "./leaderboard";
+import { SOLANA_LEADERBOARD_ADDRESSES } from "./config";
 
 // RPC endpoints for Solana devnet with fallbacks - only using CORS-enabled endpoints
 const ALCHEMY_DEVNET_RPC = import.meta.env.VITE_SOLANA_DEVNET_RPC_URL;
@@ -236,6 +237,15 @@ async function fetchAllUserScoresFromSolanaPrograms(): Promise<UserScoreOnChain[
 
           // Process accounts - add them to our unified structure
           for (const account of result.value) {
+            // Skip the leaderboard accounts themselves (they have different structure)
+            const isLeaderboardAccount = 
+              account.pubkey === SOLANA_LEADERBOARD_ADDRESSES.jumps.toString() ||
+              account.pubkey === SOLANA_LEADERBOARD_ADDRESSES.pullups.toString();
+            
+            if (isLeaderboardAccount) {
+              continue; // Skip leaderboard accounts, only process user score PDAs
+            }
+            
             // Use browser-compatible base64 decoding
             const base64String = account.account.data[0];
             const binaryString = atob(base64String);

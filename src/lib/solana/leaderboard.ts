@@ -243,21 +243,12 @@ export async function submitScoreToSolana(
     throw new Error("Wallet not connected or does not support signing");
   }
 
-  console.log(`🎯 submitScoreToSolana called:`, {
-    exercise,
-    score,
-    leaderboardAddress: leaderboardAddress.toString(),
-    userWallet: wallet.publicKey.toString(),
-  });
-
   // Derive user score PDA for this specific exercise
   const [userScorePda] = getUserScorePDA(
     wallet.publicKey,
     leaderboardAddress,
     exercise
   );
-  
-  console.log(`📍 Derived user score PDA:`, userScorePda.toString());
 
   try {
     // Build the instruction for the specific exercise contract

@@ -168,9 +168,6 @@ export const useExerciseProcessor = ({
             // Set ground level if not established
             if (!jumpGroundLevel.current) {
               jumpGroundLevel.current = (leftAnkle.y + rightAnkle.y) / 2;
-              if (process.env.NODE_ENV === "development") {
-                console.log("🏃 Ground level set:", jumpGroundLevel.current);
-              }
             }
 
             // Collect jump data for analytics
@@ -197,18 +194,6 @@ export const useExerciseProcessor = ({
               const avgAnkleY = (leftAnkle.y + rightAnkle.y) / 2;
               const isAirborne = avgAnkleY < jumpGroundLevel.current - 10;
 
-              if (process.env.NODE_ENV === "development") {
-                console.log("📊 Jump Height Debug:", {
-                  avgAnkleY: avgAnkleY.toFixed(1),
-                  groundLevel: jumpGroundLevel.current?.toFixed(1),
-                  isAirborne,
-                  currentPeak: peakAirborneY.current?.toFixed(1) ?? "null",
-                  heightDiff: jumpGroundLevel.current
-                    ? (jumpGroundLevel.current - avgAnkleY).toFixed(1)
-                    : "null",
-                });
-              }
-
               if (isAirborne) {
                 flightData.current.push({
                   shoulderX: (leftShoulder.x + rightShoulder.x) / 2,
@@ -220,13 +205,6 @@ export const useExerciseProcessor = ({
                   peakAirborneY.current ?? avgAnkleY,
                   avgAnkleY
                 );
-
-                if (process.env.NODE_ENV === "development") {
-                  console.log(
-                    "✈️ Airborne! New peak:",
-                    peakAirborneY.current?.toFixed(1)
-                  );
-                }
               }
             }
 
@@ -244,12 +222,6 @@ export const useExerciseProcessor = ({
 
             // Reset jump data after rep completion
             if (result?.isRepCompleted) {
-              if (process.env.NODE_ENV === "development") {
-                console.log(
-                  "🎯 Rep completed! Final peak was:",
-                  peakAirborneY.current?.toFixed(1) ?? "null"
-                );
-              }
               jumpData.current = [];
               flightData.current = [];
               peakAirborneY.current = null;

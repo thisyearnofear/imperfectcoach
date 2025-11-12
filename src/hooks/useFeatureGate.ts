@@ -42,28 +42,16 @@ export function useUserTier(): UserTier {
   const { hasPremiumAccess } = usePremiumAccess();
   const { isSolanaConnected } = useSolanaWallet();
 
-  // Debug logging
-  console.log("🎯 useUserTier Debug:", {
-    isAuthenticated,
-    isSolanaConnected,
-    hasPremiumAccess,
-    hasSubmittedScore,
-    basename,
-  });
-
   if (hasPremiumAccess) {
-    console.log("✅ Tier: premium (has premium access)");
     return "premium";
   }
 
   // Users with connected wallet (Base or Solana) are "connected" tier
   // This allows them to see and use the blockchain submission feature
   if (isAuthenticated || isSolanaConnected) {
-    console.log("✅ Tier: connected (authenticated or solana connected)");
     return "connected";
   }
 
-  console.log("ℹ️ Tier: free (no wallet connected)");
   return "free";
 }
 

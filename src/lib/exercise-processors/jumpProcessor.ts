@@ -73,18 +73,6 @@ export const processJumps = ({
   let heightScore = 0;
   let heightFeedback = "";
 
-  // Debug logging for jump height calculation
-  if (process.env.NODE_ENV === "development") {
-    console.log("🎯 Jump Height Calculation:", {
-      jumpGroundLevel: jumpGroundLevel?.toFixed(1) ?? "null",
-      peakAirborneY: peakAirborneY?.toFixed(1) ?? "null",
-      calculatedHeight: jumpHeight.toFixed(1),
-      avgAnkleY: avgAnkleY.toFixed(1),
-      isAirborne: isAirborne,
-      repState: repState,
-    });
-  }
-
   if (jumpHeight >= 80) {
     heightScore = 100;
     heightFeedback = "Incredible height!";
@@ -109,20 +97,6 @@ export const processJumps = ({
   const kneeAngleAsymmetry = Math.abs(leftKneeAngle - rightKneeAngle);
   let landingScore = 0;
   let landingFeedback = "";
-
-  // Debug logging for landing angles
-  if (process.env.NODE_ENV === "development") {
-    console.log("🦵 Landing Analysis Debug:", {
-      leftKneeAngle: leftKneeAngle.toFixed(1),
-      rightKneeAngle: rightKneeAngle.toFixed(1),
-      avgKneeAngle: avgKneeAngle.toFixed(1),
-      asymmetry: kneeAngleAsymmetry.toFixed(1),
-      jumpHeightPx: jumpHeight.toFixed(1),
-      jumpHeightCm: Math.round(convertHeight(jumpHeight, "cm")),
-      groundLevel: jumpGroundLevel?.toFixed(1) ?? "null",
-      peakY: peakAirborneY?.toFixed(1) ?? "null",
-    });
-  }
 
   // Primary landing quality based on knee flexion
   if (avgKneeAngle < 120) {

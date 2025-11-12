@@ -106,15 +106,6 @@ export function useSolanaWallet() {
       const isConnected = adapterConnected || managerConnected;
       const address = adapterAddress || managerAddress;
       
-      console.log("🔗 Solana Wallet State Check:", {
-        adapterConnected,
-        adapterAddress,
-        managerConnected,
-        managerAddress,
-        finalConnected: isConnected,
-        finalAddress: address,
-      });
-      
       setState((prev) => {
         // Only update if values changed to avoid unnecessary re-renders
         if (prev.isSolanaConnected !== isConnected || prev.solanaAddress !== address) {
@@ -175,12 +166,6 @@ export function useSolanaWallet() {
         toast.error("Please connect your Solana wallet first");
         return {};
       }
-      
-      console.log("🔑 Using Solana wallet:", {
-        fromAdapter: connected,
-        fromManager: managerState.connected,
-        address: walletPubKey.toString(),
-      });
 
       // Determine exercise type based on what's non-zero
       let exerciseType: "pullups" | "jumps";
@@ -216,7 +201,6 @@ export function useSolanaWallet() {
           );
         } else {
           // Use solanaWalletManager for transaction
-          console.log("📝 Building transaction with solanaWalletManager...");
           signature = await submitScoreViaManager(
             managerState,
             leaderboardAddress,

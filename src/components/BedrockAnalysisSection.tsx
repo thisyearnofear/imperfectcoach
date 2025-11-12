@@ -136,7 +136,6 @@ const BedrockAnalysisSection = ({
             message: msg,
           });
         };
-        console.log("💼 Using Base wallet for x402 payment:", address);
       } else if (isSolanaConnected) {
         // Use Solana wallet
         const managerState = solanaWalletManager.getState();
@@ -151,7 +150,6 @@ const BedrockAnalysisSection = ({
           // Convert signature bytes to base64
           return btoa(String.fromCharCode(...signatureBytes));
         };
-        console.log("◎ Using Solana wallet for x402 payment:", address);
       } else {
         throw new Error("No wallet connected");
       }
@@ -190,13 +188,6 @@ const BedrockAnalysisSection = ({
           chain: walletChain, // Tell backend which chain signature is from
         },
       };
-      
-      console.log("📦 Sending payment authorization:", {
-        address,
-        chain: walletChain,
-        messagePreview: message.substring(0, 50) + "...",
-        signaturePreview: signature.substring(0, 20) + "...",
-      });
 
       const apiUrl =
         "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
@@ -210,13 +201,10 @@ const BedrockAnalysisSection = ({
 
       // Enhanced multi-chain x402 flow - can be replaced with SmartPayButton
       if (response.status === 402) {
-        console.log("💰 Payment required - processing enhanced multi-chain x402 payment...");
-        
         // TODO: Replace this manual flow with SmartPayIntegration component
         // Example: <SmartPayIntegration amount={50000} context="premium" onSuccess={...} />
 
         const paymentChallenge = await response.json();
-        console.log("🎯 Payment challenge received:", paymentChallenge);
 
         // Extract payment requirements - support both old 'accepts' and new 'schemes' format
         const paymentRequirement = paymentChallenge.accepts?.[0] || paymentChallenge.schemes?.[0];
@@ -241,12 +229,8 @@ Payer: ${address}
 Timestamp: ${paymentTimestamp}
 Nonce: ${paymentNonce}`;
 
-        console.log("🖊️ Signing x402 payment message...");
-
         // Generate new signature specifically for x402 payment using appropriate wallet
         const x402Signature = await signMessage(x402Message);
-
-        console.log("✅ x402 payment signature generated");
 
         // Create the payment payload in exact x402 format
         const paymentPayload = {

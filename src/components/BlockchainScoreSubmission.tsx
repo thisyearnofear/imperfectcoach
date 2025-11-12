@@ -113,14 +113,6 @@ export const BlockchainScoreSubmission = ({
 
         const exerciseType = getExerciseType(exercise);
         const leaderboardAddress = getLeaderboardAddress(exerciseType);
-        
-        console.log(`📝 BlockchainScoreSubmission:`, {
-          exercise,
-          exerciseType,
-          leaderboardAddress: leaderboardAddress.toString(),
-          pullups,
-          jumps,
-        });
 
         await submitScoreToSolanaContract(
           pullups,
