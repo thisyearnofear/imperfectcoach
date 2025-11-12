@@ -29,9 +29,6 @@ contract ExerciseLeaderboard is Ownable, Pausable, ReentrancyGuard {
     address[] private sortedUsers;
     mapping(address => uint256) private userSortedIndex; // 1-based indexing (0 means not in leaderboard)
     
-    // Access control
-    mapping(address => bool) public authorizedOperators;
-    
     // Contract configuration
     string public exerciseName;
     uint256 public totalParticipants;
@@ -45,35 +42,20 @@ contract ExerciseLeaderboard is Ownable, Pausable, ReentrancyGuard {
         uint256 newBestScore,
         uint256 timestamp
     );
-    event OperatorAuthorized(address indexed operator, bool authorized);
     event LeaderboardUpdated(address indexed user, uint256 newRank);
 
-    modifier onlyAuthorizedOperator() {
-        require(
-            authorizedOperators[msg.sender] || msg.sender == owner(), 
-            "Not authorized operator"
-        );
-        _;
-    }
-
-    constructor(
-        string memory _exerciseName,
-        address _initialOperator
-    ) Ownable(msg.sender) {
+    constructor(string memory _exerciseName) Ownable(msg.sender) {
         exerciseName = _exerciseName;
-        if (_initialOperator != address(0)) {
-            authorizedOperators[_initialOperator] = true;
-        }
     }
 
     function addScore(address user, uint32 score) 
         external 
-        onlyAuthorizedOperator 
         whenNotPaused 
         nonReentrant 
     {
         require(user != address(0), "Invalid user address");
         require(score > 0, "Score must be positive");
+        require(msg.sender == user, "Can only submit your own score");
         
         Score storage userScore = userScores[user];
         bool isNewUser = (userScore.submissionCount == 0);
@@ -232,18 +214,7 @@ contract ExerciseLeaderboard is Ownable, Pausable, ReentrancyGuard {
         }
     }
 
-    // Admin Functions
-    function addOperator(address operator) external onlyOwner {
-        require(operator != address(0), "Invalid operator address");
-        authorizedOperators[operator] = true;
-        emit OperatorAuthorized(operator, true);
-    }
-    
-    function removeOperator(address operator) external onlyOwner {
-        authorizedOperators[operator] = false;
-        emit OperatorAuthorized(operator, false);
-    }
-    
+    // Admin Functions - Emergency only
     function pause() external onlyOwner {
         _pause();
     }
@@ -264,10 +235,6 @@ contract ExerciseLeaderboard is Ownable, Pausable, ReentrancyGuard {
         
         // This function would need to be called with a list of users to rebuild
         // In practice, you might want to implement this differently based on your needs
-    }
-    
-    function isAuthorizedOperator(address operator) external view returns (bool) {
-        return authorizedOperators[operator] || operator == owner();
     }
 
     // Function to check if user exists in leaderboard

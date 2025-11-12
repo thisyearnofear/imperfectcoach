@@ -25,3 +25,8 @@ dist-ssr
 
 .env
 .env.local
+
+# Foundry/Forge build artifacts
+cache/
+out/
+broadcast/

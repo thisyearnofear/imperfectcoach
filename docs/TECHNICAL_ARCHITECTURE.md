@@ -159,8 +159,14 @@ AI Processing → Analysis Delivery
 
 **Purpose:** On-chain agent with permission to update passports
 
-### ExerciseLeaderboard
-**Purpose:** Permanent on-chain workout records
+### ExerciseLeaderboard (Public Access)
+**Pullups Contract:** `0xf117057bd019C9680D5C92b48d825C294FA6c197`  
+**Jumps Contract:** `0xCD12e7B14dE9481297D4f32d98177aEC95fcC444`
+
+**Purpose:** Permanent on-chain workout records  
+**Architecture:** Public submission model - users submit their own scores directly  
+**Security:** Users can only submit scores for themselves (`msg.sender == user`)  
+**Admin:** Emergency pause/unpause available to contract owner
 
 ## 🛠️ Technology Stack
 

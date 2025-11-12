@@ -575,13 +575,14 @@ export const EXERCISE_LEADERBOARD_ABI = [
 ] as const;
 
 // Contract configurations for individual exercise leaderboards
+// PUBLIC LEADERBOARDS - Users can submit their own scores directly
 export const PULLUPS_LEADERBOARD_CONFIG: ContractConfig = {
-  address: "0x69FD29376c3e77C494Fa4c25aac4A8810f511305", // Pullups Leaderboard on Base Sepolia
+  address: "0xf117057bd019C9680D5C92b48d825C294FA6c197", // Pullups Leaderboard on Base Sepolia (Public)
   abi: EXERCISE_LEADERBOARD_ABI,
 };
 
 export const JUMPS_LEADERBOARD_CONFIG: ContractConfig = {
-  address: "0xc5fB32a87A0D54f2AEbc773F0038d32c79AA1004", // Jumps Leaderboard on Base Sepolia
+  address: "0xCD12e7B14dE9481297D4f32d98177aEC95fcC444", // Jumps Leaderboard on Base Sepolia (Public)
   abi: EXERCISE_LEADERBOARD_ABI,
 };
 
