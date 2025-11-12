@@ -197,9 +197,9 @@ function buildSubmitScoreInstruction(
 ): TransactionInstruction {
   const programId = getExerciseProgramId(exercise);
 
-  // Encode instruction data (submitScore discriminator + args)
-  // Discriminator is first 8 bytes of SHA256 hash of "global:submitScore"
-  const discriminator = new Uint8Array([0xe0, 0x2a, 0x17, 0x1b, 0xd1, 0x4b, 0xc6, 0x64]);
+  // Encode instruction data (submit_score discriminator + args)
+  // Discriminator is first 8 bytes of SHA256 hash of "global:submit_score"
+  const discriminator = new Uint8Array([0xd4, 0x80, 0x2d, 0x16, 0x70, 0x52, 0x55, 0xeb]);
 
   // Encode single score as u32 (4 bytes, little-endian)
   const scoreBuf = new Uint8Array(4);

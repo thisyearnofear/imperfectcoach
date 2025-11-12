@@ -32,7 +32,8 @@ async function submitScoreViaManager(
 
   // Build instruction
   const programId = getExerciseProgramId(exercise);
-  const discriminator = new Uint8Array([0xe0, 0x2a, 0x17, 0x1b, 0xd1, 0x4b, 0xc6, 0x64]);
+  // Correct Anchor discriminator for submit_score: sha256("global:submit_score")[0..8]
+  const discriminator = new Uint8Array([0xd4, 0x80, 0x2d, 0x16, 0x70, 0x52, 0x55, 0xeb]);
   
   // Create score buffer (4 bytes, little-endian u32)
   const scoreBuf = new Uint8Array(4);
