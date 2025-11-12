@@ -175,8 +175,11 @@ export function getUserScorePDA(
   exercise: ExerciseType
 ): [PublicKey, number] {
   const programId = getExerciseProgramId(exercise);
+  // Use Uint8Array instead of Buffer for browser compatibility
+  const encoder = new TextEncoder();
+  const userScoreSeed = encoder.encode("user_score");
   return PublicKey.findProgramAddressSync(
-    [Buffer.from("user_score"), leaderboardPublicKey.toBuffer(), userPublicKey.toBuffer()],
+    [userScoreSeed, leaderboardPublicKey.toBuffer(), userPublicKey.toBuffer()],
     programId
   );
 }
@@ -196,13 +199,17 @@ function buildSubmitScoreInstruction(
 
   // Encode instruction data (submitScore discriminator + args)
   // Discriminator is first 8 bytes of SHA256 hash of "global:submitScore"
-  const discriminator = Buffer.from([0xe0, 0x2a, 0x17, 0x1b, 0xd1, 0x4b, 0xc6, 0x64]); // Example - replace with actual
+  const discriminator = new Uint8Array([0xe0, 0x2a, 0x17, 0x1b, 0xd1, 0x4b, 0xc6, 0x64]);
 
   // Encode single score as u32 (4 bytes, little-endian)
-  const scoreBuf = Buffer.alloc(4);
-  scoreBuf.writeUInt32LE(score, 0);
+  const scoreBuf = new Uint8Array(4);
+  const scoreView = new DataView(scoreBuf.buffer);
+  scoreView.setUint32(0, score, true); // true = little-endian
 
-  const instructionData = Buffer.concat([discriminator, scoreBuf]);
+  // Combine discriminator and score
+  const instructionData = new Uint8Array(discriminator.length + scoreBuf.length);
+  instructionData.set(discriminator, 0);
+  instructionData.set(scoreBuf, discriminator.length);
 
   return new TransactionInstruction({
     programId,

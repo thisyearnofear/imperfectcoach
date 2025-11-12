@@ -236,7 +236,13 @@ async function fetchAllUserScoresFromSolanaPrograms(): Promise<UserScoreOnChain[
 
           // Process accounts - add them to our unified structure
           for (const account of result.value) {
-            const data = Buffer.from(account.account.data[0], "base64");
+            // Use browser-compatible base64 decoding
+            const base64String = account.account.data[0];
+            const binaryString = atob(base64String);
+            const data = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              data[i] = binaryString.charCodeAt(i);
+            }
             // This will create an entry for this exercise type
             const parsed = deserializeUserScore(data, account.pubkey, config.exerciseType as 'pullups' | 'jumps');
             if (parsed) {
