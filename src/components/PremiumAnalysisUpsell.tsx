@@ -130,8 +130,8 @@ const PremiumAnalysisUpsell = ({
         const paymentChallenge = await response.json();
         console.log("🎯 Payment challenge received:", paymentChallenge);
 
-        // Extract payment requirements
-        const paymentRequirement = paymentChallenge.accepts?.[0];
+        // Extract payment requirements - support both old 'accepts' and new 'schemes' format
+        const paymentRequirement = paymentChallenge.accepts?.[0] || paymentChallenge.schemes?.[0];
         if (!paymentRequirement) {
           throw new Error(
             "Invalid payment challenge - no payment requirements found"
