@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, Brain, Zap, Target, TrendingUp, Lock, Sparkles, Eye, CheckCircle2, AlertCircle, Trophy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useSolanaWallet } from "@/hooks/useSolanaWallet";
 
 interface AgentCoachUpsellProps {
   workoutData: {
@@ -34,15 +35,21 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
     setError(null);
   };
   
-  // Wallet integration
+  // Wallet integration - support both EVM and Solana
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient({ chainId: baseSepolia.id });
+  const { solanaAddress, isSolanaConnected, wallet: solanaWallet } = useSolanaWallet();
+  
+  // Determine which wallet is connected
+  const walletAddress = address || solanaAddress;
+  const walletConnected = isConnected || isSolanaConnected;
+  const walletChain = isConnected ? "base" : isSolanaConnected ? "solana" : undefined;
 
   const handleUnlockAgent = async () => {
-    if (!isConnected || !address || !walletClient) {
+    if (!walletConnected || !walletAddress) {
       toast({
         title: "❌ Wallet Required",
-        description: "Please connect your wallet to access AI Agent coaching.",
+        description: "Please connect your Ethereum or Solana wallet to access AI Agent coaching.",
         variant: "destructive",
       });
       return;
@@ -81,25 +88,37 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
       const requestBody = {
         workoutData: {
           ...workoutData,
-          userId: workoutData.userId || address,
+          userId: workoutData.userId || walletAddress,
         },
         agentMode: true, // Enable real agent functionality
         payment: {
-          walletAddress: address,
+          walletAddress: walletAddress,
           signature: "placeholder", // Will be replaced with x402 signature
           message: "I authorize payment for AI Agent analysis",
           amount: "100000", // $0.10 USDC
           timestamp,
+          chain: walletChain,
         },
       };
 
       const apiUrl = "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
 
-      // First, make a request without payment to get the 402 challenge
+      // First, make a request WITHOUT payment data to get the 402 challenge
+      // This is the x402 pattern - server tells us what payment it needs
       let response = await fetch(apiUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Chain": walletChain || "base" // Tell server which chain we're using
+        },
+        body: JSON.stringify({
+          workoutData: {
+            ...workoutData,
+            userId: workoutData.userId || walletAddress,
+          },
+          agentMode: true,
+          // Don't send payment yet - wait for 402 challenge
+        }),
       });
 
       // If we get a 402 Payment Required, handle the x402 flow
@@ -126,23 +145,35 @@ Network: ${paymentRequirement.network}
 Asset: ${paymentRequirement.asset}
 Amount: ${paymentRequirement.amount}
 PayTo: ${paymentRequirement.payTo}
-Payer: ${address}
+Payer: ${walletAddress}
 Timestamp: ${paymentTimestamp}
 Nonce: ${paymentNonce}`;
 
         console.log("🖊️ Signing x402 payment message for agent...");
 
-        // Generate signature for x402 payment
-        const x402Signature = await walletClient.signMessage({
-          account: address,
-          message: x402Message,
-        });
+        // Generate signature for x402 payment based on wallet type
+        let x402Signature: string;
+        
+        if (walletChain === "solana" && solanaWallet?.signMessage) {
+          // Solana wallet signature
+          const messageBytes = new TextEncoder().encode(x402Message);
+          const signatureBytes = await solanaWallet.signMessage(messageBytes);
+          x402Signature = Buffer.from(signatureBytes).toString('hex');
+        } else if (walletClient && address) {
+          // EVM wallet signature
+          x402Signature = await walletClient.signMessage({
+            account: address,
+            message: x402Message,
+          });
+        } else {
+          throw new Error("No wallet available for signing");
+        }
 
         console.log("✅ x402 signature generated for agent");
 
         // Update request body with x402 payment details
         requestBody.payment = {
-          walletAddress: address,
+          walletAddress: walletAddress,
           signature: x402Signature,
           message: x402Message,
           amount: paymentRequirement.amount,
@@ -152,13 +183,35 @@ Nonce: ${paymentNonce}`;
           network: paymentRequirement.network,
           asset: paymentRequirement.asset,
           payTo: paymentRequirement.payTo,
+          chain: walletChain,
         };
 
-        // Make the actual request with payment
+        // Make the actual request with payment in x402 header format
         response = await fetch(apiUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody),
+          headers: { 
+            "Content-Type": "application/json",
+            "X-Payment": JSON.stringify({
+              signature: x402Signature,
+              message: x402Message,
+              amount: paymentRequirement.amount,
+              timestamp: paymentTimestamp,
+              nonce: paymentNonce,
+              scheme: paymentRequirement.scheme,
+              network: paymentRequirement.network,
+              asset: paymentRequirement.asset,
+              payTo: paymentRequirement.payTo,
+              payer: walletAddress,
+            }),
+            "X-Chain": walletChain || "base"
+          },
+          body: JSON.stringify({
+            workoutData: {
+              ...workoutData,
+              userId: workoutData.userId || walletAddress,
+            },
+            agentMode: true,
+          }),
         });
       }
 
@@ -234,21 +287,21 @@ Nonce: ${paymentNonce}`;
   if (error) {
     return (
       <Card className="border-red-500/50 bg-gradient-to-br from-red-900/20 to-red-950/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-400">
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center gap-2 text-red-400">
             <AlertCircle className="h-5 w-5" />
             Agent Error
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-center">
             {error.title}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+          <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4 text-center">
             <p className="text-sm text-red-300">{error.message}</p>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-center">
             <AnimatedButton
               onClick={clearError}
               className="bg-red-600 hover:bg-red-700"
@@ -265,7 +318,7 @@ Nonce: ${paymentNonce}`;
             </AnimatedButton>
           </div>
           
-          <div className="text-xs text-muted-foreground pt-2 border-t">
+          <div className="text-xs text-muted-foreground pt-2 border-t text-center">
             <p>If this issue persists, please contact support with the error details above.</p>
           </div>
         </CardContent>

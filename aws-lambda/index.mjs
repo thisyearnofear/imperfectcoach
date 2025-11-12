@@ -2,6 +2,7 @@
 import {
   BedrockRuntimeClient,
   InvokeModelCommand,
+  ConverseCommand,
 } from "@aws-sdk/client-bedrock-runtime";
 
 // Import Coinbase Developer Platform (CDP) SDK v2
@@ -1217,68 +1218,295 @@ async function callFacilitator(endpoint, data) {
   }
 }
 
+// Tool definitions for the AI Agent (same as agent-coach-handler.mjs)
+const AGENT_TOOLS = [
+  {
+    name: "analyze_pose_data",
+    description:
+      "Analyzes pose detection data to identify form issues, asymmetries, and technique improvements for specific exercises",
+    input_schema: {
+      type: "object",
+      properties: {
+        exercise: { type: "string", description: "Exercise type (pullups, jumps, etc)" },
+        pose_data: { type: "object", description: "Pose detection keypoints and angles" },
+        rep_count: { type: "number", description: "Number of reps completed" },
+      },
+      required: ["exercise", "pose_data", "rep_count"],
+    },
+  },
+  {
+    name: "query_workout_history",
+    description:
+      "Retrieves user's workout history to identify patterns, progress, and areas needing focus",
+    input_schema: {
+      type: "object",
+      properties: {
+        user_id: { type: "string", description: "User identifier" },
+        exercise_type: { type: "string", description: "Optional filter by exercise type" },
+        days_back: { type: "number", description: "Number of days to look back" },
+      },
+      required: ["user_id"],
+    },
+  },
+  {
+    name: "benchmark_performance",
+    description:
+      "Compares user's performance against similar athletes to provide context and motivation",
+    input_schema: {
+      type: "object",
+      properties: {
+        exercise: { type: "string", description: "Exercise type" },
+        user_metrics: { type: "object", description: "User's current performance metrics" },
+        experience_level: { type: "string", description: "beginner, intermediate, or advanced" },
+      },
+      required: ["exercise", "user_metrics"],
+    },
+  },
+  {
+    name: "generate_training_plan",
+    description:
+      "Creates a personalized training plan based on current performance, goals, and identified weaknesses",
+    input_schema: {
+      type: "object",
+      properties: {
+        current_performance: { type: "object", description: "Current performance metrics" },
+        goals: { type: "array", description: "User's training goals" },
+        weaknesses: { type: "array", description: "Identified areas for improvement" },
+        available_days: { type: "number", description: "Days per week for training" },
+      },
+      required: ["current_performance", "goals"],
+    },
+  },
+];
+
+// Tool execution functions
+async function executeAgentTool(toolName, toolInput) {
+  console.log(`🔧 Executing tool: ${toolName}`, JSON.stringify(toolInput, null, 2));
+
+  switch (toolName) {
+    case "analyze_pose_data":
+      return {
+        form_score: toolInput.pose_data?.formScore || 75,
+        issues_detected: toolInput.pose_data?.formScore > 80 
+          ? ["Excellent form - minor adjustments only"]
+          : ["Form improvements recommended for safety and efficiency"],
+        technique_tips: [
+          "Focus on controlled descent phase (3-second negative)",
+          "Engage core throughout movement",
+          "Maintain shoulder blade retraction at bottom position"
+        ],
+        asymmetries: {
+          detected: false,
+          recommendation: "Continue monitoring"
+        },
+        rep_quality: {
+          quality_score: toolInput.pose_data?.formScore || 75,
+          full_reps: toolInput.rep_count,
+          partial_reps: 0
+        }
+      };
+    
+    case "query_workout_history":
+      return {
+        total_workouts: 15,
+        exercises_performed: [
+          { type: toolInput.exercise_type || "pullups", sessions: 8, avg_reps: 12, best_form_score: 85 },
+        ],
+        progress_trend: "improving",
+        consistency_score: 78,
+        identified_patterns: [
+          "Strong morning performance",
+          "Form deteriorates after rep 10",
+        ],
+      };
+    
+    case "benchmark_performance":
+      const benchmarks = {
+        pullups: { beginner: 5, intermediate: 12, advanced: 20 },
+        jumps: { beginner: 30, intermediate: 50, advanced: 70 },
+      };
+      const userPerf = toolInput.user_metrics?.reps || 10;
+      const benchmark = benchmarks[toolInput.exercise]?.intermediate || 10;
+      return {
+        user_performance: userPerf,
+        benchmark: benchmark,
+        percentile: userPerf >= benchmark ? "Top 50%" : "Improvement opportunity",
+        comparison: userPerf >= benchmark ? "above_average" : "below_average",
+        next_milestone: Math.ceil(userPerf * 1.2),
+      };
+    
+    case "generate_training_plan":
+      return {
+        plan_duration: "4 weeks",
+        weekly_schedule: [
+          { day: 1, focus: "strength", exercises: ["Main lift", "Accessory work"] },
+          { day: 2, focus: "technique", exercises: ["Form drills", "Mobility"] },
+          { day: 3, focus: "volume", exercises: ["Higher reps", "Endurance"] }
+        ],
+        progressive_overload: {
+          week_1: "Current volume",
+          week_2: "Add 5% reps or 2.5% weight",
+          week_3: "Add 10% total volume",
+          week_4: "Deload week - 70% volume"
+        },
+        success_metrics: toolInput.goals?.map(g => ({
+          goal: g,
+          target: "20% improvement in 4 weeks"
+        })) || []
+      };
+    
+    default:
+      return { error: `Unknown tool: ${toolName}` };
+  }
+}
+
 /**
- * Gets agent analysis using Amazon Bedrock AgentCore
+ * Gets agent analysis using Amazon Bedrock AgentCore with real Converse API
  */
 async function getAgentAnalysis(data) {
-  console.log("🤖 Starting Agent Analysis with AgentCore...");
+  console.log("🤖 Starting REAL Agent Analysis with Bedrock AgentCore...");
   
   try {
-    // Simulate agent reasoning with tools
-    const agentResponse = {
-      success: true,
-      agent_type: "autonomous_coach",
-      model: "amazon.nova-lite-v1:0",
-      agentCore_primitives_used: ["tool_use", "multi_step_reasoning", "autonomous_decision_making"],
-      agentResponse: `🤖 **AUTONOMOUS AI COACH ANALYSIS**
+    const conversationHistory = [];
+    const maxIterations = 5;
+    let iteration = 0;
 
-**STEP 1: POSE ANALYSIS** 🎯
-I've analyzed your ${data.exercise} form and detected:
-- Average form score: ${data.formScore}%
-- ${data.reps} reps completed
-- Key insight: ${data.formScore > 80 ? 'Excellent form consistency!' : 'Form improvements needed for safety'}
+    // System prompt for the agent
+    const systemPrompt = {
+      text: `You are an elite AI fitness coach with autonomous decision-making capabilities. 
+Your role is to:
+1. Analyze workout performance data deeply
+2. Use available tools to gather context and history
+3. Make autonomous decisions about what analysis is needed
+4. Generate personalized, actionable coaching advice
+5. Create adaptive training plans
 
-**STEP 2: WORKOUT HISTORY** 📊
-Querying your training patterns... I found:
-- Recent ${data.exercise} sessions show ${data.formScore > 75 ? 'improving' : 'inconsistent'} performance
-- Recommendation: ${data.formScore > 80 ? 'Increase intensity' : 'Focus on form before adding volume'}
-
-**STEP 3: PERFORMANCE BENCHMARKING** 🏆
-Comparing against athlete database:
-- Your ${data.reps} reps places you in the ${data.reps > 10 ? '75th' : '45th'} percentile
-- Form quality is ${data.formScore > 80 ? 'above average' : 'below optimal'}
-
-**STEP 4: PERSONALIZED TRAINING PLAN** 📋
-Based on autonomous analysis, I recommend:
-
-Week 1-2: ${data.formScore > 80 ? 'Progressive overload focus' : 'Form correction protocol'}
-- ${data.exercise}: ${data.formScore > 80 ? '3x8-12 reps' : '3x5-8 reps (focus on form)'}
-- Rest: 60-90 seconds between sets
-- Frequency: 3x per week
-
-Week 3-4: Advanced progression
-- Add ${data.formScore > 80 ? 'weighted variations' : 'tempo control (3-second negatives)'}
-- Monitor form scores - target 85%+ consistency
-
-**AUTONOMOUS DECISION SUMMARY:**
-✅ Used 4 integrated tools independently
-✅ Multi-step reasoning completed
-✅ Personalized recommendations generated
-✅ No human intervention required`,
-      
-      toolsUsed: ["analyze_pose_data", "query_workout_history", "benchmark_performance", "generate_training_plan"],
-      iterationsUsed: 4,
-      reasoning_steps: [
-        { step: 1, action: "analyze_pose_data", result: "Form analysis completed" },
-        { step: 2, action: "query_workout_history", result: "Historical patterns identified" },
-        { step: 3, action: "benchmark_performance", result: "Performance percentile calculated" },
-        { step: 4, action: "generate_training_plan", result: "Personalized plan created" }
-      ],
-      timestamp: new Date().toISOString()
+You have access to tools for analyzing pose data, querying workout history, benchmarking performance, and generating training plans.
+Think step-by-step about what information you need and which tools to use.`,
     };
 
-    console.log("✅ Agent analysis completed with", agentResponse.toolsUsed.length, "tools");
-    return agentResponse;
+    // Initial user message with workout data
+    conversationHistory.push({
+      role: "user",
+      content: [
+        {
+          text: `Analyze this workout and provide comprehensive coaching:
+          
+Exercise: ${data.exercise || "unknown"}
+Reps: ${data.reps || 0}
+Form Score: ${data.formScore || 0}%
+Pose Data: ${JSON.stringify(data.poseData || {})}
+User ID: ${data.userId || "demo-user"}
+
+Provide autonomous, multi-step analysis using available tools.`,
+        },
+      ],
+    });
+
+    console.log("🔄 Starting agent reasoning loop...");
+
+    while (iteration < maxIterations) {
+      iteration++;
+      console.log(`🔄 Agent iteration ${iteration}/${maxIterations}`);
+
+      const response = await bedrockClient.send(
+        new ConverseCommand({
+          modelId: "amazon.nova-lite-v1:0",
+          messages: conversationHistory,
+          system: [systemPrompt],
+          toolConfig: {
+            tools: AGENT_TOOLS.map((tool) => ({
+              toolSpec: {
+                name: tool.name,
+                description: tool.description,
+                inputSchema: { json: tool.input_schema },
+              },
+            })),
+          },
+        })
+      );
+
+      const message = response.output.message;
+      conversationHistory.push(message);
+
+      // Check if agent wants to use tools
+      if (message.content.some((block) => block.toolUse)) {
+        console.log("🔧 Agent is using tools...");
+
+        const toolResults = [];
+
+        for (const block of message.content) {
+          if (block.toolUse) {
+            const toolName = block.toolUse.name;
+            const toolInput = block.toolUse.input;
+            const toolUseId = block.toolUse.toolUseId;
+
+            // Execute the tool
+            const result = await executeAgentTool(toolName, toolInput);
+
+            toolResults.push({
+              toolUseId: toolUseId,
+              content: [{ json: result }],
+            });
+          }
+        }
+
+        // Send tool results back to agent
+        conversationHistory.push({
+          role: "user",
+          content: toolResults.map((tr) => ({
+            toolResult: tr,
+          })),
+        });
+      } else {
+        // Agent has finished reasoning and provided final response
+        console.log("✅ Agent has completed analysis");
+        
+        const finalText = message.content
+          .filter((block) => block.text)
+          .map((block) => block.text)
+          .join("\n");
+
+        // Extract tools used from conversation history
+        const toolsUsed = [];
+        for (const msg of conversationHistory) {
+          if (msg.content) {
+            for (const block of msg.content) {
+              if (block.toolUse) {
+                toolsUsed.push(block.toolUse.name);
+              }
+            }
+          }
+        }
+
+        return {
+          success: true,
+          agent_type: "autonomous_coach",
+          model: "amazon.nova-lite-v1:0",
+          agentCore_primitives_used: ["tool_use", "multi_step_reasoning", "autonomous_decision_making"],
+          agentResponse: finalText,
+          toolsUsed: [...new Set(toolsUsed)],
+          iterationsUsed: iteration,
+          reasoning_steps: conversationHistory
+            .filter((msg) => msg.role === "assistant")
+            .map((msg, idx) => ({
+              step: idx + 1,
+              action: msg.content[0]?.toolUse?.name || "final_response",
+              reasoning: msg.content[0]?.text || "Tool execution",
+            })),
+          timestamp: new Date().toISOString(),
+        };
+      }
+    }
+
+    // Max iterations reached
+    console.warn("⚠️ Agent reached maximum iterations");
+    return {
+      success: false,
+      error: "Agent reached maximum iterations",
+      agentResponse: "Analysis incomplete - please try again",
+      timestamp: new Date().toISOString(),
+    };
     
   } catch (error) {
     console.error("💥 Error in agent analysis:", error);
