@@ -295,7 +295,6 @@ export const BlockchainScoreSubmission = ({
                 (isSubmitting || isSolanaLoading) ||
                 (!isConnected && !isSolanaConnected) ||
                 (isConnected && !isOnCorrectNetwork && !isSolanaConnected) ||
-                (isConnected && !canSubmit && !isSolanaConnected) ||
                 reps === 0
               }
               className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"

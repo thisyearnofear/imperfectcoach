@@ -705,53 +705,7 @@ export const PostWorkoutFlow = ({
             </Card>
           </FadeIn>
           
-      {/* Smart Tier Recommendation - Personalized suggestion */}
-          <FadeIn delay={0.1}>
-          <SmartTierRecommendation
-            workoutData={{
-              exercise,
-              reps,
-              averageFormScore,
-              repHistory: repHistory.map(r => ({ score: r.score })),
-              hasFormIssues: averageFormScore < 70,
-              hasAsymmetry: false, // Can be enhanced with pose data analysis
-              isPersonalBest: reps >= 10, // Simplified, can track actual PBs
-            }}
-            onSelectTier={(tier) => {
-              if (tier === "premium") {
-                handleUpgrade();
-              } else if (tier === "agent") {
-                setShowAgentUpsell(true);
-                setTimeout(() => {
-                  bedrockSectionRef.current?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center",
-                  });
-                }, 100);
-              }
-            }}
-          />
-          </FadeIn>
-
-          {/* Agent Coach Upsell */}
-          {showAgentUpsell && (
-            <FadeIn delay={0.2}>
-            <AgentCoachUpsell
-              workoutData={{
-                exercise,
-                reps,
-                formScore: averageFormScore,
-                poseData: {}, // Can be enhanced with actual pose data
-                userId: undefined,
-              }}
-              onSuccess={(analysis) => {
-                console.log("Agent analysis complete:", analysis);
-              }}
-            />
-            </FadeIn>
-          )}
-
-          {/* Unified CTA - handles connected/premium flows */}
+          {/* Unified CTA - handles connected/premium flows (moved higher for visibility) */}
           <UnifiedActionCTA
             exercise={exercise}
             reps={reps}
@@ -808,6 +762,52 @@ export const PostWorkoutFlow = ({
             onTryAgain={() => window.location.reload()}
           />
           </FadeIn>
+          
+          {/* Smart Tier Recommendation - Show cheaper option first */}
+          <FadeIn delay={0.3}>
+          <SmartTierRecommendation
+            workoutData={{
+              exercise,
+              reps,
+              averageFormScore,
+              repHistory: repHistory.map(r => ({ score: r.score })),
+              hasFormIssues: averageFormScore < 70,
+              hasAsymmetry: false, // Can be enhanced with pose data analysis
+              isPersonalBest: reps >= 10, // Simplified, can track actual PBs
+            }}
+            onSelectTier={(tier) => {
+              if (tier === "premium") {
+                handleUpgrade();
+              } else if (tier === "agent") {
+                setShowAgentUpsell(true);
+                setTimeout(() => {
+                  bedrockSectionRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                  });
+                }, 100);
+              }
+            }}
+          />
+          </FadeIn>
+
+          {/* Agent Coach Upsell - Most expensive option last */}
+          {showAgentUpsell && (
+            <FadeIn delay={0.4}>
+            <AgentCoachUpsell
+              workoutData={{
+                exercise,
+                reps,
+                formScore: averageFormScore,
+                poseData: {}, // Can be enhanced with actual pose data
+                userId: undefined,
+              }}
+              onSuccess={(analysis) => {
+                console.log("Agent analysis complete:", analysis);
+              }}
+            />
+            </FadeIn>
+          )}
         </div>
       )}
 
