@@ -193,23 +193,30 @@ Nonce: ${paymentNonce}`;
           chain: walletChain,
         };
 
+        // Create x402 payment payload
+        const paymentPayload = {
+          signature: x402Signature,
+          message: x402Message,
+          amount: paymentRequirement.amount,
+          timestamp: paymentTimestamp,
+          nonce: paymentNonce,
+          scheme: paymentRequirement.scheme,
+          network: paymentRequirement.network,
+          asset: paymentRequirement.asset,
+          payTo: paymentRequirement.payTo,
+          payer: walletAddress,
+        };
+        
+        // Encode payment payload as base64 for x402 header (standard format)
+        const paymentHeader = btoa(JSON.stringify(paymentPayload));
+        console.log("📦 Created base64-encoded x402 payment header");
+        
         // Make the actual request with payment in x402 header format
         response = await fetch(apiUrl, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
-            "X-Payment": JSON.stringify({
-              signature: x402Signature,
-              message: x402Message,
-              amount: paymentRequirement.amount,
-              timestamp: paymentTimestamp,
-              nonce: paymentNonce,
-              scheme: paymentRequirement.scheme,
-              network: paymentRequirement.network,
-              asset: paymentRequirement.asset,
-              payTo: paymentRequirement.payTo,
-              payer: walletAddress,
-            }),
+            "X-Payment": paymentHeader,
             "X-Chain": walletChain || "base"
           },
           body: JSON.stringify({
