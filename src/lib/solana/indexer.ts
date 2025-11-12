@@ -56,7 +56,7 @@ let leaderboardCache: CachedLeaderboard | null = null;
  * - first_submission_time: u64 (8 bytes)
  */
 function deserializeUserScore(
-  data: Buffer,
+  data: Uint8Array,
   pubkey: string,
   exerciseType: 'pullups' | 'jumps' // Specify which program this is for
 ): RawUserScore | null {
@@ -76,22 +76,24 @@ function deserializeUserScore(
     const userPubkey = new PublicKey(data.slice(offset, offset + 32)).toString();
     offset += 32;
 
-    // Read u64 values (little-endian) - adjust according to your actual on-chain structure
-    const totalScore = BigInt(data.readBigUInt64LE(offset));
+    // Use DataView for browser-compatible u64 reading (little-endian)
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    
+    const totalScore = view.getBigUint64(offset, true); // true = little-endian
     offset += 8;
 
-    const bestSingleScore = BigInt(data.readBigUInt64LE(offset));
+    const bestSingleScore = view.getBigUint64(offset, true);
     offset += 8;
 
     // For exercise-specific programs, this might just be the count for that exercise
     // Adjust these based on your actual on-chain account structure
-    const submissionCount = BigInt(data.readBigUInt64LE(offset));
+    const submissionCount = view.getBigUint64(offset, true);
     offset += 8;
 
-    const lastSubmissionTime = BigInt(data.readBigUInt64LE(offset));
+    const lastSubmissionTime = view.getBigUint64(offset, true);
     offset += 8;
 
-    const firstSubmissionTime = BigInt(data.readBigUInt64LE(offset));
+    const firstSubmissionTime = view.getBigUint64(offset, true);
 
     return {
       pubkey,
