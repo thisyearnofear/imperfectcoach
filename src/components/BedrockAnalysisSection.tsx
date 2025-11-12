@@ -121,6 +121,7 @@ const BedrockAnalysisSection = ({
       // Determine which wallet to use
       let address: string;
       let signMessage: (message: string) => Promise<string>;
+      let walletChain: "base" | "solana";
       
       if (isConnected && walletClient) {
         // Use Base wallet
@@ -128,6 +129,7 @@ const BedrockAnalysisSection = ({
         if (!address) {
           throw new Error("No Base wallet address found");
         }
+        walletChain = "base";
         signMessage = async (msg: string) => {
           return await walletClient.signMessage({
             account: address as `0x${string}`,
@@ -142,6 +144,7 @@ const BedrockAnalysisSection = ({
           throw new Error("Solana wallet not properly connected");
         }
         address = managerState.publicKey.toString();
+        walletChain = "solana";
         signMessage = async (msg: string) => {
           const msgBuffer = new TextEncoder().encode(msg);
           const signatureBytes = await solanaWalletManager.signMessage(msgBuffer);
@@ -184,8 +187,16 @@ const BedrockAnalysisSection = ({
           message,
           amount: "50000", // 0.05 USDC in microUSDC
           timestamp,
+          chain: walletChain, // Tell backend which chain signature is from
         },
       };
+      
+      console.log("📦 Sending payment authorization:", {
+        address,
+        chain: walletChain,
+        messagePreview: message.substring(0, 50) + "...",
+        signaturePreview: signature.substring(0, 20) + "...",
+      });
 
       const apiUrl =
         "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";

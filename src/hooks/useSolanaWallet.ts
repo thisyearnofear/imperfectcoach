@@ -32,10 +32,17 @@ async function submitScoreViaManager(
 
   // Build instruction
   const programId = getExerciseProgramId(exercise);
-  const discriminator = Buffer.from([0xe0, 0x2a, 0x17, 0x1b, 0xd1, 0x4b, 0xc6, 0x64]);
-  const scoreBuf = Buffer.alloc(4);
-  scoreBuf.writeUInt32LE(score, 0);
-  const instructionData = Buffer.concat([discriminator, scoreBuf]);
+  const discriminator = new Uint8Array([0xe0, 0x2a, 0x17, 0x1b, 0xd1, 0x4b, 0xc6, 0x64]);
+  
+  // Create score buffer (4 bytes, little-endian u32)
+  const scoreBuf = new Uint8Array(4);
+  const scoreView = new DataView(scoreBuf.buffer);
+  scoreView.setUint32(0, score, true); // true = little-endian
+  
+  // Combine discriminator and score
+  const instructionData = new Uint8Array(discriminator.length + scoreBuf.length);
+  instructionData.set(discriminator, 0);
+  instructionData.set(scoreBuf, discriminator.length);
 
   const instruction = new TransactionInstruction({
     programId,
