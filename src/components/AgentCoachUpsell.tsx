@@ -10,6 +10,7 @@ import { Loader2, Brain, Zap, Target, TrendingUp, Lock, Sparkles, Eye, CheckCirc
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
 
 interface AgentCoachUpsellProps {
   workoutData: {
@@ -38,7 +39,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   // Wallet integration - support both EVM and Solana
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient({ chainId: baseSepolia.id });
-  const { solanaAddress, isSolanaConnected, wallet: solanaWallet } = useSolanaWallet();
+  const { solanaAddress, isSolanaConnected } = useSolanaWallet();
   
   // Determine which wallet is connected
   const walletAddress = address || solanaAddress;
@@ -154,11 +155,17 @@ Nonce: ${paymentNonce}`;
         // Generate signature for x402 payment based on wallet type
         let x402Signature: string;
         
-        if (walletChain === "solana" && solanaWallet?.signMessage) {
-          // Solana wallet signature
+        if (walletChain === "solana" && isSolanaConnected) {
+          // Solana wallet signature using solanaWalletManager
+          const managerState = solanaWalletManager.getState();
+          if (!managerState.publicKey || !managerState.adapter) {
+            throw new Error("Solana wallet not properly connected");
+          }
+          
           const messageBytes = new TextEncoder().encode(x402Message);
-          const signatureBytes = await solanaWallet.signMessage(messageBytes);
-          x402Signature = Buffer.from(signatureBytes).toString('hex');
+          const signatureBytes = await solanaWalletManager.signMessage(messageBytes);
+          // Convert signature bytes to base64 for Solana
+          x402Signature = btoa(String.fromCharCode(...signatureBytes));
         } else if (walletClient && address) {
           // EVM wallet signature
           x402Signature = await walletClient.signMessage({

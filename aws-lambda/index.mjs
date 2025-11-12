@@ -359,7 +359,7 @@ const CDP_CONFIG = {
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, X-Payment, X-Payment-Response",
+    "Content-Type, Authorization, X-Payment, X-Chain, X-Payment-Response",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -377,7 +377,7 @@ export const handler = async (event) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, X-Payment, X-Chain, X-Payment-Response",
         "Access-Control-Max-Age": "86400",
       },
       body: "",
@@ -417,14 +417,28 @@ export const handler = async (event) => {
       }
     }
 
-    // Validate payment data is provided
+    // Check for x402 payment header first (proper x402 flow)
+    const paymentHeader =
+      event.headers["x-payment"] || event.headers["X-Payment"];
+    const chainHeader = 
+      event.headers["x-chain"] || event.headers["X-Chain"] || "base";
+    
+    // If no x402 payment header, return 402 Payment Required challenge
+    if (!paymentHeader) {
+      console.log("❌ No x402 payment header - returning 402 challenge");
+      return createMultiChainPaymentRequiredResponse(
+        "Payment required for premium analysis"
+      );
+    }
+    
+    // Payment header exists, now validate payment data for signature verification
     if (
       !payment ||
       !payment.walletAddress ||
       !payment.signature ||
       !payment.message
     ) {
-      console.log("❌ Missing payment data");
+      console.log("❌ Missing payment data in body");
       return createErrorResponse("Payment authorization required", 400);
     }
 
@@ -439,44 +453,28 @@ export const handler = async (event) => {
 
     console.log("✅ Wallet signature verified");
 
-    // Check for x402 payment header first
-    const paymentHeader =
-      event.headers["x-payment"] || event.headers["X-Payment"];
-    const chainHeader = 
-      event.headers["x-chain"] || event.headers["X-Chain"] || "base";
+    // Process x402 payment
+    console.log(`💳 Processing ${chainHeader} x402 payment...`);
+    const paymentProcessingResult = await verifyAndSettleMultiChainPayment(
+      paymentHeader,
+      chainHeader,
+      isValidSignature
+    );
 
-    let paymentProcessingResult;
-
-    if (paymentHeader) {
-      // Enhanced multi-chain x402 payment flow
-      console.log(`💳 Payment header found for ${chainHeader} chain, verifying and settling...`);
-      paymentProcessingResult = await verifyAndSettleMultiChainPayment(
-        paymentHeader,
-        chainHeader,
-        isValidSignature
+    if (!paymentProcessingResult.success) {
+      console.error(
+        "❌ Multi-chain x402 payment verification failed:",
+        paymentProcessingResult.error
       );
-
-      if (!paymentProcessingResult.success) {
-        console.error(
-          "❌ Multi-chain x402 payment verification failed:",
-          paymentProcessingResult.error
-        );
-        return createPaymentRequiredResponse(
-          `${chainHeader} payment verification failed: ` + paymentProcessingResult.error
-        );
-      }
-
-      console.log(
-        `✅ ${chainHeader} payment verified and settled successfully:`,
-        paymentProcessingResult
-      );
-    } else {
-      // No x402 payment header - require payment with multi-chain support
-      console.log("❌ No x402 payment header found - payment required");
-      return createMultiChainPaymentRequiredResponse(
-        "Payment required for premium analysis"
+      return createPaymentRequiredResponse(
+        `${chainHeader} payment verification failed: ` + paymentProcessingResult.error
       );
     }
+
+    console.log(
+      `✅ ${chainHeader} payment verified and settled successfully:`,
+      paymentProcessingResult
+    );
     console.log(
       "✅ Payment processed successfully:",
       paymentProcessingResult.transactionHash
@@ -1047,6 +1045,7 @@ function createMultiChainPaymentRequiredResponse(message) {
   return {
     statusCode: 402,
     headers: {
+      ...CORS_HEADERS,
       "Content-Type": "application/json",
       "X-Payment-Required": "true",
       "X-Multi-Chain": "base,solana"
