@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -136,7 +136,7 @@ const PerformanceAnalytics = ({
   const { addSocialActivity, friendAddresses } = useSocialContext();
 
   // Detect mobile on mount
-  React.useEffect(() => {
+  useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);

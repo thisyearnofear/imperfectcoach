@@ -259,11 +259,11 @@ export const BlockchainScoreSubmission = ({
               )}
             </AlertDescription>
           </Alert>
-        ) : !isOnCorrectNetwork ? (
+        ) : (isConnected && !isSolanaConnected && !isOnCorrectNetwork) ? (
           <div className="space-y-3">
             <NetworkStatus variant="alert" showSwitchButton={true} />
           </div>
-        ) : !canSubmit && timeUntilNextSubmission > 0 ? (
+        ) : (isConnected && !canSubmit && timeUntilNextSubmission > 0) ? (
           <Alert className="border-orange-200 bg-orange-50">
             <Clock className="h-4 w-4 text-orange-600" />
             <AlertDescription className="text-orange-800">

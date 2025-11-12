@@ -15,9 +15,13 @@ export interface SolanaWalletState {
   connection: Connection;
 }
 
+type WalletEventType = 'connect' | 'disconnect' | 'change';
+type WalletEventListener = (state: SolanaWalletState) => void;
+
 export class SolanaWalletManager {
   private state: SolanaWalletState;
   private availableAdapters: WalletAdapter[];
+  private listeners: Map<WalletEventType, Set<WalletEventListener>> = new Map();
 
   constructor() {
     this.availableAdapters = [
@@ -32,6 +36,11 @@ export class SolanaWalletManager {
       publicKey: null,
       connection: new Connection(solanaConfig.rpcUrl, 'confirmed')
     };
+    
+    // Initialize event listener maps
+    this.listeners.set('connect', new Set());
+    this.listeners.set('disconnect', new Set());
+    this.listeners.set('change', new Set());
   }
 
   /**
@@ -86,6 +95,10 @@ export class SolanaWalletManager {
       this.state.publicKey = selectedAdapter.publicKey;
 
       console.log(`✅ Connected to ${selectedAdapter.name}:`, selectedAdapter.publicKey?.toString());
+      
+      // Emit connect event
+      this.emit('connect');
+      this.emit('change');
 
       return true;
 
@@ -112,6 +125,10 @@ export class SolanaWalletManager {
       connected: false,
       publicKey: null
     };
+    
+    // Emit disconnect event
+    this.emit('disconnect');
+    this.emit('change');
   }
 
   /**
@@ -210,6 +227,38 @@ export class SolanaWalletManager {
     
     const key = this.state.publicKey.toString();
     return `${key.slice(0, 4)}...${key.slice(-4)}`;
+  }
+  
+  /**
+   * EVENT SYSTEM
+   * Subscribe to wallet state changes
+   */
+  on(event: WalletEventType, listener: WalletEventListener): () => void {
+    const eventListeners = this.listeners.get(event);
+    if (eventListeners) {
+      eventListeners.add(listener);
+    }
+    
+    // Return unsubscribe function
+    return () => {
+      const eventListeners = this.listeners.get(event);
+      if (eventListeners) {
+        eventListeners.delete(listener);
+      }
+    };
+  }
+  
+  private emit(event: WalletEventType): void {
+    const eventListeners = this.listeners.get(event);
+    if (eventListeners) {
+      eventListeners.forEach(listener => {
+        try {
+          listener(this.getState());
+        } catch (error) {
+          console.error(`Error in wallet event listener for ${event}:`, error);
+        }
+      });
+    }
   }
 }
 

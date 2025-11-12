@@ -3,6 +3,8 @@ import { useAccount, useWalletClient } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { usePremiumAccess } from "@/hooks/usePremiumAccess";
+import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AnimatedButton } from "@/components/ui/animated-button";
@@ -98,10 +100,16 @@ const BedrockAnalysisSection = ({
   const { data: walletClient } = useWalletClient({
     chainId: baseSepolia.id,
   });
+  const { isSolanaConnected, solanaAddress } = useSolanaWallet();
 
   const handlePremiumAnalysis = async () => {
-    if (!isConnected || !walletClient) {
-      setError("Please connect your wallet to proceed.");
+    if (!isConnected && !isSolanaConnected) {
+      setError("Please connect your wallet (Base or Solana) to proceed.");
+      return;
+    }
+    
+    if (isConnected && !walletClient) {
+      setError("Wallet client not available.");
       return;
     }
 
@@ -110,19 +118,46 @@ const BedrockAnalysisSection = ({
     setPaymentStatus("processing");
 
     try {
-      const address = walletClient.account?.address;
-      if (!address) {
-        throw new Error("No wallet address found");
+      // Determine which wallet to use
+      let address: string;
+      let signMessage: (message: string) => Promise<string>;
+      
+      if (isConnected && walletClient) {
+        // Use Base wallet
+        address = walletClient.account?.address || "";
+        if (!address) {
+          throw new Error("No Base wallet address found");
+        }
+        signMessage = async (msg: string) => {
+          return await walletClient.signMessage({
+            account: address as `0x${string}`,
+            message: msg,
+          });
+        };
+        console.log("💼 Using Base wallet for x402 payment:", address);
+      } else if (isSolanaConnected) {
+        // Use Solana wallet
+        const managerState = solanaWalletManager.getState();
+        if (!managerState.publicKey || !managerState.adapter) {
+          throw new Error("Solana wallet not properly connected");
+        }
+        address = managerState.publicKey.toString();
+        signMessage = async (msg: string) => {
+          const msgBuffer = new TextEncoder().encode(msg);
+          const signatureBytes = await solanaWalletManager.signMessage(msgBuffer);
+          // Convert signature bytes to base64
+          return btoa(String.fromCharCode(...signatureBytes));
+        };
+        console.log("◎ Using Solana wallet for x402 payment:", address);
+      } else {
+        throw new Error("No wallet connected");
       }
 
       // Create payment authorization
       const timestamp = Date.now();
       const message = `Authorize payment of 0.05 USDC for premium workout analysis\nTimestamp: ${timestamp}\nAddress: ${address}`;
 
-      const signature = await walletClient.signMessage({
-        account: address,
-        message,
-      });
+      const signature = await signMessage(message);
 
       setPaymentStatus("verified");
 
@@ -197,11 +232,8 @@ Nonce: ${paymentNonce}`;
 
         console.log("🖊️ Signing x402 payment message...");
 
-        // Generate new signature specifically for x402 payment
-        const x402Signature = await walletClient.signMessage({
-          account: address,
-          message: x402Message,
-        });
+        // Generate new signature specifically for x402 payment using appropriate wallet
+        const x402Signature = await signMessage(x402Message);
 
         console.log("✅ x402 payment signature generated");
 
@@ -404,7 +436,7 @@ Nonce: ${paymentNonce}`;
 
           <AnimatedButton
             onClick={handlePremiumAnalysis}
-            disabled={isLoading || !isConnected}
+            disabled={isLoading || (!isConnected && !isSolanaConnected)}
             disableAnimation={isLoading}
             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             animationPreset="glow"

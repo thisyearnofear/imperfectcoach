@@ -1,14 +1,73 @@
 import { useCallback, useState, useEffect } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "sonner";
-import { submitScoreToSolana, getTopUsersFromSolana } from "@/lib/solana/leaderboard";
-import { PublicKey } from "@solana/web3.js";
+import { submitScoreToSolana, getTopUsersFromSolana, getUserScorePDA, getExerciseProgramId, type ExerciseType } from "@/lib/solana/leaderboard";
+import { PublicKey, Transaction, TransactionInstruction, SystemProgram } from "@solana/web3.js";
+import { solanaWalletManager, type SolanaWalletState } from "@/lib/payments/solana-wallet-adapter";
 
 interface UseSolanaWalletState {
   solanaAddress?: string;
   isSolanaConnected: boolean;
   isSolanaLoading: boolean;
   solanaError?: string;
+}
+
+// Helper function to submit score using solanaWalletManager
+async function submitScoreViaManager(
+  managerState: SolanaWalletState,
+  leaderboardAddress: PublicKey,
+  score: number,
+  exercise: ExerciseType
+): Promise<string> {
+  if (!managerState.publicKey || !managerState.adapter) {
+    throw new Error("Wallet manager not properly initialized");
+  }
+
+  // Derive user score PDA
+  const [userScorePda] = getUserScorePDA(
+    managerState.publicKey,
+    leaderboardAddress,
+    exercise
+  );
+
+  // Build instruction
+  const programId = getExerciseProgramId(exercise);
+  const discriminator = Buffer.from([0xe0, 0x2a, 0x17, 0x1b, 0xd1, 0x4b, 0xc6, 0x64]);
+  const scoreBuf = Buffer.alloc(4);
+  scoreBuf.writeUInt32LE(score, 0);
+  const instructionData = Buffer.concat([discriminator, scoreBuf]);
+
+  const instruction = new TransactionInstruction({
+    programId,
+    keys: [
+      { pubkey: leaderboardAddress, isSigner: false, isWritable: true },
+      { pubkey: userScorePda, isSigner: false, isWritable: true },
+      { pubkey: managerState.publicKey, isSigner: true, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data: instructionData,
+  });
+
+  // Build transaction
+  const latestBlockhash = await managerState.connection.getLatestBlockhash();
+  const transaction = new Transaction({
+    feePayer: managerState.publicKey,
+    blockhash: latestBlockhash.blockhash,
+    lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+  }).add(instruction);
+
+  // Sign and send using manager
+  const signed = await managerState.adapter.signTransaction!(transaction);
+  const signature = await managerState.connection.sendRawTransaction(signed.serialize());
+
+  // Wait for confirmation
+  await managerState.connection.confirmTransaction({
+    signature,
+    blockhash: latestBlockhash.blockhash,
+    lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+  });
+
+  return signature;
 }
 
 export function useSolanaWallet() {
@@ -23,12 +82,54 @@ export function useSolanaWallet() {
   });
 
   // Update state when wallet connection changes
+  // Check both wallet adapter context AND solanaWalletManager singleton
   useEffect(() => {
-    setState((prev) => ({
-      ...prev,
-      solanaAddress: publicKey?.toBase58(),
-      isSolanaConnected: connected,
-    }));
+    const checkWalletState = () => {
+      // Check wallet adapter context first
+      const adapterConnected = connected;
+      const adapterAddress = publicKey?.toBase58();
+      
+      // Also check solanaWalletManager singleton
+      const managerState = solanaWalletManager.getState();
+      const managerConnected = managerState.connected;
+      const managerAddress = managerState.publicKey?.toString();
+      
+      // Use whichever is connected
+      const isConnected = adapterConnected || managerConnected;
+      const address = adapterAddress || managerAddress;
+      
+      console.log("🔗 Solana Wallet State Check:", {
+        adapterConnected,
+        adapterAddress,
+        managerConnected,
+        managerAddress,
+        finalConnected: isConnected,
+        finalAddress: address,
+      });
+      
+      setState((prev) => {
+        // Only update if values changed to avoid unnecessary re-renders
+        if (prev.isSolanaConnected !== isConnected || prev.solanaAddress !== address) {
+          return {
+            ...prev,
+            solanaAddress: address,
+            isSolanaConnected: isConnected,
+          };
+        }
+        return prev;
+      });
+    };
+    
+    // Check immediately
+    checkWalletState();
+    
+    // Subscribe to solanaWalletManager events
+    const unsubscribe = solanaWalletManager.on('change', checkWalletState);
+    
+    // Cleanup: unsubscribe from events
+    return () => {
+      unsubscribe();
+    };
   }, [publicKey, connected]);
 
   const connectSolanaWallet = useCallback(async () => {
@@ -57,10 +158,21 @@ export function useSolanaWallet() {
       jumps: number,
       leaderboardAddress: PublicKey
     ): Promise<{ signature?: string }> => {
-      if (!publicKey || !signTransaction || !connected) {
+      // Check if wallet is connected via either adapter context OR manager
+      const managerState = solanaWalletManager.getState();
+      const isWalletConnected = (publicKey && signTransaction && connected) || managerState.connected;
+      const walletPubKey = publicKey || managerState.publicKey;
+      
+      if (!isWalletConnected || !walletPubKey) {
         toast.error("Please connect your Solana wallet first");
         return {};
       }
+      
+      console.log("🔑 Using Solana wallet:", {
+        fromAdapter: connected,
+        fromManager: managerState.connected,
+        address: walletPubKey.toString(),
+      });
 
       // Determine exercise type based on what's non-zero
       let exerciseType: "pullups" | "jumps";
@@ -83,13 +195,27 @@ export function useSolanaWallet() {
           isSolanaLoading: true,
         }));
 
-        const signature = await submitScoreToSolana(
-          connection,
-          wallet,
-          leaderboardAddress,
-          score,
-          exerciseType
-        );
+        let signature: string;
+        
+        // Use adapter context if available, otherwise use manager
+        if (connected && signTransaction) {
+          signature = await submitScoreToSolana(
+            connection,
+            wallet,
+            leaderboardAddress,
+            score,
+            exerciseType
+          );
+        } else {
+          // Use solanaWalletManager for transaction
+          console.log("📝 Building transaction with solanaWalletManager...");
+          signature = await submitScoreViaManager(
+            managerState,
+            leaderboardAddress,
+            score,
+            exerciseType
+          );
+        }
 
         toast.success(
           `✅ ${exerciseType.charAt(0).toUpperCase() + exerciseType.slice(1)} score submitted to Solana! Signature: ${signature.slice(0, 8)}...`

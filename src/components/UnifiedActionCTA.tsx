@@ -19,8 +19,11 @@ import {
 import { BlockchainScoreSubmission } from "./BlockchainScoreSubmission";
 import { InlineWallet } from "./UnifiedWallet";
 import { useFeatureAvailability } from "@/hooks/useFeatureGate";
+import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { useUser } from "@/hooks/useUserHooks";
 import { Exercise, RepData, Achievement } from "@/lib/types";
 import { FadeIn } from "./ui/fade-in";
+import { useEffect } from "react";
 
 interface UnifiedActionCTAProps {
   exercise: Exercise;
@@ -56,6 +59,19 @@ export const UnifiedActionCTA = ({
   bedrockSectionRef,
 }: UnifiedActionCTAProps) => {
   const { tier } = useFeatureAvailability("MULTIPLE_AI_COACHES");
+  const { isSolanaConnected, solanaAddress } = useSolanaWallet();
+  const { isAuthenticated, address } = useUser();
+
+  // Debug logging for tier detection
+  useEffect(() => {
+    console.log("🔍 UnifiedActionCTA Tier Debug:", {
+      tier,
+      isSolanaConnected,
+      solanaAddress,
+      isAuthenticated,
+      baseAddress: address,
+    });
+  }, [tier, isSolanaConnected, solanaAddress, isAuthenticated, address]);
 
   const handleUpgradeClick = () => {
     if (onPremiumUpgrade) {
@@ -255,7 +271,7 @@ export const UnifiedActionCTA = ({
             {/* Connection Section */}
             <div className="space-y-4">
               <div className="flex justify-center">
-                <InlineWallet showOnboarding={false} />
+                <InlineWallet chains="all" showOnboarding={false} />
               </div>
 
               <Alert className="border-green-200 bg-green-50 justify-center text-center">
