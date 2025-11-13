@@ -317,8 +317,106 @@ export class PoseReadinessSystem {
     }
     
     private analyzePullupPosture(keypoints: posedetection.Keypoint[], issues: ReadinessIssue[]) {
-        // Implement pull-up specific posture analysis
-        return { score: 100, issues };
+        const keypointsMap = new Map(keypoints.map(k => [k.name, k]));
+        
+        const nose = keypointsMap.get('nose');
+        const leftWrist = keypointsMap.get('left_wrist');
+        const rightWrist = keypointsMap.get('right_wrist');
+        const leftShoulder = keypointsMap.get('left_shoulder');
+        const rightShoulder = keypointsMap.get('right_shoulder');
+        const leftHip = keypointsMap.get('left_hip');
+        const rightHip = keypointsMap.get('right_hip');
+        const leftKnee = keypointsMap.get('left_knee');
+        const rightKnee = keypointsMap.get('right_knee');
+        const leftAnkle = keypointsMap.get('left_ankle');
+        const rightAnkle = keypointsMap.get('right_ankle');
+        
+        if (!nose || !leftWrist || !rightWrist || !leftShoulder || !rightShoulder || 
+            !leftHip || !rightHip || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) {
+            return { score: 0, issues };
+        }
+        
+        let postureScore = 100;
+        const minConfidence = 0.4; // Lenient confidence threshold
+        
+        // Check if user is in hanging position (wrists above shoulders)
+        const avgWristY = (leftWrist.y + rightWrist.y) / 2;
+        const avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+        const isHanging = avgWristY < avgShoulderY;
+        
+        // Lower body visibility is critical for full-body tracking
+        const lowerBodyPoints = [leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle];
+        const lowerBodyVisible = lowerBodyPoints.filter(p => p.score > minConfidence).length;
+        
+        if (lowerBodyVisible < 4) {
+            postureScore -= 30;
+            issues.push({
+                type: 'VISIBILITY',
+                severity: 'HIGH',
+                message: 'Lower body not fully visible',
+                suggestion: 'Step back so camera can see your full body from head to feet',
+                fixable: true
+            });
+        } else if (lowerBodyVisible < 6) {
+            postureScore -= 15;
+            issues.push({
+                type: 'VISIBILITY',
+                severity: 'MEDIUM',
+                message: 'Some lower body points obscured',
+                suggestion: 'Adjust camera angle to see your legs and feet clearly',
+                fixable: true
+            });
+        }
+        
+        // Check critical upper body points
+        const criticalPoints = [nose, leftWrist, rightWrist, leftShoulder, rightShoulder];
+        const criticalVisible = criticalPoints.filter(p => p.score > minConfidence).length;
+        
+        if (criticalVisible < 4) {
+            postureScore -= 40;
+            issues.push({
+                type: 'VISIBILITY',
+                severity: 'HIGH',
+                message: 'Cannot see key upper body points',
+                suggestion: 'Make sure your head, shoulders, and hands are clearly visible',
+                fixable: true
+            });
+        }
+        
+        // Provide guidance if not yet hanging
+        if (isHanging) {
+            // Check if pull-up bar position is reasonable (side view works best)
+            const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
+            const wristWidth = Math.abs(leftWrist.x - rightWrist.x);
+            
+            // In good side profile, wrist and shoulder widths should be similar (not too compressed)
+            const widthRatio = Math.min(shoulderWidth, wristWidth) / Math.max(shoulderWidth, wristWidth);
+            
+            if (widthRatio < 0.3) {
+                postureScore -= 15;
+                issues.push({
+                    type: 'POSITIONING',
+                    severity: 'LOW',
+                    message: 'Camera angle could be better',
+                    suggestion: 'Try positioning camera at 45° angle or side view for optimal tracking',
+                    fixable: true
+                });
+            }
+        } else {
+            // Not hanging yet - provide gentle guidance without penalty
+            issues.push({
+                type: 'POSTURE',
+                severity: 'LOW',
+                message: 'Ready to start',
+                suggestion: 'Hang from the bar when ready to begin',
+                fixable: true
+            });
+        }
+        
+        return {
+            score: Math.max(0, postureScore),
+            issues
+        };
     }
     
     private updatePoseHistory(keypoints: posedetection.Keypoint[]) {

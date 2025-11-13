@@ -243,11 +243,13 @@ Nonce: ${paymentNonce}`;
 
       // Track payment transaction if available
       if (result.transactionHash) {
-        try {
-          await trackPaymentTransaction(result.transactionHash, "agent_analysis");
-        } catch (trackingError) {
-          console.warn("Failed to track payment transaction:", trackingError);
-        }
+        trackPaymentTransaction(
+          result.transactionHash,
+          "0.10",
+          "USDC",
+          "AI Coach Agent analysis",
+          "AgentCore x402"
+        );
       }
 
       toast({

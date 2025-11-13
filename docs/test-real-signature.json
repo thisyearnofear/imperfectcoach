@@ -1,8 +1,0 @@
-{
-  "httpMethod": "POST",
-  "headers": {
-    "Content-Type": "application/json",
-    "Origin": "https://imperfecthigher.com"
-  },
-  "body": "{\"workoutData\": {\"exercises\": [{\"name\": \"Push-ups\", \"reps\": 15, \"sets\": 3, \"form_score\": 85}, {\"name\": \"Squats\", \"reps\": 20, \"sets\": 3, \"form_score\": 90}], \"duration\": 600, \"totalCalories\": 250}, \"payment\": {\"walletAddress\": \"0x742d35Cc6688C02532807F8dFe37c2B4C3C7e300\", \"signature\": \"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1b\", \"message\": \"I authorize this payment for premium workout analysis\", \"amount\": \"50000\"}}"
-}

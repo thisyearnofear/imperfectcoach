@@ -21,7 +21,9 @@
     "@aws-sdk/client-bedrock-agent-runtime": "^3.914.0",
     "@aws-sdk/client-bedrock-runtime": "^3.0.0",
     "@coinbase/coinbase-sdk": "^0.25.0",
-    "@solana/web3.js": "^1.95.0"
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.95.0",
+    "bs58": "^6.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

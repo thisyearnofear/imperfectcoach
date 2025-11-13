@@ -37,9 +37,26 @@ export const processPullups = ({ keypoints, repState, internalReps, lastRepIssue
         return null;
     }
 
-    if (nose.score < 0.5 || leftWrist.score < 0.5 || rightWrist.score < 0.5 || leftShoulder.score < 0.5 || rightShoulder.score < 0.5 || leftElbow.score < 0.5 || rightElbow.score < 0.5 || leftHip.score < 0.5 || rightHip.score < 0.5 || leftKnee.score < 0.5 || rightKnee.score < 0.5 || leftAnkle.score < 0.5 || rightAnkle.score < 0.5) {
+    // Provide specific feedback about which body parts aren't visible
+    const lowConfidencePoints = [];
+    if (nose.score < 0.5) lowConfidencePoints.push('head');
+    if (leftWrist.score < 0.5 || rightWrist.score < 0.5) lowConfidencePoints.push('hands');
+    if (leftElbow.score < 0.5 || rightElbow.score < 0.5) lowConfidencePoints.push('elbows');
+    if (leftShoulder.score < 0.5 || rightShoulder.score < 0.5) lowConfidencePoints.push('shoulders');
+    if (leftHip.score < 0.5 || rightHip.score < 0.5) lowConfidencePoints.push('hips');
+    if (leftKnee.score < 0.5 || rightKnee.score < 0.5) lowConfidencePoints.push('knees');
+    if (leftAnkle.score < 0.5 || rightAnkle.score < 0.5) lowConfidencePoints.push('feet');
+    
+    if (lowConfidencePoints.length > 0) {
+        let feedback = "Can't see your ";
+        if (lowConfidencePoints.length > 2) {
+            feedback = "Step back - need to see full body";
+        } else {
+            feedback += lowConfidencePoints.join(' & ');
+        }
+        
         return {
-            feedback: "Make sure you're fully in view!",
+            feedback,
             isRepCompleted: false,
             poseData: { keypoints }
         };

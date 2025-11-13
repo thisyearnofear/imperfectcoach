@@ -1,8 +1,13 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Exercise } from "@/lib/types";
 
-const PoseDetectionGuide: React.FC = () => {
+interface PoseDetectionGuideProps {
+  exercise?: Exercise;
+}
+
+const PoseDetectionGuide: React.FC<PoseDetectionGuideProps> = ({ exercise }) => {
   const signals = [
     {
       type: "Screen Flash",
@@ -93,13 +98,31 @@ const PoseDetectionGuide: React.FC = () => {
           ))}
         </div>
 
-        <div className="border-t pt-3 mt-4">
+        <div className="border-t pt-3 mt-4 space-y-2">
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <span>💡</span>
             <span>
               Keep your whole body visible in the frame for best results
             </span>
           </div>
+          
+          {exercise && (
+            <div className="text-center space-y-1">
+              <div className="text-xs font-medium text-primary">
+                {exercise === 'pull-ups' ? '🏋️ Pull-ups requires:' : '🦘 Jumps requires:'}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {exercise === 'pull-ups' 
+                  ? 'Head, hands, elbows, shoulders, hips, knees, feet (13 points)'
+                  : 'Shoulders, hips, knees, ankles (8 points)'}
+              </div>
+              {exercise === 'pull-ups' && (
+                <div className="text-xs text-amber-600 dark:text-amber-500 italic">
+                  Tip: Side or 45° angle works best
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

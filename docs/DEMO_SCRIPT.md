@@ -1,255 +1,170 @@
-# 🎥 Solana x402 Hackathon Demo Script
-## **3-Minute Demonstration: AI Agent with Smart Payment Routing**
+# Demo Script
 
----
+**Imperfect Coach - Autonomous AI Fitness Agent with Multi-Chain Payments**
 
-## **🎯 Demo Objective**
-Show the first AI agent that makes autonomous economic decisions about payment routing - choosing optimal blockchains in real-time for cost and speed.
+> 🎯 **Target Time: 3 minutes**
 
----
+## 🎬 Opening Hook (0:00-0:20)
 
-## **⏱️ TIMING BREAKDOWN (3:00 total)**
+**Narrative:** "What if your fitness coach was an AI agent that could make autonomous economic decisions?"
 
-### **0:00-0:30 - Problem & Hook (30 seconds)**
-**Visual:** Split screen - Traditional vs. Enhanced
-**Narration:**
-> "Traditional AI agents are stuck on single payment rails - they can't optimize for cost or speed. But what if your AI fitness coach could think about economics too? Watch this..."
+**Visual:** Show the app interface with both Base and Solana wallet connections.
 
-**Screen:** 
-- Show existing payment button: "Get Analysis $0.05"
-- Transition to enhanced: "Smart Pay $0.05 ⚡"
+**Script:**
+"Meet Imperfect Coach - the first AI agent that makes intelligent payment routing decisions. While other agents simply pay, ours optimizes costs in real-time across multiple blockchains."
 
-### **0:30-1:45 - Core Demo: AI Decision Making (75 seconds)**
+## 🏋️ Feature Demo 1: Pull-up Analysis (0:20-1:00)
 
-#### **Demo 1: Micro-Payment (0:30-0:50)**
-**Action:** Click Smart Pay for $0.001 tip
-**AI Narration:** 
-> "Analyzing payment route... Amount: $0.001... Solana selected - 90% fee savings for micro-payments"
+**Narrative:** "Let me show you how it works with a pull-up workout."
 
-**Visual Effects:**
-- Brain icon pulsing
-- Network analysis animation  
-- Fee comparison popup: Solana $0.00001 vs Base $0.02
+**Actions:**
+1. Connect Solana wallet (Phantom)
+2. Select "Pull-ups" exercise
+3. Complete 5 pull-ups with form feedback
+4. Show real-time form scoring (78%)
+5. Click "Unlock AI Coach Agent" ($0.10)
 
-#### **Demo 2: Premium Analysis (0:50-1:10)**  
-**Action:** Click Smart Pay for $0.05 analysis
-**AI Narration:**
-> "Premium analysis requested... Comparing networks... User choice mode - showing options"
+**Script:**
+"Watch as our AI agent decides which tools to use. It's analyzing your form, checking your history, benchmarking against peers, and generating a personalized plan - all autonomously."
 
-**Visual:** Side-by-side comparison
-- Solana: $0.05 + $0.00001 fee (Recommended)
-- Base: $0.05 + $0.02 fee
-
-#### **Demo 3: Agent Coaching (1:10-1:30)**
-**Action:** Click Smart Pay for $0.10 coaching
-**AI Narration:**
-> "Agent coaching session... High-value transaction... Base selected - established infrastructure for premium services"
-
-**Visual:** Chain reasoning display
-- Base chosen for reliability
-- Show transaction confirmation
-
-#### **Demo 4: Fallback System (1:30-1:45)**
-**Action:** Simulate Solana network issue
-**AI Narration:**
-> "Solana network busy... Automatically falling back to Base... No disruption to user experience"
-
-**Visual:** Graceful error handling and seamless fallback
-
-### **1:45-2:30 - Technical Innovation (45 seconds)**
-
-#### **Architecture Overview (1:45-2:00)**
-**Visual:** System architecture diagram
-**Narration:**
-> "Here's how it works: Our enhanced x402 protocol now supports multi-chain routing. The AI analyzes network conditions, fees, and transaction context in real-time."
-
-#### **Code Highlight (2:00-2:15)**
-**Visual:** Code snippet with syntax highlighting
-```typescript
-// Smart routing decision
-const decision = await paymentRouter.selectOptimalChain({
-  amount: request.amount,
-  context: request.context,
-  userAddress: request.userAddress
-});
+**Visual:** Show CloudWatch logs with agent reasoning steps:
+```
+🤖 Starting REAL Agent Analysis with Bedrock AgentCore...
+🔄 Agent iteration 1/5 - Analyzing pose data
+🔧 Executing tool: analyze_pose_data
+🔄 Agent iteration 2/5 - Querying workout history
+🔧 Executing tool: query_workout_history
 ```
 
-#### **AWS Lambda Enhancement (2:15-2:30)**
-**Visual:** AWS console / logs
-**Narration:**
-> "Our AWS Lambda now verifies payments on both Base and Solana, with intelligent fallback systems ensuring 99.9% reliability."
+## 💰 Feature Demo 2: Smart Payment Routing (1:00-1:40)
 
-### **2:30-3:00 - Impact & Call to Action (30 seconds)**
+**Narrative:** "Here's where it gets interesting - autonomous payment optimization."
 
-#### **Results Summary (2:30-2:45)**
-**Visual:** Metrics dashboard
-- 90% fee reduction on micro-payments
-- <100ms decision time
-- Zero breaking changes
-- First intelligent agent payment routing
+**Actions:**
+1. Show payment selection modal with cost comparison
+2. Highlight Solana option: "Save 90% on fees"
+3. Complete x402 payment with Solana wallet
+4. Show transaction confirmation
 
-#### **Hackathon Value (2:45-3:00)**
-**Visual:** Prize categories and GitHub link
-**Narration:**
-> "This is more than a payment system - it's the future of autonomous agent economics. Our AI doesn't just coach fitness, it optimizes every transaction. Available open source, deployed to production, ready to transform how agents think about money."
+**Script:**
+"For micro-payments like this $0.001 tip, the agent automatically selects Solana - saving 90% in fees. For larger payments, it offers user choice with live cost comparison."
 
----
-
-## **🎬 VISUAL ELEMENTS**
-
-### **Color Coding**
-- **Blue/Purple Gradient:** Smart AI features
-- **Green:** Cost savings and success states  
-- **Orange/Amber:** Fallback and warning states
-- **Gray:** Technical/infrastructure elements
-
-### **Animations**
-```css
-/* Brain thinking animation */
-.ai-thinking {
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-/* Chain selection flow */
-.chain-selection {
-  animation: slideInRight 0.5s ease-out;
-}
-
-/* Success confirmations */
-.success-state {
-  animation: bounceIn 0.8s ease-out;
-}
+**Visual:** Show transaction on Solana Explorer:
+```
+✅ Transaction confirmed
+🔗 https://explorer.solana.com/tx/...
+📤 0.001 USDC transferred
+💰 90% fee savings vs Ethereum
 ```
 
-### **Icons & Graphics**
-- 🧠 **Brain:** AI decision making
-- ⚡ **Lightning:** Speed and optimization  
-- 🔗 **Chains:** Blockchain networks
-- 💰 **Money:** Cost savings
-- 🛡️ **Shield:** Security and fallbacks
+## 🤖 Feature Demo 3: Multi-Chain Intelligence (1:40-2:20)
+
+**Narrative:** "The agent adapts to different payment contexts."
+
+**Actions:**
+1. Show $0.05 premium analysis - user choice between chains
+2. Show $0.10 agent coaching - automatic Base selection
+3. Explain reasoning: "Established infrastructure for complex operations"
+
+**Script:**
+"For premium analysis, you choose. For agent coaching, it intelligently selects Base - leveraging established infrastructure for complex multi-step reasoning."
+
+## 🏆 Feature Demo 4: On-Chain Leaderboard (2:20-2:40)
+
+**Narrative:** "All your progress is permanently recorded on-chain."
+
+**Actions:**
+1. Submit score to leaderboard
+2. Show transaction confirmation
+3. Refresh leaderboard to show new entry
+
+**Script:**
+"Every workout is permanently recorded on the blockchain. No centralized database - just immutable proof of your progress."
+
+## 🎯 Closing & Value Proposition (2:40-3:00)
+
+**Narrative:** "Why this matters for the Solana x402 Hackathon."
+
+**Script:**
+"This isn't just another fitness app - it's a working AI agent that makes autonomous economic decisions. While other hackathon projects prototype, we've built a production-ready system that demonstrates true autonomous economic intelligence.
+
+We're redefining what it means to be an x402 agent - from simple payment user to intelligent payment optimizer."
+
+**Visual:** Show all three value propositions:
+1. ✅ Working Agent (vs. prototypes)
+2. ✅ Proven x402 (enhanced integration)
+3. ✅ Smart Economic Decisions (first autonomous payment routing)
+
+## 🎤 Presentation Tips
+
+### Technical Details to Highlight
+- **Multi-step reasoning**: Show CloudWatch logs with agent iterations
+- **Tool integration**: Demonstrate 4 different tools being used autonomously
+- **Payment optimization**: Emphasize 90% fee savings
+- **Real transactions**: Show actual Solana Explorer links
+
+### Common Questions to Prepare For
+1. **"How does the agent decide which chain to use?"**
+   Answer: Context-aware routing based on transaction value and complexity.
+
+2. **"Is this actually saving money?"**
+   Answer: Yes - show live cost comparison and transaction fees.
+
+3. **"How does the AI coaching work?"**
+   Answer: Multi-step reasoning with autonomous tool selection and execution.
+
+### Backup Demo Options
+If live demo fails:
+1. Show pre-recorded video of agent reasoning
+2. Display CloudWatch logs with successful transactions
+3. Show Solana Explorer with real transactions
+4. Present architecture diagrams
+
+## 📊 Success Metrics
+
+### What Judges Should See
+- ✅ Autonomous AI agent making decisions
+- ✅ Multi-chain payment optimization
+- ✅ Real on-chain transactions
+- ✅ Working implementation (not just concept)
+
+### Key Differentiators
+1. **Working Agent**: Sophisticated AI vs. hackathon prototypes
+2. **Smart Payments**: Autonomous routing vs. simple payments
+3. **Multi-Chain**: True cross-chain intelligence
+4. **Production Ready**: Complete system vs. demo components
+
+## ⏰ Timing Checklist
+
+- [ ] 0:00-0:20: Opening hook
+- [ ] 0:20-1:00: Pull-up analysis with agent
+- [ ] 1:00-1:40: Smart payment routing
+- [ ] 1:40-2:20: Multi-chain intelligence
+- [ ] 2:20-2:40: On-chain leaderboard
+- [ ] 2:40-3:00: Closing value proposition
+
+## 🛠️ Technical Setup
+
+### Before Demo
+1. Fund server wallets with SOL and USDC
+2. Verify Lambda functions are deployed
+3. Check contract addresses are current
+4. Prepare Solana wallet with sufficient balance
+5. Test all payment flows
+6. Prepare backup videos/screenshots
+
+### During Demo
+1. Keep CloudWatch logs visible
+2. Show Solana Explorer links
+3. Highlight cost savings
+4. Demonstrate agent autonomy
+5. Show real-time form feedback
+
+### After Demo
+1. Reset demo state
+2. Document any issues
+3. Gather feedback
+4. Update documentation if needed
 
 ---
-
-## **🎤 NARRATION TONE**
-
-### **Voice Characteristics**
-- **Confident but accessible** - technical but not jargony
-- **Enthusiastic about the innovation** - genuine excitement  
-- **Clear and measured pace** - ensure comprehension
-- **Professional with personality** - not robotic
-
-### **Key Phrases to Emphasize**
-- "**First AI agent** to make autonomous economic decisions"
-- "**Real-time optimization** for cost and speed"
-- "**Zero breaking changes** to existing functionality"
-- "**90% fee reduction** on micro-payments"
-- "**Intelligent fallback systems** ensure reliability"
-
----
-
-## **🎯 DEMO ENVIRONMENT SETUP**
-
-### **Browser Setup**
-```bash
-# Multiple tabs prepared
-Tab 1: Demo app (localhost:8080)
-Tab 2: Solana Explorer (solscan.io/devnet)  
-Tab 3: Base Sepolia Explorer (sepolia.basescan.org)
-Tab 4: GitHub repository
-```
-
-### **Wallet Setup**
-- **Phantom Wallet:** Connected with devnet SOL
-- **Coinbase Wallet:** Connected with Base Sepolia ETH
-- **Both visible in browser for switching demos**
-
-### **Network Status**
-- Verify both networks healthy before demo
-- Have backup scenarios if network issues
-- Monitor transaction confirmations
-
----
-
-## **📱 RESPONSIVE DEMO FLOW**
-
-### **Desktop Version (Primary)**
-- Full side-by-side comparisons
-- Detailed technical information
-- Real-time network status
-
-### **Mobile Backup**
-- Simplified single-column layout
-- Focus on core smart pay functionality
-- Vertical component stacking
-
----
-
-## **🛠️ TECHNICAL BACKUP PLANS**
-
-### **If Live Networks Fail**
-- Switch to mock payment responses
-- Pre-recorded transaction confirmations  
-- Emphasize architecture and code quality
-
-### **If Demo App Crashes**
-- Have static screenshots prepared
-- Code walkthrough as backup
-- Focus on technical innovation
-
-### **If Timing Runs Long**
-- Skip micro-payment demo (least critical)
-- Combine technical sections
-- End with strong GitHub/code showcase
-
----
-
-## **📊 SUCCESS METRICS**
-
-### **What Good Looks Like**
-- ✅ All 3 payment demos work smoothly
-- ✅ AI decision explanations clear and impressive
-- ✅ Technical innovation obvious to judges
-- ✅ Cost savings and benefits clearly demonstrated
-- ✅ GitHub repository gets attention
-
-### **Bonus Points**
-- Show real transaction confirmations on both chains
-- Demonstrate actual fee savings with real numbers
-- Show code quality and architecture
-- Prove production readiness
-
----
-
-## **🎬 PRODUCTION CHECKLIST**
-
-### **Pre-Demo (24 hours before)**
-- [ ] Record backup video of full demo flow
-- [ ] Test all payment flows on both networks
-- [ ] Verify wallet connections and balances
-- [ ] Prepare static assets and screenshots
-- [ ] Practice narration timing
-
-### **Demo Day (2 hours before)**  
-- [ ] Final network status check
-- [ ] Browser and wallet setup
-- [ ] Microphone and screen recording test
-- [ ] Backup plans reviewed and ready
-- [ ] Deep breath and confidence boost 💪
-
----
-
-## **🏆 CLOSING IMPACT**
-
-**Final Frame:** GitHub repository with clear README
-**Final Words:** 
-> "This isn't just a hackathon project - it's production-ready infrastructure that transforms how AI agents think about economics. The future of autonomous payments starts here."
-
-**Call to Action:**
-- ⭐ Star the repository
-- 🔗 Try the live demo  
-- 💬 Join the discussion
-- 🚀 Build the next generation of intelligent agents
-
----
-
-*Ready to show the world the future of AI agent economics* 🎯
+*Ready for Solana x402 Hackathon judging*

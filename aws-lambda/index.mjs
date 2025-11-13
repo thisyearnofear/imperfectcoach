@@ -936,9 +936,19 @@ async function verifyAndSettleMultiChainPayment(
   }
 }
 
-import { Connection, PublicKey } from "@solana/web3.js";
-
-// ... (rest of the imports)
+import { 
+  Connection, 
+  PublicKey, 
+  Keypair,
+  Transaction,
+  sendAndConfirmTransaction
+} from "@solana/web3.js";
+import {
+  getAssociatedTokenAddress,
+  createTransferInstruction,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import bs58 from "bs58";
 
 // Initialize Solana Connection
 const solanaConnection = new Connection(
@@ -946,12 +956,138 @@ const solanaConnection = new Connection(
   "confirmed"
 );
 
-// ... (rest of the file)
+// Solana USDC Configuration for Devnet
+const SOLANA_USDC_CONFIG = {
+  MINT_ADDRESS: "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr", // USDC on devnet
+  DECIMALS: 6,
+  TREASURY_ADDRESS: process.env.SOLANA_TREASURY_ADDRESS || "CmGgLQL36Y9ubtTsy2zmE46TAxwCBm66onZmPPhUWNqv",
+  PAYMENT_AMOUNT_USDC: "0.05", // 0.05 USDC
+};
+
+// Solana server keypair for payments (loaded from env)
+let solanaServerKeypair = null;
+
+function getSolanaServerKeypair() {
+  if (solanaServerKeypair) {
+    return solanaServerKeypair;
+  }
+  
+  const privateKeyString = process.env.SOLANA_PRIVATE_KEY;
+  if (!privateKeyString) {
+    throw new Error("SOLANA_PRIVATE_KEY environment variable not set");
+  }
+  
+  // Parse private key (expects base58 or JSON array format)
+  try {
+    let secretKey;
+    if (privateKeyString.startsWith('[')) {
+      // JSON array format: [1,2,3,...]
+      secretKey = new Uint8Array(JSON.parse(privateKeyString));
+    } else {
+      // Base58 format - decode it
+      secretKey = bs58.decode(privateKeyString);
+    }
+    
+    solanaServerKeypair = Keypair.fromSecretKey(secretKey);
+    console.log(`✅ Solana server keypair loaded: ${solanaServerKeypair.publicKey.toString()}`);
+    return solanaServerKeypair;
+  } catch (error) {
+    console.error("Failed to parse SOLANA_PRIVATE_KEY:", error);
+    throw new Error("Invalid SOLANA_PRIVATE_KEY format");
+  }
+}
 
 /**
- * NEW: Solana payment verification
- * For x402 flow, we verify the wallet signature (already done)
- * and create a mock settlement response
+ * Process real USDC payment on Solana devnet
+ */
+async function processSolanaUSDCPayment(paymentPayload) {
+  try {
+    const { payer, amount, payTo } = paymentPayload;
+    
+    console.log("💳 Processing real Solana USDC payment...");
+    console.log({
+      from: payer,
+      to: payTo || SOLANA_USDC_CONFIG.TREASURY_ADDRESS,
+      amount: SOLANA_USDC_CONFIG.PAYMENT_AMOUNT_USDC + " USDC",
+    });
+    
+    // Get server keypair
+    const serverKeypair = getSolanaServerKeypair();
+    
+    // USDC mint address on devnet
+    const usdcMint = new PublicKey(SOLANA_USDC_CONFIG.MINT_ADDRESS);
+    const recipientPubkey = new PublicKey(payTo || SOLANA_USDC_CONFIG.TREASURY_ADDRESS);
+    
+    // Get associated token accounts
+    const fromTokenAccount = await getAssociatedTokenAddress(
+      usdcMint,
+      serverKeypair.publicKey
+    );
+    
+    const toTokenAccount = await getAssociatedTokenAddress(
+      usdcMint,
+      recipientPubkey
+    );
+    
+    console.log(`📝 From token account: ${fromTokenAccount.toString()}`);
+    console.log(`📝 To token account: ${toTokenAccount.toString()}`);
+    
+    // Calculate amount in smallest units (microUSDC)
+    const amountInMicroUSDC = Math.floor(
+      parseFloat(SOLANA_USDC_CONFIG.PAYMENT_AMOUNT_USDC) * Math.pow(10, SOLANA_USDC_CONFIG.DECIMALS)
+    );
+    
+    console.log(`💰 Transferring ${amountInMicroUSDC} microUSDC (${SOLANA_USDC_CONFIG.PAYMENT_AMOUNT_USDC} USDC)`);
+    
+    // Create transfer instruction
+    const transferInstruction = createTransferInstruction(
+      fromTokenAccount,
+      toTokenAccount,
+      serverKeypair.publicKey,
+      amountInMicroUSDC,
+      [],
+      TOKEN_PROGRAM_ID
+    );
+    
+    // Create and send transaction
+    const transaction = new Transaction().add(transferInstruction);
+    
+    console.log("📡 Sending transaction to Solana devnet...");
+    const signature = await sendAndConfirmTransaction(
+      solanaConnection,
+      transaction,
+      [serverKeypair],
+      {
+        commitment: "confirmed",
+        maxRetries: 3,
+      }
+    );
+    
+    console.log(`✅ Solana USDC payment confirmed: ${signature}`);
+    console.log(`🔍 View on Solana Explorer: https://explorer.solana.com/tx/${signature}?cluster=devnet`);
+    
+    return {
+      success: true,
+      transactionHash: signature,
+      settlementResponse: {
+        success: true,
+        txHash: signature,
+        networkId: "solana-devnet",
+        explorerUrl: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
+      },
+    };
+  } catch (error) {
+    console.error("❌ Solana USDC payment failed:", error);
+    return {
+      success: false,
+      error: error.message || "Solana USDC payment processing failed",
+    };
+  }
+}
+
+/**
+ * Solana payment verification and settlement
+ * Processes real USDC transfer on Solana devnet
  */
 async function verifySolanaPayment(paymentHeader, userSignatureVerified = false) {
   try {
@@ -960,24 +1096,21 @@ async function verifySolanaPayment(paymentHeader, userSignatureVerified = false)
     );
     console.log("🔍 Decoded Solana payment payload:", paymentPayload);
 
-    // For x402 flow with wallet signatures, we don't need on-chain verification
-    // The signature was already verified earlier in the flow
+    // For x402 flow with wallet signatures, signature was already verified
+    // Now we process the actual USDC payment
     if (userSignatureVerified) {
-      console.log("✅ Solana wallet signature already verified, accepting payment");
+      console.log("✅ Solana wallet signature verified, processing USDC payment...");
       
-      // Generate mock transaction hash for tracking
-      const mockTxHash = `solana_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Process real USDC transfer on Solana devnet
+      const paymentResult = await processSolanaUSDCPayment(paymentPayload);
       
-      return {
-        success: true,
-        settlementResponse: {
-          success: true,
-          txHash: mockTxHash,
-          networkId: "solana-devnet",
-        },
-        transactionHash: mockTxHash,
-        isMock: true, // Indicate this is a mock settlement
-      };
+      if (!paymentResult.success) {
+        throw new Error(paymentResult.error || "Solana payment processing failed");
+      }
+      
+      console.log(`✅ Real Solana USDC payment settled: ${paymentResult.transactionHash}`);
+      
+      return paymentResult;
     }
 
     // If not verified yet, this would be for actual on-chain transaction verification
@@ -1059,15 +1192,16 @@ function createMultiChainPaymentRequiredResponse(message) {
         chainId: PAYMENT_CONFIG.chainId,
         description: "Premium analysis via Base network"
       },
-      // NEW: Solana payment option
+      // Solana USDC payment option
       {
         scheme: "SOLANA_PAY",
         network: "solana-devnet",
-        asset: "SOL", 
-        amount: "0.00001", // Equivalent micro-payment
+        asset: "USDC",
+        amount: "50000", // 0.05 USDC in microUSDC (6 decimals)
         payTo: process.env.SOLANA_TREASURY_ADDRESS || "CmGgLQL36Y9ubtTsy2zmE46TAxwCBm66onZmPPhUWNqv",
         chainId: "solana-devnet",
-        description: "Premium analysis via Solana network (ultra-low fees)"
+        mint: "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr", // USDC mint on devnet
+        description: "Premium analysis via Solana network (USDC payment)"
       }
     ],
     facilitator: process.env.FACILITATOR_URL || "https://x402.org/facilitator",

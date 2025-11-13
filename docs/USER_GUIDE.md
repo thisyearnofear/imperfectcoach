@@ -1,4 +1,4 @@
-# 🏋️ Imperfect Coach - User Features & Capabilities
+# 🏋️ Imperfect Coach - User Guide
 
 **Autonomous AI Agent for Personalized Fitness Coaching**
 
@@ -9,7 +9,9 @@
 
 Imperfect Coach is an **autonomous AI agent system** that combines computer vision, multi-step reasoning, and tool integration to deliver personalized fitness coaching. The agent independently analyzes workout performance, queries historical data, benchmarks against similar athletes, and generates adaptive training plans—all without human intervention.
 
-## ✨ Core Features
+We're transforming AI agents from simple payment users to payment optimizers with intelligent multi-chain routing.
+
+## ✨ Key Features
 
 ### 🤖 Autonomous AI Coach Agent
 - **Multi-Step Reasoning**: Agent decides which analysis tools to invoke (up to 5 reasoning iterations)
@@ -30,21 +32,9 @@ Imperfect Coach is an **autonomous AI agent system** that combines computer visi
 - **Graceful Fallback**: Base network as reliable backup if Solana unavailable
 
 ### 🧠 Three Coaching Tiers
-
-#### 🆓 Free Tier
-- Real-time coaching with Gemini/OpenAI/Anthropic
-- Accurate rep counting and form feedback
-- Basic performance analytics
-
-#### 💎 Premium Tier ($0.05 USDC)
-- Deep-dive Amazon Bedrock analysis
-- Detailed form breakdown with technique tips
-- Performance metrics and improvement tracking
-
-#### 🤖 Agent Tier ($0.10 USDC)
-- Autonomous multi-step reasoning
-- Personalized 4-week training plans
-- Performance benchmarking against similar athletes
+- **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)
+- **Premium ($0.05 USDC)**: Deep-dive Amazon Bedrock analysis
+- **Agent ($0.10 USDC)**: Autonomous multi-step reasoning + personalized 4-week training plans
 
 ### 💪 Supported Exercises
 - **Pull-ups**: Elbow angle, chin-over-bar, ROM tracking, asymmetry detection
@@ -110,6 +100,50 @@ A: Yes! Watch it work - you'll see it independently choose which tools to use ba
 
 **Q: Is my workout data private?**
 A: Absolutely. Only you can see your analysis. We don't share data.
+
+## 💪 Exercise-Specific Features
+
+### Pull-Up Detection & Communication Improvements
+
+#### ReadinessSystem.ts - Pull-Up Posture Analysis
+- Validates all 13 required keypoints (nose, wrists, elbows, shoulders, hips, knees, ankles)
+- Detects if user is in hanging position vs standing
+- Provides specific feedback for lower body visibility issues
+- Checks upper body critical points (head, hands, shoulders)
+- Suggests optimal camera angles (45° or side view)
+- Progressive scoring system (0-100) with severity-based issues
+
+#### PoseDetectionGuide.tsx - Exercise-Specific Requirements
+- Shows required keypoints count for each exercise:
+  - **Pull-ups:** "Head, hands, elbows, shoulders, hips, knees, feet (13 points)"
+  - **Jumps:** "Shoulders, hips, knees, ankles (8 points)"
+- Includes camera angle tip for pull-ups: "Tip: Side or 45° angle works best"
+- Tasteful, compact design that doesn't overwhelm users
+
+#### pullupProcessor.ts - Specific Visibility Feedback
+- Enhanced keypoint visibility checking with specific body part feedback
+- Replaced generic "Make sure you're fully in view!" with actionable messages
+- Identifies exactly which body parts aren't visible:
+  - "Can't see your hands"
+  - "Can't see your feet & knees"
+- Smart aggregation: "Step back - need to see full body" when 3+ parts missing
+
+#### drawing.ts - Enhanced Visual Feedback
+- Improved `drawFormZone()` for pull-ups with better visual cues
+- Added labeled reference lines and success indicators
+- "Chin target" line (green) shows where nose needs to reach
+- "Full extension" line (yellow) calculated from arm length
+- Green circle appears around nose when chin is over bar
+- Only shows zones when actually hanging (prevents clutter)
+- Subtle, non-intrusive labels for clarity
+
+## 📚 Documentation References
+
+For technical documentation, see:
+- **[Architecture](ARCHITECTURE.md)** - Complete system design
+- **[Development](DEVELOPMENT.md)** - Setup and development guides
+- **[Deployment](DEPLOYMENT.md)** - Deployment procedures
+- **[Solana Payments](SOLANA_PAYMENTS.md)** - Solana payment implementation
 
 ---
 *Built with ❤️ for athletes everywhere. Powered by Amazon Bedrock AgentCore.*

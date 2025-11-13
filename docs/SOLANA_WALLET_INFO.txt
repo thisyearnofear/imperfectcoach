@@ -1,0 +1,121 @@
+═══════════════════════════════════════════════════════════════════════
+  SOLANA SERVER WALLET - READY FOR FUNDING
+═══════════════════════════════════════════════════════════════════════
+
+✅ DEPLOYMENT STATUS: COMPLETE
+
+Lambda Function: imperfect-coach-premium-analysis
+Region: eu-north-1
+Code Size: 36.6 MB
+Last Updated: 2025-11-13T12:20:35.000+0000
+
+═══════════════════════════════════════════════════════════════════════
+  WALLET DETAILS
+═══════════════════════════════════════════════════════════════════════
+
+🔑 PUBLIC ADDRESS (Server Wallet):
+BADYKhYwhtu43g9JnGqdFTZBjK3FsjHvBjcixVePKiNd
+
+📥 FUND THIS ADDRESS WITH:
+- SOL: 2-3 SOL (for transaction fees)
+- USDC: 5-10 USDC (for payments)
+
+Network: Solana Devnet
+USDC Mint: Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr
+
+═══════════════════════════════════════════════════════════════════════
+  FUNDING INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════
+
+1. GET DEVNET SOL:
+   Visit: https://faucet.solana.com/
+   Enter: BADYKhYwhtu43g9JnGqdFTZBjK3FsjHvBjcixVePKiNd
+   Request: 2 SOL
+
+   OR use command (if Solana CLI installed):
+   solana airdrop 2 BADYKhYwhtu43g9JnGqdFTZBjK3FsjHvBjcixVePKiNd --url devnet
+
+2. GET DEVNET USDC:
+   Visit: https://spl-token-faucet.com/?token-name=USDC
+   Enter: BADYKhYwhtu43g9JnGqdFTZBjK3FsjHvBjcixVePKiNd
+   Request: 10 USDC
+
+═══════════════════════════════════════════════════════════════════════
+  PAYMENT FLOW
+═══════════════════════════════════════════════════════════════════════
+
+When user pays with Solana:
+1. User signs x402 payment message with their wallet
+2. Backend transfers 0.05 USDC from SERVER WALLET to TREASURY
+3. Returns real transaction hash
+
+Server Wallet: BADYKhYwhtu43g9JnGqdFTZBjK3FsjHvBjcixVePKiNd
+Treasury (same): BADYKhYwhtu43g9JnGqdFTZBjK3FsjHvBjcixVePKiNd
+
+Note: Currently using same address for both. For production, set different
+SOLANA_TREASURY_ADDRESS to split server wallet from revenue wallet.
+
+═══════════════════════════════════════════════════════════════════════
+  VERIFY BALANCES
+═══════════════════════════════════════════════════════════════════════
+
+Check SOL balance:
+https://explorer.solana.com/address/BADYKhYwhtu43g9JnGqdFTZBjK3FsjHvBjcixVePKiNd?cluster=devnet
+
+Check USDC balance (via CLI):
+spl-token balance Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr \
+  --owner BADYKhYwhtu43g9JnGqdFTZBjK3FsjHvBjcixVePKiNd \
+  --url devnet
+
+═══════════════════════════════════════════════════════════════════════
+  ENVIRONMENT VARIABLES (SET IN LAMBDA)
+═══════════════════════════════════════════════════════════════════════
+
+✅ SOLANA_PRIVATE_KEY: [Set - 64 byte array]
+✅ SOLANA_TREASURY_ADDRESS: BADYKhYwhtu43g9JnGqdFTZBjK3FsjHvBjcixVePKiNd
+✅ SOLANA_RPC_URL: https://api.devnet.solana.com
+
+═══════════════════════════════════════════════════════════════════════
+  TESTING
+═══════════════════════════════════════════════════════════════════════
+
+After funding:
+
+1. Open your app and connect Solana wallet (Phantom/Solflare)
+2. Trigger Bedrock Analysis or Agent Analysis
+3. Sign x402 payment message
+4. Backend will transfer USDC and return transaction hash
+5. Verify on explorer:
+   https://explorer.solana.com/tx/<hash>?cluster=devnet
+
+═══════════════════════════════════════════════════════════════════════
+  MONITORING
+═══════════════════════════════════════════════════════════════════════
+
+View Lambda logs:
+aws logs tail /aws/lambda/imperfect-coach-premium-analysis --follow --region eu-north-1
+
+Look for:
+✅ Solana USDC payment confirmed: <signature>
+🔍 View on Solana Explorer: <url>
+
+═══════════════════════════════════════════════════════════════════════
+  SECURITY NOTES
+═══════════════════════════════════════════════════════════════════════
+
+⚠️  Private key is stored in Lambda environment (encrypted at rest)
+⚠️  Keep server wallet funded but don't over-fund
+⚠️  Monitor balance regularly
+⚠️  Set up CloudWatch alarms for low balance
+⚠️  For production, use AWS Secrets Manager
+
+Private key backup saved to: /tmp/imperfect-coach-server-wallet.json
+(Backup this file securely and delete after confirming Lambda works)
+
+═══════════════════════════════════════════════════════════════════════
+  READY TO TEST!
+═══════════════════════════════════════════════════════════════════════
+
+Status: ✅ Lambda deployed with Solana support
+Next: 💰 Fund wallet with SOL + USDC
+Then: 🧪 Test payment flow end-to-end

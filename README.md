@@ -100,16 +100,18 @@ npm run dev
 
 ## 📚 Documentation
 
-### Solana x402 Hackathon Focus
+### User Guides
+- **[User Guide](docs/USER_GUIDE.md)** - Complete features and usage instructions
 - **[Demo Script](docs/DEMO_SCRIPT.md)** - 3-minute presentation for hackathon judges
-- **[User Features](docs/USER_AND_FEATURES.md)** - AI agent capabilities and payment system
 
 ### Technical Documentation
-- **[Technical Architecture](docs/TECHNICAL_ARCHITECTURE.md)** - System design, AI agent, and payment infrastructure
-- **[Development & Deployment](docs/DEVELOPMENT_AND_DEPLOYMENT.md)** - Setup, testing, and deployment guides
+- **[Architecture](docs/ARCHITECTURE.md)** - Complete system design and implementation
+- **[Development](docs/DEVELOPMENT.md)** - Setup, testing, and development practices
+- **[Deployment](docs/DEPLOYMENT.md)** - Deployment procedures and monitoring
+- **[Solana Payments](docs/SOLANA_PAYMENTS.md)** - Multi-chain payment implementation
 
 ### Quick References
-- **[AWS Deployment Script](aws-lambda/deploy-agent.sh)** - One-command Lambda deployment
+- **[AWS Deployment Script](aws-lambda/deploy.sh)** - One-command Lambda deployment
 - **[Supabase Functions](supabase/)** - Edge function source code
 
 ---

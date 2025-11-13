@@ -154,14 +154,6 @@ const BedrockAnalysisSection = ({
         throw new Error("No wallet connected");
       }
 
-      // Create payment authorization
-      const timestamp = Date.now();
-      const message = `Authorize payment of 0.05 USDC for premium workout analysis\nTimestamp: ${timestamp}\nAddress: ${address}`;
-
-      const signature = await signMessage(message);
-
-      setPaymentStatus("verified");
-
       // Convert duration to seconds
       const convertDurationToSeconds = (durationString: string): number => {
         if (!durationString || durationString === "N/A") return 0;
@@ -172,31 +164,25 @@ const BedrockAnalysisSection = ({
         return minutes * 60 + seconds;
       };
 
-      const requestBody = {
-        workoutData: {
-          ...workoutData,
-          duration: convertDurationToSeconds(
-            workoutData.duration?.toString() || "0"
-          ),
-        },
-        payment: {
-          walletAddress: address,
-          signature,
-          message,
-          amount: "50000", // 0.05 USDC in microUSDC
-          timestamp,
-          chain: walletChain, // Tell backend which chain signature is from
-        },
-      };
-
       const apiUrl =
         "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
 
-      // First, make a request without payment to get the 402 challenge
+      // First, make a request WITHOUT payment to get the 402 challenge (x402 protocol)
       let response = await fetch(apiUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Chain": walletChain || "base" // Tell server which chain we're using
+        },
+        body: JSON.stringify({
+          workoutData: {
+            ...workoutData,
+            duration: convertDurationToSeconds(
+              workoutData.duration?.toString() || "0"
+            ),
+          },
+          // Don't send payment yet - wait for 402 challenge
+        }),
       });
 
       // Enhanced multi-chain x402 flow - can be replaced with SmartPayButton
@@ -258,8 +244,17 @@ Nonce: ${paymentNonce}`;
           headers: {
             "Content-Type": "application/json",
             "X-Payment": paymentHeader,
+            "X-Chain": walletChain || "base"
           },
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify({
+            workoutData: {
+              ...workoutData,
+              duration: convertDurationToSeconds(
+                workoutData.duration?.toString() || "0"
+              ),
+            },
+            // Payment is in X-Payment header, not in body
+          }),
         });
       }
 

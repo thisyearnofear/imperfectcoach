@@ -51,26 +51,64 @@ function drawFormZone(ctx: CanvasRenderingContext2D, keypoints: Keypoint[], exer
     const leftWrist = getKeypoint(keypoints, 'left_wrist');
     const rightWrist = getKeypoint(keypoints, 'right_wrist');
     const leftShoulder = getKeypoint(keypoints, 'left_shoulder');
+    const rightShoulder = getKeypoint(keypoints, 'right_shoulder');
+    const leftElbow = getKeypoint(keypoints, 'left_elbow');
+    const rightElbow = getKeypoint(keypoints, 'right_elbow');
+    const nose = getKeypoint(keypoints, 'nose');
 
     if (leftWrist && rightWrist && leftShoulder && leftWrist.score > MIN_CONFIDENCE_TO_DRAW && rightWrist.score > MIN_CONFIDENCE_TO_DRAW && leftShoulder.score > MIN_CONFIDENCE_TO_DRAW) {
-      // Top of range (chin over bar) - Green line
-      const topY = Math.min(leftWrist.y, rightWrist.y);
-      ctx.strokeStyle = 'rgba(0, 255, 0, 0.6)';
-      ctx.lineWidth = 4;
-      ctx.setLineDash([15, 8]);
-      ctx.beginPath();
-      ctx.moveTo(0, topY);
-      ctx.lineTo(ctx.canvas.width, topY);
-      ctx.stroke();
+      const avgWristY = (leftWrist.y + rightWrist.y) / 2;
+      const avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+      const isHanging = avgWristY < avgShoulderY;
+      
+      if (isHanging) {
+        // Top of range (chin over bar) - Green line at wrist level
+        const topY = avgWristY;
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.6)';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([15, 8]);
+        ctx.beginPath();
+        ctx.moveTo(0, topY);
+        ctx.lineTo(ctx.canvas.width, topY);
+        ctx.stroke();
+        
+        // Add subtle label
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.9)';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('Chin target', 10, topY - 8);
 
-      // Bottom of range (full extension) - Yellow line
-      const bottomY = leftShoulder.y + (leftShoulder.y - topY) * 0.1; // Approximate full extension
-      ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
-      ctx.beginPath();
-      ctx.moveTo(0, bottomY);
-      ctx.lineTo(ctx.canvas.width, bottomY);
-      ctx.stroke();
-      ctx.setLineDash([]); // Reset line dash
+        // Bottom of range (full extension) - Yellow line
+        // Calculate based on arm length for more accuracy
+        if (leftElbow && rightElbow) {
+          const avgElbowY = (leftElbow.y + rightElbow.y) / 2;
+          const armLength = avgElbowY - avgWristY;
+          const bottomY = avgShoulderY + armLength * 0.95; // 95% extension estimate
+          
+          ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(0, bottomY);
+          ctx.lineTo(ctx.canvas.width, bottomY);
+          ctx.stroke();
+          
+          // Add subtle label
+          ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+          ctx.fillText('Full extension', 10, bottomY + 18);
+        }
+        
+        ctx.setLineDash([]); // Reset line dash
+        
+        // Visual feedback if chin is over bar
+        if (nose && nose.score > MIN_CONFIDENCE_TO_DRAW && nose.y < topY) {
+          // Draw success indicator around nose
+          ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(nose.x, nose.y, 15, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
+      }
     }
   }
   // TODO: Add form zones for jumps

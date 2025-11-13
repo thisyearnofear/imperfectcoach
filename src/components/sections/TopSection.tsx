@@ -133,7 +133,7 @@ export const TopSection = forwardRef<
 
           {/* Desktop Visual Guide - Below leaderboard for landscape symmetry */}
           <div className="hidden lg:block">
-            <PoseDetectionGuide />
+            <PoseDetectionGuide exercise={props.exercise} />
           </div>
         </div>
 
@@ -187,7 +187,7 @@ export const TopSection = forwardRef<
         />
 
         {/* Mobile Visual Guide - After feedback for reference */}
-        <PoseDetectionGuide />
+        <PoseDetectionGuide exercise={props.exercise} />
 
         {/* Mobile Leaderboard - At bottom */}
         <Leaderboard timeframe="week" />
