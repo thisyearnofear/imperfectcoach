@@ -35,6 +35,7 @@ import { useUser } from "@/hooks/useUserHooks";
 import { solanaWalletManager } from "../lib/payments/solana-wallet-adapter";
 import { useAccount } from "wagmi";
 import { cn } from "@/lib/utils";
+import { useDisplayName } from "@/hooks/useMemoryIdentity";
 
 type WalletVariant = "header" | "card" | "inline" | "minimal" | "dual";
 type WalletSize = "sm" | "md" | "lg";
@@ -153,7 +154,6 @@ const SolanaWalletState = ({
   onConnect,
   isConnecting,
   address,
-  displayName,
   onDisconnect,
   variant,
   size = "md",
@@ -161,12 +161,12 @@ const SolanaWalletState = ({
   onConnect: () => void;
   isConnecting: boolean;
   address: string | null;
-  displayName: string;
   onDisconnect: () => void;
   variant: WalletVariant;
   size?: WalletSize;
 }) => {
   const [copied, setCopied] = React.useState(false);
+  const { displayName } = useDisplayName(address || undefined, 'solana');
   
   const isPhantomAvailable = () => {
     return typeof window !== "undefined" && (window as any)?.solana?.isPhantom;
@@ -705,7 +705,6 @@ export const UnifiedWallet = ({
                 onConnect={handleSolanaConnect}
                 isConnecting={solanaState.connecting}
                 address={solanaState.address}
-                displayName={solanaState.address?.slice(0, 4) + "..." + solanaState.address?.slice(-4) || "Not Connected"}
                 onDisconnect={handleSolanaDisconnect}
                 variant="card"
                 size={size}
@@ -820,7 +819,6 @@ export const UnifiedWallet = ({
               onConnect={handleSolanaConnect}
               isConnecting={solanaState.connecting}
               address={solanaState.address}
-              displayName={solanaState.address?.slice(0, 4) + "..." + solanaState.address?.slice(-4) || "SOL"}
               onDisconnect={handleSolanaDisconnect}
               variant={variant}
               size={size}
@@ -934,7 +932,6 @@ export const UnifiedWallet = ({
             onConnect={handleSolanaConnect}
             isConnecting={solanaState.connecting}
             address={solanaState.address}
-            displayName={solanaState.address?.slice(0, 4) + "..." + solanaState.address?.slice(-4) || "Not Connected"}
             onDisconnect={handleSolanaDisconnect}
             variant="inline"
             size={size}
@@ -985,7 +982,6 @@ export const UnifiedWallet = ({
             onConnect={handleSolanaConnect}
             isConnecting={solanaState.connecting}
             address={solanaState.address}
-            displayName={solanaState.address?.slice(0, 4) + "..." + solanaState.address?.slice(-4) || "Not Connected"}
             onDisconnect={handleSolanaDisconnect}
             variant="card"
             size={size}

@@ -50,11 +50,11 @@ const inFlightRequests = new Map<string, Promise<IdentityGraph | null>>();
 const cleanupExpiredCacheEntries = () => {
   const identityCache = getGlobalCache();
   const now = Date.now();
-  
+
   for (const [walletAddress, cacheEntry] of identityCache.entries()) {
     const cacheAge = now - cacheEntry.timestamp;
     const maxAge = cacheEntry.error ? FAILED_CACHE_AGE : MAX_CACHE_AGE;
-    
+
     if (cacheAge >= maxAge) {
       identityCache.delete(walletAddress);
     }
@@ -109,10 +109,10 @@ export const useMemoryIdentity = (
       const fetchIdentityGraph = async () => {
         // Clean up expired cache entries before checking
         cleanupExpiredCacheEntries();
-        
+
         // Get the shared global cache
         const identityCache = getGlobalCache();
-        
+
         // Check cache first
         const cached = identityCache.get(walletAddress);
         const now = Date.now();
@@ -150,16 +150,16 @@ export const useMemoryIdentity = (
         // Create the request promise and store it
         const requestPromise = (async (): Promise<IdentityGraph | null> => {
           try {
-          // Note: Requires MEMORY_API_KEY environment variable
-          const apiKey = import.meta.env.VITE_MEMORY_API_KEY;
-          if (!apiKey) {
-            // Gracefully handle missing API key - don't make requests
-            const emptyGraph = { identities: [] };
-            setIdentityGraph(emptyGraph);
-            setError(null);
-            identityCache.set(walletAddress, { data: emptyGraph, timestamp: now, error: null });
-            return;
-          }
+            // Note: Requires MEMORY_API_KEY environment variable
+            const apiKey = import.meta.env.VITE_MEMORY_API_KEY;
+            if (!apiKey) {
+              // Gracefully handle missing API key - don't make requests
+              const emptyGraph = { identities: [] };
+              setIdentityGraph(emptyGraph);
+              setError(null);
+              identityCache.set(walletAddress, { data: emptyGraph, timestamp: now, error: null });
+              return;
+            }
 
             const response = await fetch(
               `https://api.memoryproto.co/identities/wallet/${walletAddress}`,
@@ -336,7 +336,7 @@ export const useSolanaNameService = (walletAddress?: string) => {
         }
         const names = await Promise.all(domainKeys.map((k) => performReverseLookup(connection, k)));
         const preferred = names.find((n) => !n.includes('.')) || names[0] || null;
-        const finalName = preferred ? `${preferred}.sol` : null;
+        const finalName = preferred ? (preferred.endsWith('.sol') ? preferred : `${preferred}.sol`) : null;
         cache.set(walletAddress, { name: finalName, timestamp: now, error: null });
         setSolName(finalName);
       } catch (e: any) {
@@ -366,9 +366,10 @@ export const useDisplayName = (address?: string, chain?: 'solana' | 'base') => {
   const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
     enabled: !basenameLoading && !basename,
   });
-  const { solName, isLoading: snsLoading } = useSolanaNameService(chain === 'solana' ? address : undefined);
-
   const social = getPrimarySocialIdentity();
+  const shouldRunSNS = !social && !basename && chain === 'solana';
+  const { solName, isLoading: snsLoading } = useSolanaNameService(shouldRunSNS ? address : undefined);
+
   const isLoading = basenameLoading || identityLoading || snsLoading;
 
   let displayName: string;
