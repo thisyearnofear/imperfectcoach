@@ -23,6 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 
+# IDE-specific directories
+.trae/
+.qoo/
+.qoder/
+
 .env
 .env.local
 
