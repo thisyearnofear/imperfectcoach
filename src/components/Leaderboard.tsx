@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { SmartRefresh, RefreshButton } from "./SmartRefresh";
 import { Badge } from "@/components/ui/badge";
 import { useBasename } from "@/hooks/useBasename";
-import { useMemoryIdentity } from "@/hooks/useMemoryIdentity";
+import { useMemoryIdentity, useSolanaNameService } from "@/hooks/useMemoryIdentity";
 import { useSocialContext } from "@/contexts/SocialContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +67,7 @@ const UserDisplay = ({ address, chain, showActions = false }: { address: string;
   const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
     enabled: !basenameLoading && !basename // Only fetch if no basename
   });
+  const { solName, isLoading: snsLoading } = useSolanaNameService(chain === "solana" ? address : undefined);
 
   const { getFriendActivity, addSocialActivity } = useSocialContext();
   const [isChallenging, setIsChallenging] = useState(false);
@@ -78,7 +79,7 @@ const UserDisplay = ({ address, chain, showActions = false }: { address: string;
   let displayName: string;
   let displayIcon: string | null = null;
 
-  if (basenameLoading || identityLoading) {
+  if (basenameLoading || identityLoading || snsLoading) {
     displayName = "Loading...";
   } else if (socialIdentity) {
     displayName = socialIdentity.username || socialIdentity.id;
@@ -90,6 +91,8 @@ const UserDisplay = ({ address, chain, showActions = false }: { address: string;
     }
   } else if (basename) {
     displayName = basename;
+  } else if (solName) {
+    displayName = solName;
   } else {
     displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
   }

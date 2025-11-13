@@ -20,7 +20,7 @@ import PrivacySettings from "@/components/PrivacySettings";
 import { Input } from "@/components/ui/input";
 import MyPassport from "@/components/MyPassport";
 import { useSocialContext } from "@/contexts/SocialContext";
-import { useMemoryIdentity } from "@/hooks/useMemoryIdentity";
+import { useMemoryIdentity, useSolanaNameService } from "@/hooks/useMemoryIdentity";
 import { UnifiedWallet } from "@/components/UnifiedWallet";
 
 const SocialDashboard = () => {
@@ -29,6 +29,7 @@ const SocialDashboard = () => {
   const { address, isConnected } = useAccount();
   const { getFriendActivity, getFriendChallenges, friendAddresses } = useSocialContext();
   const { identityGraph, isLoading: isIdentityLoading } = useMemoryIdentity(address);
+  const { solName } = useSolanaNameService(address);
 
   // Search through connected identities
   const searchResults = useMemo(() => {
@@ -165,6 +166,9 @@ const SocialDashboard = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Social Dashboard</h1>
+            {solName && (
+              <p className="text-xs text-muted-foreground">{solName}</p>
+            )}
             <p className="text-muted-foreground">
               Connect with friends and track your social fitness journey
             </p>

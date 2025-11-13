@@ -39,6 +39,7 @@ import {
 import { Exercise } from "@/lib/types";
 import { useLeaderboardParallel, ChainFilter } from "@/hooks/useLeaderboardParallel";
 import { useBasename } from "@/hooks/useBasename";
+import { useSolanaNameService, useDisplayName } from "@/hooks/useMemoryIdentity";
 import { SmartRefresh, RefreshButton } from "./SmartRefresh";
 import { cn } from "@/lib/utils";
 
@@ -80,9 +81,7 @@ const ChainBadge = ({ chain }: { chain?: "base" | "solana" }) => {
 
 // User display with basename resolution
 const UserDisplay = ({ address, chain }: { address: string; chain?: "base" | "solana" }) => {
-  const { basename, isLoading } = useBasename(address);
-  const displayName =
-    basename || `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const { displayName, isLoading } = useDisplayName(address, chain);
 
   return (
     <div className="flex items-center gap-2">

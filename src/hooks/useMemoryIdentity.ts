@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
+import { getAllDomains, performReverseLookup } from '@bonfida/spl-name-service';
+import { useBasename } from '@/hooks/useBasename';
 
 interface IdentityNode {
   id: string;
@@ -268,4 +271,128 @@ export const useMemoryIdentity = (
     getPrimarySocialIdentity,
     getSocialIdentities,
   };
+};
+
+const getSnsReverseCache = (): Map<string, { name: string | null; timestamp: number; error: string | null }> => {
+  if (typeof window !== 'undefined') {
+    if (!(window as any).__snsReverseCache) {
+      (window as any).__snsReverseCache = new Map();
+    }
+    return (window as any).__snsReverseCache;
+  }
+  return new Map();
+};
+
+export const useSolanaNameService = (walletAddress?: string) => {
+  const [solName, setSolName] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!walletAddress) {
+      setSolName(null);
+      setError(null);
+      return;
+    }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    const run = async () => {
+      const cache = getSnsReverseCache();
+      const now = Date.now();
+      const cached = cache.get(walletAddress);
+      if (cached && now - cached.timestamp < MAX_CACHE_AGE) {
+        setSolName(cached.name);
+        setError(cached.error);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      try {
+        let pubkey: PublicKey;
+        try {
+          pubkey = new PublicKey(walletAddress);
+        } catch (e) {
+          cache.set(walletAddress, { name: null, timestamp: now, error: 'Invalid address' });
+          setSolName(null);
+          setError('Invalid address');
+          return;
+        }
+
+        const endpoint = import.meta.env.VITE_SOLANA_MAINNET_RPC_URL || clusterApiUrl('mainnet-beta');
+        const connection = new Connection(endpoint, 'confirmed');
+        const domainKeys = await getAllDomains(connection, pubkey);
+        if (!domainKeys || domainKeys.length === 0) {
+          cache.set(walletAddress, { name: null, timestamp: now, error: null });
+          setSolName(null);
+          setIsLoading(false);
+          return;
+        }
+        const names = await Promise.all(domainKeys.map((k) => performReverseLookup(connection, k)));
+        const preferred = names.find((n) => !n.includes('.')) || names[0] || null;
+        const finalName = preferred ? `${preferred}.sol` : null;
+        cache.set(walletAddress, { name: finalName, timestamp: now, error: null });
+        setSolName(finalName);
+      } catch (e: any) {
+        const msg = e?.message || 'SNS lookup failed';
+        getSnsReverseCache().set(walletAddress, { name: null, timestamp: Date.now(), error: msg });
+        setError(msg);
+        setSolName(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [walletAddress]);
+
+  return { solName, isLoading, error };
+};
+
+export const useDisplayName = (address?: string, chain?: 'solana' | 'base') => {
+  const { basename, isLoading: basenameLoading } = useBasename(address);
+  const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
+    enabled: !basenameLoading && !basename,
+  });
+  const { solName, isLoading: snsLoading } = useSolanaNameService(chain === 'solana' ? address : undefined);
+
+  const social = getPrimarySocialIdentity();
+  const isLoading = basenameLoading || identityLoading || snsLoading;
+
+  let displayName: string;
+  let source: 'social' | 'basename' | 'sol' | 'address';
+
+  if (isLoading) {
+    displayName = 'Loading...';
+    source = 'address';
+  } else if (social) {
+    displayName = social.username || social.id;
+    source = 'social';
+  } else if (basename) {
+    displayName = basename;
+    source = 'basename';
+  } else if (solName) {
+    displayName = solName;
+    source = 'sol';
+  } else if (address) {
+    displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+    source = 'address';
+  } else {
+    displayName = '';
+    source = 'address';
+  }
+
+  return { displayName, source, isLoading };
 };

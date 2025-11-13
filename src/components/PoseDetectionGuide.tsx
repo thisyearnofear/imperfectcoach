@@ -1,6 +1,5 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Exercise } from "@/lib/types";
 
 interface PoseDetectionGuideProps {
@@ -116,11 +115,11 @@ const PoseDetectionGuide: React.FC<PoseDetectionGuideProps> = ({ exercise }) => 
                   ? 'Head, hands, elbows, shoulders, hips, knees, feet (13 points)'
                   : 'Shoulders, hips, knees, ankles (8 points)'}
               </div>
-              {exercise === 'pull-ups' && (
-                <div className="text-xs text-amber-600 dark:text-amber-500 italic">
-                  Tip: Side or 45° angle works best
-                </div>
-              )}
+              <div className="text-xs text-amber-600 dark:text-amber-500 italic">
+                {exercise === 'pull-ups' 
+                  ? 'Tip: Side or 45° angle works best'
+                  : 'Tip: Camera at eye level, 6-8 feet away'}
+              </div>
             </div>
           )}
         </div>

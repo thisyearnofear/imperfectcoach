@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useMemoryIdentity } from "@/hooks/useMemoryIdentity";
+import { useMemoryIdentity, useSolanaNameService } from "@/hooks/useMemoryIdentity";
 import { useSocialContext } from "@/contexts/SocialContext";
 import { Users, Trophy, Calendar, Shield, Verified } from "lucide-react";
 import { format } from "date-fns";
@@ -27,6 +27,7 @@ type PassportData = {
 const MyPassport = () => {
 const { address, isConnected } = useAccount();
   const { getSocialIdentities, isLoading: identityLoading } = useMemoryIdentity(address);
+  const { solName } = useSolanaNameService(address);
 
   // 1. Fetch the user's tokenId first
   const { data: tokenId, isLoading: isLoadingTokenId } = useReadContract({
@@ -194,6 +195,11 @@ const { address, isConnected } = useAccount();
                 <span className="text-lg">🌐</span>
                 Connected Identities
               </h4>
+              {solName && (
+                <Badge variant="secondary" className="text-xs">
+                  {solName}
+                </Badge>
+              )}
               <Button variant="link" size="sm" className="h-6 p-0 text-xs" asChild>
                 <Link to="/social">View All</Link>
               </Button>

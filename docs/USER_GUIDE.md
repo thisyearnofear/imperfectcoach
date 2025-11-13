@@ -137,6 +137,36 @@ A: Absolutely. Only you can see your analysis. We don't share data.
 - Only shows zones when actually hanging (prevents clutter)
 - Subtle, non-intrusive labels for clarity
 
+### Jump Detection & Communication Improvements
+
+#### PoseDetectionGuide.tsx - Jump-Specific Requirements
+- Shows required keypoints count for jumps: "Shoulders, hips, knees, ankles (8 points)"
+- Provides clear visual guidance for optimal positioning
+
+#### jumpProcessor.ts - Enhanced Jump Analysis
+- Accurate jump height measurement with granular feedback
+- Landing technique analysis with knee flexion scoring
+- Explosiveness detection based on takeoff velocity
+- Flight symmetry analysis to detect body drift
+- Landing impact analysis to prevent injury
+- Power endurance bonuses for consistent performance
+
+#### Visual Feedback System
+The system provides real-time visual cues during jumps:
+
+👁️ **Visual Signals Guide**
+Watch for these visual cues during your workout:
+
+📸 **Screen Flash** - Red flash when poor form detected
+📍 **Landmarks** - Yellow dots show detected body points
+✅ **Ready State** - Green indicates good starting position
+🔄 **Rep Count** - Blue pulse when rep is counted
+
+💡 Keep your whole body visible in the frame for best results
+
+🦘 **Jumps requires:**
+Shoulders, hips, knees, ankles (8 points)
+
 ## 📚 Documentation References
 
 For technical documentation, see:
