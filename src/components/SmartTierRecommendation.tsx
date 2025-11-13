@@ -108,7 +108,7 @@ export function SmartTierRecommendation({
     return (
       <Card className="border-blue-500/50 bg-gradient-to-br from-blue-500/10 to-blue-500/5 relative overflow-hidden">
         {/* Subtle animated shine */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer pointer-events-none" />
 
         <CardHeader className="relative">
           <div className="flex items-center justify-between">
@@ -171,7 +171,7 @@ export function SmartTierRecommendation({
   return (
     <Card className="border-2 border-purple-500/50 bg-gradient-to-br from-purple-500/10 to-blue-500/10 relative overflow-hidden">
       {/* Pulsing glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-purple-500/10 animate-pulse" />
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-blue-500/5 to-purple-500/5 animate-pulse pointer-events-none" />
 
       <CardHeader className="relative">
         <div className="flex items-center justify-between">
