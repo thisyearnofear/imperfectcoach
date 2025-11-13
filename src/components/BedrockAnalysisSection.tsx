@@ -29,6 +29,7 @@ import {
   ChatMessage,
 } from "@/lib/types";
 import PerformanceAnalytics from "./PerformanceAnalytics";
+import { WalletBalanceDisplay } from "./WalletBalanceDisplay";
 
 interface WorkoutData {
   exercise: string;
@@ -181,6 +182,11 @@ const BedrockAnalysisSection = ({
               workoutData.duration?.toString() || "0"
             ),
           },
+          walletInfo: {
+            address: address,
+            chain: walletChain,
+            addressFormat: walletChain === "solana" ? "base58" : "hex"
+          }
           // Don't send payment yet - wait for 402 challenge
         }),
       });
@@ -253,16 +259,47 @@ Nonce: ${paymentNonce}`;
                 workoutData.duration?.toString() || "0"
               ),
             },
+            walletInfo: {
+              address: address,
+              chain: walletChain,
+              addressFormat: walletChain === "solana" ? "base58" : "hex"
+            }
             // Payment is in X-Payment header, not in body
           }),
         });
       }
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => "Unknown error");
-        throw new Error(
-          `Analysis failed with status ${response.status}: ${errorText}`
-        );
+        let errorMessage = "Analysis request failed";
+        
+        try {
+          const errorData = await response.json();
+          
+          // Handle 402 Payment Required specifically
+          if (response.status === 402) {
+            errorMessage = "Payment verification failed. Please ensure your wallet has sufficient USDC and try again.";
+            
+            // Extract specific error if available
+            if (errorData.error && typeof errorData.error === 'string') {
+              // Clean up technical error messages for user display
+              if (errorData.error.includes('Non-base58')) {
+                errorMessage = "Wallet address format error. Please try reconnecting your wallet.";
+              } else if (errorData.error.includes('Insufficient')) {
+                errorMessage = "Insufficient USDC balance. Get testnet tokens from faucet.";
+              } else if (errorData.error.includes('signature')) {
+                errorMessage = "Payment signature verification failed. Please try again.";
+              }
+            }
+          } else {
+            // Generic error message for other status codes
+            errorMessage = errorData.error || errorData.message || `Request failed (${response.status})`;
+          }
+        } catch {
+          // If JSON parsing fails, use status-based message
+          errorMessage = `Analysis failed (HTTP ${response.status}). Please try again.`;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       setPaymentStatus("settled");
@@ -367,6 +404,16 @@ Nonce: ${paymentNonce}`;
               </span>
             </div>
           </div>
+
+          {/* Balance Display - Shows user affordability */}
+          <WalletBalanceDisplay 
+            variant="detailed"
+            requiredAmount="0.05"
+            className="mt-4"
+            onInsufficientFunds={() => {
+              setError("Insufficient USDC balance. Get testnet tokens from a faucet to continue.");
+            }}
+          />
 
           {/* Payment Status Indicator */}
           {paymentStatus !== "idle" && (

@@ -729,7 +729,7 @@ export const PostWorkoutFlow = ({
 
       {/* Bedrock Analysis Section - Visible for connected and premium users */}
       {(tier === "connected" || tier === "premium") && (
-        <div ref={bedrockSectionRef}>
+        <div ref={bedrockSectionRef} className="max-w-4xl mx-auto space-y-4">
           <FadeIn delay={0.2}>
           <BedrockAnalysisSection
             workoutData={{

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useSolanaWallet } from "@/hooks/useSolanaWallet";
 import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
+import { WalletBalanceDisplay } from "./WalletBalanceDisplay";
 
 interface AgentCoachUpsellProps {
   workoutData: {
@@ -622,6 +623,20 @@ Nonce: ${paymentNonce}`;
           </div>
         </div>
 
+        {/* Balance Display */}
+        <WalletBalanceDisplay 
+          variant="detailed"
+          requiredAmount="0.10"
+          className="mb-4"
+          onInsufficientFunds={() => {
+            toast({
+              title: "⚠️ Insufficient USDC",
+              description: "Get testnet tokens from faucet to use AI Agent Coach",
+              variant: "destructive",
+            });
+          }}
+        />
+
         {/* Pricing */}
         <div className="border-t pt-4">
           <div className="flex items-center justify-between mb-4">
@@ -650,7 +665,7 @@ Nonce: ${paymentNonce}`;
             ) : (
               <>
                 <Brain className="mr-2 h-4 w-4" />
-                Unlock AI Coach Agent
+                Unlock AI Coach Agent - $0.10
               </>
             )}
           </AnimatedButton>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAccount, useWalletClient } from "wagmi";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { baseSepolia } from "wagmi/chains";
 import { trackPaymentTransaction, updateTransactionStatus } from "@/lib/cdp";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ interface PremiumAnalysisUpsellProps {
   onOpenChange: (isOpen: boolean) => void;
   workoutData: WorkoutData;
   onAnalysisComplete: (analysis: AnalysisResult) => void;
+  preferredChain?: 'base' | 'solana'; // Optional: specify which chain to use
 }
 
 const PremiumAnalysisUpsell = ({
@@ -44,6 +46,7 @@ const PremiumAnalysisUpsell = ({
   onOpenChange,
   workoutData,
   onAnalysisComplete,
+  preferredChain = 'base',
 }: PremiumAnalysisUpsellProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,14 +56,22 @@ const PremiumAnalysisUpsell = ({
     "idle" | "processing" | "verified" | "settled" | "complete"
   >("idle");
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
-  const { isConnected } = useAccount();
+  
+  // Base (EVM) wallet
+  const { isConnected: isBaseConnected } = useAccount();
   const { data: walletClient } = useWalletClient({
     chainId: baseSepolia.id,
   });
+  
+  // Solana wallet
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, connected: isSolanaConnected } = useWallet();
+  
+  // Determine which wallet is connected based on preferred chain
+  const isConnected = preferredChain === 'solana' ? isSolanaConnected : isBaseConnected;
 
   const handlePaymentAndAnalysis = async () => {
-    if (!isConnected || !walletClient) {
-      setError("Please connect your wallet to proceed.");
+    if (!isConnected) {
+      setError(`Please connect your ${preferredChain === 'solana' ? 'Solana' : 'Base'} wallet to proceed.`);
       return;
     }
 
@@ -69,30 +80,50 @@ const PremiumAnalysisUpsell = ({
     setPaymentStatus("processing");
 
     try {
-      // Get wallet address
-      const address = walletClient.account?.address;
-      if (!address) {
-        throw new Error("No wallet address found");
-      }
+      let address: string;
+      let signature: string;
+      let message: string;
+      const timestamp = Date.now();
 
-      console.log("🔧 Wallet client available:", {
-        address,
-        hasSignMessage: typeof walletClient.signMessage === "function",
-      });
+      // Handle Solana wallet
+      if (preferredChain === 'solana') {
+        if (!solanaPublicKey || !solanaSignMessage) {
+          throw new Error("Solana wallet not properly connected");
+        }
+        
+        address = solanaPublicKey.toBase58();
+        message = `Authorize payment of 0.05 USDC for premium workout analysis\nTimestamp: ${timestamp}\nAddress: ${address}`;
+        
+        console.log("✍️ Signing Solana payment authorization...");
+        const encodedMessage = new TextEncoder().encode(message);
+        const signatureBytes = await solanaSignMessage(encodedMessage);
+        signature = Buffer.from(signatureBytes).toString('base64');
+        console.log("✅ Solana payment authorization signed");
+      } 
+      // Handle Base (EVM) wallet
+      else {
+        if (!walletClient) {
+          throw new Error("Base wallet not properly connected");
+        }
+        
+        address = walletClient.account?.address;
+        if (!address) {
+          throw new Error("No wallet address found");
+        }
+        
+        message = `Authorize payment of 0.05 USDC for premium workout analysis\nTimestamp: ${timestamp}\nAddress: ${address}`;
+        
+        console.log("✍️ Signing Base payment authorization...");
+        signature = await walletClient.signMessage({
+          account: address,
+          message,
+        });
+        console.log("✅ Base payment authorization signed");
+      }
 
       console.log("🚀 Starting premium analysis with x402 payment...");
       console.log("💪 Workout data:", JSON.stringify(workoutData, null, 2));
-
-      // Create payment authorization message for wallet signature verification
-      const timestamp = Date.now();
-      const message = `Authorize payment of 0.05 USDC for premium workout analysis\nTimestamp: ${timestamp}\nAddress: ${address}`;
-
-      console.log("✍️ Signing payment authorization...");
-      const signature = await walletClient.signMessage({
-        account: address,
-        message,
-      });
-      console.log("✅ Payment authorization signed");
+      console.log(`🔗 Using ${preferredChain} chain for payment`);
 
       setPaymentStatus("verified");
 
@@ -131,14 +162,36 @@ const PremiumAnalysisUpsell = ({
         console.log("🎯 Payment challenge received:", paymentChallenge);
 
         // Extract payment requirements - support both old 'accepts' and new 'schemes' format
-        const paymentRequirement = paymentChallenge.accepts?.[0] || paymentChallenge.schemes?.[0];
-        if (!paymentRequirement) {
+        const availableSchemes = paymentChallenge.accepts || paymentChallenge.schemes;
+        if (!availableSchemes || availableSchemes.length === 0) {
           throw new Error(
             "Invalid payment challenge - no payment requirements found"
           );
         }
-
-        // Create payment payload
+        
+        // Select payment requirement based on preferred chain
+        let paymentRequirement;
+        if (preferredChain === 'solana') {
+          // Find Solana payment option
+          paymentRequirement = availableSchemes.find((scheme: any) => 
+            scheme.network?.includes('solana')
+          );
+          if (!paymentRequirement) {
+            console.warn('⚠️ Solana payment not available, falling back to Base');
+            paymentRequirement = availableSchemes[0];
+          }
+        } else {
+          // Find Base payment option
+          paymentRequirement = availableSchemes.find((scheme: any) => 
+            scheme.network?.includes('base') || scheme.network?.includes('ethereum')
+          ) || availableSchemes[0];
+        }
+        
+        // Determine actual chain from selected requirement
+        const chain = paymentRequirement.network?.includes('solana') ? 'solana' : 'base';
+        console.log(`🔗 Selected ${chain} payment scheme`);
+        
+        // Create payment payload with payer field for Lambda compatibility
         const paymentPayload = {
           scheme: paymentRequirement.scheme,
           network: paymentRequirement.network,
@@ -146,10 +199,12 @@ const PremiumAnalysisUpsell = ({
           amount: paymentRequirement.amount,
           chainId: paymentRequirement.chainId,
           payTo: paymentRequirement.payTo,
+          payer: address, // Use 'payer' field that Lambda expects
           from: address,
           timestamp: Date.now(),
           nonce: crypto.randomUUID(),
           signature: signature, // Use the wallet signature we already have
+          message: message, // Include the original message that was signed
         };
 
         // Encode payment payload as base64 for x402 header
@@ -158,12 +213,13 @@ const PremiumAnalysisUpsell = ({
 
         setPaymentStatus("settled");
 
-        // Retry the request with the x402 payment header
+        // Retry the request with the x402 payment header AND chain header
         response = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "X-Payment": paymentHeader,
+            "X-Chain": chain, // Add chain header to route correctly
           },
           body: JSON.stringify(requestBody),
         });

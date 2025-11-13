@@ -581,6 +581,26 @@ function createErrorResponse(message, statusCode = 500) {
 }
 
 /**
+ * Detect if an address is Solana format (base58) or Ethereum format (hex)
+ */
+function detectAddressFormat(address) {
+  // Ethereum addresses: 0x followed by 40 hex characters
+  const ethRegex = /^0x[a-fA-F0-9]{40}$/;
+  if (ethRegex.test(address)) {
+    return 'ethereum';
+  }
+  
+  // Solana addresses: 32-44 base58 characters (no 0x prefix)
+  // Base58 alphabet: 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnopqrstuvwxyz
+  const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  if (base58Regex.test(address)) {
+    return 'solana';
+  }
+  
+  return 'unknown';
+}
+
+/**
  * Verify wallet signature to ensure payment authorization is valid
  * Supports:
  * - Ethereum EOA (Externally Owned Accounts)
@@ -592,17 +612,33 @@ async function verifyWalletSignature(payment) {
     const { walletAddress, signature, message, chain } = payment;
 
     console.log("🔍 Verifying signature for address:", walletAddress);
-    console.log("🔍 Chain:", chain || "base (default)");
+    console.log("🔍 Chain header:", chain || "not specified");
     console.log("🔍 Message:", message);
     console.log("🔍 Signature length:", signature.length);
 
-    // Route to appropriate verification based on chain
-    if (chain === "solana") {
+    // SMART ADDRESS DETECTION: Detect address format to route correctly
+    const detectedFormat = detectAddressFormat(walletAddress);
+    console.log("🔍 Detected address format:", detectedFormat);
+
+    // Route to appropriate verification based on chain header OR detected format
+    if (chain === "solana" || detectedFormat === 'solana') {
       console.log("◎ Verifying Solana signature...");
+      if (detectedFormat === 'solana' && chain !== 'solana') {
+        console.log("💡 Chain header mismatch corrected: address is Solana format");
+      }
       return await verifySolanaSignature(walletAddress, signature, message);
     }
 
-    // Default to Ethereum verification
+    // Only attempt Ethereum verification if address format is Ethereum
+    if (detectedFormat !== 'ethereum') {
+      console.error("❌ Address format unknown or invalid:", walletAddress);
+      console.error("  Expected: Ethereum (0x...) or Solana (base58)");
+      return false;
+    }
+
+    // Ethereum verification path
+    console.log("🔷 Proceeding with Ethereum verification for address:", walletAddress);
+    
     // First, try standard EOA signature verification
     try {
       const isEOAValid = await verifyMessage({
@@ -619,6 +655,7 @@ async function verifyWalletSignature(payment) {
       console.log(
         "⚠️ EOA verification failed, trying smart wallet verification..."
       );
+      console.log("  Error:", eoaError.message);
     }
 
     // If EOA verification fails, try EIP-1271 smart wallet verification
@@ -702,20 +739,35 @@ async function verifySolanaSignature(publicKeyString, signatureBase64, message) 
     // But Lambda can't easily use Node.js crypto for ed25519, so we'll validate format
     
     console.log("🔍 Solana signature validation:");
+    console.log("  - Public key:", publicKeyString);
     console.log("  - Public key length:", publicKeyString.length);
     console.log("  - Signature length:", signatureBase64.length);
     
-    // Basic validation: Solana public keys are 32-44 chars base58
-    // Solana signatures are ~88 chars base64
-    const isValidPublicKey = publicKeyString.length >= 32 && publicKeyString.length <= 44;
-    const isValidSignature = signatureBase64.length >= 80 && signatureBase64.length <= 100;
-    
-    if (!isValidPublicKey || !isValidSignature) {
-      console.log("❌ Invalid Solana signature format");
+    // Validate Solana public key is base58
+    // Base58 alphabet: 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnopqrstuvwxyz
+    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]+$/;
+    if (!base58Regex.test(publicKeyString)) {
+      console.log("❌ Invalid Solana address - contains non-base58 characters");
+      console.log("  Invalid characters found in:", publicKeyString);
       return false;
     }
     
-    console.log("✅ Solana signature format valid (MVP mode)");
+    // Basic validation: Solana public keys are typically 32-44 chars base58
+    const isValidPublicKeyLength = publicKeyString.length >= 32 && publicKeyString.length <= 44;
+    if (!isValidPublicKeyLength) {
+      console.log("❌ Invalid Solana public key length:", publicKeyString.length);
+      return false;
+    }
+    
+    // Validate signature format (base64 for our implementation)
+    // Solana signatures are typically 64 bytes = 88 chars in base64
+    const isValidSignatureLength = signatureBase64.length >= 80 && signatureBase64.length <= 130;
+    if (!isValidSignatureLength) {
+      console.log("❌ Invalid Solana signature length:", signatureBase64.length);
+      return false;
+    }
+    
+    console.log("✅ Solana address and signature format valid (MVP mode)");
     console.log("⚠️ Production should verify ed25519 signature cryptographically");
     
     // MVP: Accept valid-looking Solana signatures

@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:balances": "node test-balances.js"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.835.0",
