@@ -2,10 +2,6 @@
 
 **Autonomous AI Agent for Personalized Fitness Coaching**
 
-> 🤖 **Solana x402 Hackathon Submission**  
-> Target: Best x402 Agent Application ($20,000 prize)  
-> Built with Amazon Bedrock AgentCore • Amazon Nova Lite • Multi-step Reasoning
-
 **🔗 Live Demo:** [imperfectcoach.netlify.app](https://imperfectcoach.netlify.app)
 
 ---
@@ -66,11 +62,14 @@ We're transforming AI agents from simple payment users to payment optimizers wit
 
 ### For Developers
 ```bash
-git clone https://github.com/thisyearnofear/imperfecthigher
-cd imperfecthigher
-npm install
-npm run dev
+git clone https://github.com/thisyearnofear/imperfectcoach
+cd imperfectcoach
+# Install pnpm if you don't have it: npm install -g pnpm
+pnpm install
+pnpm run dev
 ```
+
+> **Note**: This project now uses pnpm as the package manager for better disk space efficiency and faster installations. While npm still works, pnpm is recommended.
 
 ---
 
@@ -102,7 +101,6 @@ npm run dev
 
 ### User Guides
 - **[User Guide](docs/USER_GUIDE.md)** - Complete features and usage instructions
-- **[Demo Script](docs/DEMO_SCRIPT.md)** - 3-minute presentation for hackathon judges
 
 ### Technical Documentation
 - **[Architecture](docs/ARCHITECTURE.md)** - Complete system design and implementation
@@ -116,24 +114,6 @@ npm run dev
 
 ---
 
-## 🎯 Solana x402 Hackathon Value
-
-### Why We'll Win
-1. **Working Agent**: Sophisticated AI fitness coach vs. hackathon prototypes
-2. **Proven x402**: Enhanced existing integration with intelligent routing
-3. **Smart Economic Decisions**: First agent to make autonomous payment routing
-4. **Multi-Chain Pioneer**: Demonstrates true autonomous economic intelligence
-
-### Demo Experience
-Watch our AI fitness coach make real-time economic decisions:
-- **$0.001 micro-tip** → Automatically selects Solana (90% fee savings)
-- **$0.05 premium analysis** → Offers user choice with live cost comparison  
-- **$0.10 agent coaching** → Intelligently chooses Base (established infrastructure)
-
-All seamless. All autonomous. All while maintaining a single user experience.
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License
@@ -142,10 +122,6 @@ This project is licensed under the MIT License
 
 ## 🙏 Acknowledgments
 
-**Solana x402 Hackathon** - For pushing the boundaries of internet payments  
 **Amazon Bedrock Team** - For AgentCore and Nova Lite  
 **TensorFlow.js & MediaPipe** - Computer vision foundation  
 **Base & Coinbase** - CDP Wallet infrastructure and Smart Wallet
-
----
-*Built with ❤️ for athletes everywhere. Submitted to Solana x402 Hackathon.*
