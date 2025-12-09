@@ -3,6 +3,9 @@
 **Autonomous AI Agent for Personalized Fitness Coaching**
 
 **🔗 Live Demo:** [imperfectcoach.netlify.app](https://imperfectcoach.netlify.app)
+ 
+> **🏆 Avalanche Hack2Build: Payments x402 Participant**  
+> Implementing autonomous agent payments with x402 protocol across Base, Avalanche, and Solana.
 
 ---
 
@@ -28,11 +31,11 @@ We're transforming AI agents from simple payment users to payment optimizers wit
 - **Accurate Rep Counting**: Automatic detection with range-of-motion validation
 - **Form Scoring**: 0-100% accuracy rating per exercise
 
-### 💰 Intelligent Multi-Chain Payments
-- **Smart Payment Routing**: AI automatically selects optimal blockchain (Base or Solana)
-- **Cost Optimization**: Up to 90% fee savings on micro-payments via Solana
-- **Seamless Experience**: Single payment flow with invisible chain selection
-- **Graceful Fallback**: Base network as reliable backup if Solana unavailable
+### 💰 x402 Multi-Chain Payments
+- **Server-Driven Protocol**: HTTP 402 Payment Required for API-native micropayments
+- **Multichain Support**: Base Sepolia, Avalanche C-Chain, Solana Devnet
+- **Zero Account Friction**: No signup, no KYC, just wallet + signature
+- **AI-Agent Native**: Designed for autonomous agents to pay for API access
 
 ### 🧠 Three Coaching Tiers
 - **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)
@@ -91,22 +94,18 @@ pnpm run dev
 - Smart Contracts (Base Sepolia)
 
 **Payments**
-- x402pay protocol (Base + Solana)
-- CDP Wallet (autonomous treasury)
-- USDC on Base & SOL/USDC on Solana
+- x402 protocol (HTTP 402 Payment Required)
+- Base Sepolia, Avalanche C-Chain, Solana Devnet
+- USDC stablecoin settlement
 
 ---
 
 ## 📚 Documentation
 
-### User Guides
-- **[User Guide](docs/USER_GUIDE.md)** - Complete features and usage instructions
-
 ### Technical Documentation
-- **[Architecture](docs/ARCHITECTURE.md)** - Complete system design and implementation
+- **[Architecture](docs/ARCHITECTURE.md)** - Complete system design and x402 implementation
 - **[Development](docs/DEVELOPMENT.md)** - Setup, testing, and development practices
 - **[Deployment](docs/DEPLOYMENT.md)** - Deployment procedures and monitoring
-- **[Solana Payments](docs/SOLANA_PAYMENTS.md)** - Multi-chain payment implementation
 
 ### Quick References
 - **[AWS Deployment Script](aws-lambda/deploy.sh)** - One-command Lambda deployment

@@ -7,8 +7,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Brain, Sparkles, Zap, DollarSign } from "lucide-react";
 import { useAccount } from "wagmi";
-import { UnifiedPaymentFlow, PaymentStatus } from "./payments";
-import type { PaymentResponse } from "../lib/payments/payment-types";
+import { PaymentStatus } from "./payments";
 
 interface WorkoutData {
   reps: number;
@@ -33,69 +32,8 @@ export function EnhancedBedrockAnalysis({
   onAnalysisComplete 
 }: EnhancedBedrockAnalysisProps) {
   const { address } = useAccount();
-  const [showPayment, setShowPayment] = useState(false);
-  const [paymentResponse, setPaymentResponse] = useState<PaymentResponse | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  const handleStartAnalysis = () => {
-    if (!address) {
-      alert("Please connect your wallet first");
-      return;
-    }
-    setShowPayment(true);
-  };
-
-  const handlePaymentSuccess = async (response: PaymentResponse) => {
-    console.log("✅ Payment successful, starting analysis...", response);
-    setPaymentResponse(response);
-    setShowPayment(false);
-    setIsAnalyzing(true);
-
-    try {
-      // Call the enhanced AWS Lambda with multi-chain support
-      const analysisResponse = await fetch('/api/premium-analysis', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Payment-Verified': 'true',
-          'X-Chain': response.chain,
-          'X-Transaction': response.transactionHash || ''
-        },
-        body: JSON.stringify({
-          workoutData,
-          paymentChain: response.chain,
-          enhancedAnalysis: true
-        })
-      });
-
-      if (analysisResponse.ok) {
-        const result = await analysisResponse.json();
-        setAnalysisResult(result);
-        onAnalysisComplete?.(result);
-      } else {
-        throw new Error('Analysis failed');
-      }
-    } catch (error) {
-      console.error('Analysis error:', error);
-      alert('Analysis failed. Please try again.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handlePaymentError = (error: string) => {
-    console.error("❌ Payment failed:", error);
-    alert(`Payment failed: ${error}`);
-    setShowPayment(false);
-  };
-
-  const resetAnalysis = () => {
-    setShowPayment(false);
-    setPaymentResponse(null);
-    setAnalysisResult(null);
-    setIsAnalyzing(false);
-  };
 
   return (
     <div className="space-y-6">

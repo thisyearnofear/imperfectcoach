@@ -1,21 +1,14 @@
 // Payment Components Index - ORGANIZED structure
-// Clean exports for all payment-related components
 
-export { ChainSelector } from './ChainSelector';
-export { UnifiedPaymentFlow } from './UnifiedPaymentFlow';
 export { PaymentStatus } from './PaymentStatus';
 
-// Re-export payment types for convenience
-export type {
-  PaymentChain,
-  PaymentContext,
-  PaymentRequest,
-  PaymentResponse,
-  ChainRoutingDecision,
-  PaymentFlowState
-} from '../../lib/payments/payment-types';
+// Re-export x402 protocol utilities
+export type { X402Challenge, SignedPayment } from '../../lib/payments/x402-signer';
+export { signChallenge, encodePaymentHeader, decodePaymentHeader } from '../../lib/payments/x402-signer';
 
-// Re-export payment utilities
-export { paymentRouter } from '../../lib/payments/payment-router';
-export { x402UnifiedHandler } from '../../lib/payments/x402-unified';
-export { solanaPayment } from '../../lib/payments/solana-payment';
+// Re-export network configuration
+export type { X402Network, NetworkConfig } from '../../lib/payments/x402-chains';
+export { X402_NETWORKS, getNetworkConfig, getAllNetworks, isEVMNetwork } from '../../lib/payments/x402-chains';
+
+// Re-export payment types
+export type { BlockchainScore, UserProfile, ContractConfig } from '../../lib/payments/payment-types';

@@ -101,36 +101,72 @@ Step 5: Synthesis
 └─ Comprehensive coaching with actionable plan
 ```
 
-## 💰 Multi-Chain Payment Infrastructure
+## 💰 x402 Multi-Chain Payment Infrastructure
 
-### x402pay Multi-Chain Integration ✅ IMPLEMENTED
+### x402 Protocol: Server-Driven, AI-Agent Native
 
-**Protocol:** Pay-per-use AI analysis without subscriptions  
-**Networks:** 
-- **Base Sepolia** (Premium/Agent) - USDC ✅ Existing Infrastructure
-- **Solana Devnet** (Micro-payments) - SOL/USDC ✅ NEW Implementation
-**Smart Routing:** ✅ Automatic chain selection based on transaction value (<100ms decision time)
+**What is x402?** An open payment protocol (Coinbase/x402 Foundation) that revives HTTP 402 for machine-to-machine commerce. It allows AI agents to autonomously pay for API access without accounts, pre-authorization, or complex authentication. The protocol is blockchain-agnostic and designed for the AI agent economy.
 
-### Intelligent Routing Logic ✅ BUILT
-```typescript
-// Intelligent chain selection based on transaction context
-if (amount < $0.01) → Solana (ultra-low fees)
-if (context === 'agent') → Base (established infrastructure)  
-if (context === 'premium') → User choice with cost optimization
+**Key Principle:** Server specifies payment requirements. Client signs proof of intent. Settlement happens server-side.
+
+### Correct x402 Flow (NOT Traditional Payments)
+
+```
+1. CLIENT REQUEST (no payment)
+   POST /analyze-workout
+   { workoutData, userAddress }
+   
+2. SERVER CHALLENGE (402 Payment Required)
+   HTTP 402
+   {
+     "amount": "50000",        // microunits (0.05 USDC)
+     "asset": "USDC",
+     "network": "base-sepolia", // SERVER SPECIFIES
+     "payTo": "0x...",
+     "scheme": "eip-191",
+     "timestamp": 1234567890,
+     "nonce": "uuid"
+   }
+   
+3. CLIENT SIGNS CHALLENGE
+   Sign exact challenge from server (not custom message)
+   signature = wallet.sign(challenge)
+   
+4. CLIENT RETRY (with signature)
+   POST /analyze-workout
+   Header: X-Payment: base64(challenge + signature)
+   
+5. SERVER VERIFIES & SETTLES
+   - Verify signature matches challenge
+   - Settle payment onchain
+   - Return resource (HTTP 200)
 ```
 
-### Enhanced Multi-Chain Flow ✅ ACTIVE
-```
-User Request → Smart Chain Analysis → Optimal Route Selection → x402 Challenge → 
-Wallet Sign (Base/Solana) → Multi-Chain Transfer → Unified Treasury → 
-AI Processing → Analysis Delivery
-```
+### Supported Networks
 
-### Technical Implementation:
-- **Payment Router**: `UnifiedPaymentRouter` with network health monitoring
-- **Chain Selector UI**: Real-time fee comparison and selection
-- **Unified Handler**: `X402UnifiedHandler` consolidating all payment logic
-- **Fallback System**: Graceful degradation to Base if Solana fails
+| Network | Asset | Use Case | Status |
+|---------|-------|----------|--------|
+| **Base Sepolia** | USDC | Premium ($0.05) & Agent ($0.10) | ✅ Active |
+| **Avalanche C-Chain** | USDC | Premium tier | ✅ Active |
+| **Solana Devnet** | USDC | Micro-payments | ✅ Active |
+
+The server returns `challenge.network` based on context. The client uses that network—**no client-side chain selection**.
+
+### Technical Implementation (Fixed)
+
+**Old (WRONG):** Client tries to "process" payments, route intelligently, settle transactions  
+**New (CORRECT):** Client only signs challenges. Server handles everything.
+
+Key files:
+- `src/lib/payments/x402-signer.ts` - Simple signer (sign + retry)
+- `src/lib/payments/x402-chains.ts` - Network configurations
+- `aws-lambda/index.mjs` - Server returns 402, verifies signatures
+
+**Removed complexity:**
+- ❌ `X402UnifiedHandler` (overly complex)
+- ❌ `PaymentRouter` (client shouldn't choose chains)
+- ❌ Custom message signing (use server's challenge)
+- ❌ "Smart routing" logic (server decides)
 
 ## 📜 Smart Contracts
 
@@ -1125,5 +1161,27 @@ If issues occur:
 2. Can revert `src/lib/contracts.ts` to old addresses
 3. Old contracts still functional (but require operator authorization)
 
+
 ---
-*Built with Enhancement-First principles for Solana x402 Hackathon*
+
+## 🎯 Hackathon: Avalanche Hack2Build Payments x402
+
+**Timeline:** November 27 - December 12, 2025
+
+**Implementation Status:** ✅ Complete
+- Base Sepolia: EVM signature verification (eip-191)
+- Avalanche C-Chain: EVM signature verification (eip-191) 
+- Solana Devnet: Ed25519 signature verification (tweetnacl)
+
+**Test Commands:**
+```bash
+# EVM (Base or Avalanche)
+node aws-lambda/test-x402-with-signature.mjs [base-sepolia|avalanche-c-chain]
+
+# Solana
+node aws-lambda/test-x402-solana.mjs
+```
+
+---
+
+*Built with Enhancement-First principles for Hack2Build: Payments x402*

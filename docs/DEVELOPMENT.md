@@ -18,9 +18,9 @@
 - Smart Contracts (Base Sepolia)
 
 **Payments**
-- x402pay protocol (Base + Solana)
-- CDP Wallet (autonomous treasury)
-- USDC on Base & SOL/USDC on Solana
+- x402 protocol (server-driven challenges)
+- Base Sepolia, Avalanche C-Chain, Solana Devnet
+- USDC/SOL stablecoin settlement
 
 ## 🚀 Quick Start for Developers
 
@@ -78,6 +78,82 @@ npm run lint
 cd aws-lambda
 node index.mjs
 ```
+
+### x402 Protocol Testing
+
+### x402 Protocol Testing
+
+We provide automated scripts to test the full x402 flow (challenge → sign → verify) across all supported networks.
+
+**EVM Chains (Base Sepolia, Avalanche C-Chain)**
+```bash
+# Test Base Sepolia (default)
+node aws-lambda/test-x402-with-signature.mjs
+
+# Test Avalanche C-Chain
+node aws-lambda/test-x402-with-signature.mjs avalanche-c-chain
+```
+
+**Solana Devnet**
+```bash
+# Test Solana Devnet (using Ed25519)
+node aws-lambda/test-x402-solana.mjs
+```
+
+These scripts simulate a client request, receive the 402 challenge, sign it using the appropriate scheme (EIP-191 or Ed25519), and retry the request to verify the server accepts the signature.
+
+#### Frontend x402 Flow Testing
+
+1. **Test Payment Challenge Flow**
+   - Open browser DevTools (Console tab)
+   - Navigate to Premium Analysis section
+   - Click "Unlock Analysis"
+   - Check Network tab: should see 402 response with challenge
+   - Verify challenge has: `amount`, `asset`, `network`, `payTo`, `scheme`
+
+2. **Test Signature Signing**
+   - After 402 is received, wallet should prompt for signature
+   - Check console: `🔐 Signing x402 challenge`
+   - Verify signature appears in Network request headers (`X-Payment`)
+
+3. **Test Payment Verification**
+   - After retry with signature, should see 200 response
+   - Check console: `✅ Payment verified, analyzing...`
+   - Should display analysis results
+
+4. **Test Multi-Chain Flows**
+   - Base Sepolia: connect Base wallet → request analysis → verify 402 has `network: 'base-sepolia'`
+   - Avalanche C-Chain: connect Avalanche wallet → request → verify `network: 'avalanche-c-chain'`
+   - Solana Devnet: connect Phantom → request → verify `network: 'solana-devnet'`
+
+#### Test Checklist
+
+- [ ] Base Sepolia
+  - [ ] Request without payment → 402
+  - [ ] Sign challenge → signature valid
+  - [ ] Retry with signature → 200
+  
+- [ ] Avalanche C-Chain
+  - [ ] Request without payment → 402 with avalanche network
+  - [ ] Sign challenge with Avalanche wallet
+  - [ ] Verify signature server-side
+  - [ ] Receive analysis
+  
+- [ ] Solana Devnet
+  - [ ] Request without payment → 402 with solana network
+  - [ ] Sign challenge with Phantom wallet
+  - [ ] Verify Solana signature (tweetnacl)
+  - [ ] Receive analysis
+
+- [ ] Invalid Signatures
+  - [ ] Tamper with amount in X-Payment header → should fail verification
+  - [ ] Use wrong wallet signature → should fail
+  - [ ] Expired nonce → should fail
+
+- [ ] Edge Cases
+  - [ ] Multiple rapid requests → each gets own nonce
+  - [ ] Signature expires after timeout → new 402 required
+  - [ ] Network timeout during signature → graceful retry
 
 ## 🚀 Deployment
 
@@ -183,17 +259,7 @@ export const utilityName = (param: Type): ReturnType => {
 3. Enable verbose logging with `localStorage.debug = '*'`
 
 ### Backend Debugging
-1. Check CloudWatch logs:
-   ```bash
-   aws logs tail /aws/lambda/imperfect-coach-premium-analysis \
-     --follow --region eu-north-1
-   ```
-
-2. Test locally with environment variables:
-   ```bash
-   export SOLANA_PRIVATE_KEY="your-key"
-   node index.mjs
-   ```
+Use the automated test scripts described in the "x402 Protocol Testing" section above for reliable debugging. Logs can be viewed via CloudWatch or the local script output.
 
 ### Solana Debugging
 1. Check wallet balance:
@@ -249,7 +315,7 @@ The project uses GitHub Actions for CI/CD:
 See [ARCHITECTURE.md](ARCHITECTURE.md) for complete system architecture.
 
 ### Solana Payments
-See [SOLANA_PAYMENTS.md](SOLANA_PAYMENTS.md) for Solana payment implementation.
+Solana integration details are covered in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### User Guide
 See [USER_GUIDE.md](USER_GUIDE.md) for user-facing features.

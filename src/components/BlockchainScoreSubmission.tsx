@@ -22,7 +22,6 @@ import { useUserAuth, useUserBlockchain } from "@/hooks/useUserHooks";
 import { useSolanaWallet } from "@/hooks/useSolanaWallet";
 import { InlineWallet } from "./UnifiedWallet";
 import { NetworkStatus } from "./NetworkStatus";
-import { ChainSelector } from "./ChainSelector";
 import { Exercise, RepData } from "@/lib/types";
 import {
   getDefaultChain,
@@ -49,7 +48,6 @@ export const BlockchainScoreSubmission = ({
 }: BlockchainScoreSubmissionProps) => {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [selectedChain, setSelectedChain] = useState<ChainType | null>(null);
-  const [showChainSelector, setShowChainSelector] = useState(false);
   
   // Base chain hooks
   const { isAuthenticated, isConnected, signInWithEthereum } = useUserAuth();

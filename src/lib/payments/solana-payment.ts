@@ -8,11 +8,7 @@ import {
   Transaction,
   LAMPORTS_PER_SOL,
 } from '@solana/web3.js';
-import type { 
-  SolanaPaymentDetails,
-  PaymentResponse,
-  PaymentRequest 
-} from './payment-types';
+// Types defined locally - payment-types.ts only has BlockchainScore, UserProfile, ContractConfig
 
 export interface SolanaPaymentRequest {
   amount: bigint;
@@ -28,6 +24,14 @@ export interface SolanaTransactionResult {
   confirmed: boolean;
   slot?: number;
   blockTime?: number;
+}
+
+// Local PaymentRequest type for createPayment method
+export interface PaymentRequest {
+  amount: bigint;
+  nonce?: string;
+  context?: string;
+  timestamp?: number;
 }
 
 export class SolanaPaymentModule {
@@ -72,8 +76,8 @@ export class SolanaPaymentModule {
    * Generates Solana Pay compatible payment request
    */
   async createPayment(request: PaymentRequest): Promise<SolanaPaymentRequest> {
-    const recipient = import.meta.env.VITE_SOLANA_TREASURY_ADDRESS || 
-                     'CmGgLQL36Y9ubtTsy2zmE46TAxwCBm66onZmPPhUWNqv';
+    const recipient = import.meta.env.VITE_SOLANA_TREASURY_ADDRESS ||
+      'CmGgLQL36Y9ubtTsy2zmE46TAxwCBm66onZmPPhUWNqv';
 
     return {
       amount: request.amount,
@@ -92,25 +96,24 @@ export class SolanaPaymentModule {
   async processTransaction(payment: SolanaPaymentRequest): Promise<SolanaTransactionResult> {
     try {
       console.log('💳 Processing Solana payment:', payment);
-      
+
       const wallet = await this.getWallet();
       if (!wallet.publicKey) {
         throw new Error('Wallet is not connected or public key is unavailable.');
       }
-      
+
       const transaction = await this.createTransaction(payment, wallet.publicKey);
-      
+
       const signature = await this.signAndSendTransaction(wallet, transaction);
-      
+
       const confirmation = await this.confirmTransaction(signature);
-      
+
       return {
         signature,
         confirmed: !!confirmation,
-        slot: confirmation?.slot,
-        blockTime: confirmation?.blockTime || Math.floor(Date.now() / 1000)
+        blockTime: Math.floor(Date.now() / 1000)
       };
-      
+
     } catch (error) {
       console.error('Solana payment processing failed:', error);
       throw error;
@@ -163,7 +166,7 @@ export class SolanaPaymentModule {
         lamports: payment.amount,
       })
     );
-    
+
     const { blockhash } = await this.connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = fromPublicKey;
@@ -191,7 +194,7 @@ export class SolanaPaymentModule {
   }
 
   lamportsToSol(lamports: bigint): number {
-    return Number(lamports) / LAMPORTS_PER-SOL;
+    return Number(lamports) / LAMPORTS_PER_SOL;
   }
 
   solToLamports(sol: number): bigint {
@@ -203,12 +206,12 @@ export class SolanaPaymentModule {
    */
   async getNetworkHealth(): Promise<{ healthy: boolean; tps: number; slot: number }> {
     try {
-      const health = await this.connection.getHealth();
-      if (health !== 'ok') {
+      // Check network by getting slot (getHealth may not be available in all versions)
+      const slot = await this.connection.getSlot();
+      if (!slot) {
         return { healthy: false, tps: 0, slot: 0 };
       }
-      
-      const slot = await this.connection.getSlot();
+
       const performanceSamples = await this.connection.getRecentPerformanceSamples(5);
       const avgTps = performanceSamples.reduce((acc, sample) => acc + sample.numTransactions / sample.samplePeriodSecs, 0) / performanceSamples.length;
 
@@ -217,7 +220,7 @@ export class SolanaPaymentModule {
         tps: Math.round(avgTps),
         slot,
       };
-      
+
     } catch (error) {
       console.error('Failed to get Solana network health:', error);
       return {

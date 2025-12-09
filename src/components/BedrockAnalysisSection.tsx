@@ -191,60 +191,39 @@ const BedrockAnalysisSection = ({
         }),
       });
 
-      // Enhanced multi-chain x402 flow - can be replaced with SmartPayButton
+      // x402 protocol: server returns 402 with challenge
       if (response.status === 402) {
-        // TODO: Replace this manual flow with SmartPayIntegration component
-        // Example: <SmartPayIntegration amount={50000} context="premium" onSuccess={...} />
-
-        const paymentChallenge = await response.json();
-
-        // Extract payment requirements - support both old 'accepts' and new 'schemes' format
-        const paymentRequirement = paymentChallenge.accepts?.[0] || paymentChallenge.schemes?.[0];
-        if (!paymentRequirement) {
-          throw new Error(
-            "Invalid payment challenge - no payment requirements found"
-          );
+        const { challenge } = await response.json();
+        if (!challenge) {
+          throw new Error("Invalid payment challenge - server did not provide challenge");
         }
 
-        // Create x402 payment payload with correct structure
-        const paymentTimestamp = Math.floor(Date.now() / 1000);
-        const paymentNonce = crypto.randomUUID();
+        // Sign the exact challenge from server
+        const challengeMessage = JSON.stringify({
+          amount: challenge.amount,
+          asset: challenge.asset,
+          network: challenge.network,
+          payTo: challenge.payTo,
+          scheme: challenge.scheme,
+          timestamp: challenge.timestamp,
+          nonce: challenge.nonce
+        });
 
-        // Create payment message for x402 signature
-        const x402Message = `x402 Payment Authorization
-Scheme: ${paymentRequirement.scheme}
-Network: ${paymentRequirement.network}
-Asset: ${paymentRequirement.asset}
-Amount: ${paymentRequirement.amount}
-PayTo: ${paymentRequirement.payTo}
-Payer: ${address}
-Timestamp: ${paymentTimestamp}
-Nonce: ${paymentNonce}`;
+        const signature = await signMessage(challengeMessage);
 
-        // Generate new signature specifically for x402 payment using appropriate wallet
-        const x402Signature = await signMessage(x402Message);
-
-        // Create the payment payload in exact x402 format
-        const paymentPayload = {
-          scheme: paymentRequirement.scheme,
-          network: paymentRequirement.network,
-          asset: paymentRequirement.asset,
-          amount: paymentRequirement.amount,
-          payTo: paymentRequirement.payTo,
-          payer: address,
-          timestamp: paymentTimestamp,
-          nonce: paymentNonce,
-          signature: x402Signature,
-          message: x402Message,
+        // Create signed payment
+        const signedPayment = {
+          ...challenge,
+          signature,
+          payer: address
         };
 
-        // Encode payment payload as base64 for x402 header
-        const paymentHeader = btoa(JSON.stringify(paymentPayload));
-        console.log("📦 Created x402 payment header with real signature");
+        // Encode for X-Payment header
+        const paymentHeader = btoa(JSON.stringify(signedPayment));
 
         setPaymentStatus("settled");
 
-        // Retry the request with the x402 payment header
+        // Retry with signature
         response = await fetch(apiUrl, {
           method: "POST",
           headers: {
@@ -264,7 +243,6 @@ Nonce: ${paymentNonce}`;
               chain: walletChain,
               addressFormat: walletChain === "solana" ? "base58" : "hex"
             }
-            // Payment is in X-Payment header, not in body
           }),
         });
       }
