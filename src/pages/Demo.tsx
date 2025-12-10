@@ -1,5 +1,5 @@
-// Demo Page - Showcase for Solana x402 Hackathon
-// Demonstrates both manual control and AI automation capabilities
+// Demo Page - Showcase for x402 Decentralized Agent Economy
+// Demonstrates agent autonomy, multi-chain routing, and inter-agent payments
 
 import React from 'react';
 import { SmartPayDemo } from '../components/demos/SmartPayDemo';
@@ -35,19 +35,19 @@ export function DemoPage() {
           </h2>
           
           <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-6">
-            Watch our AI fitness coach make real-time economic decisions - automatically 
-            selecting optimal blockchains for cost and speed. Built for the{' '}
-            <strong>Solana x402 Hackathon</strong>.
+            Watch our AI agents make real-time economic decisions - autonomously selecting 
+            optimal blockchains, negotiating service pricing, and coordinating multi-agent solutions. 
+            Built for the <strong>Avalanche Hack2Build</strong>.
           </p>
 
           <div className="flex flex-wrap justify-center gap-3 mb-8">
             <Badge className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2">
               <Award className="h-4 w-4 mr-2" />
-              Target: Best x402 Agent Application ($20k)
+              Avalanche Hack2Build Participant
             </Badge>
             <Badge variant="outline" className="px-4 py-2">
               <Shield className="h-4 w-4 mr-2" />
-              Production Ready
+              Agent Economy Live
             </Badge>
             <Badge variant="outline" className="px-4 py-2">
               <Github className="h-4 w-4 mr-2" />
@@ -178,28 +178,29 @@ export function DemoPage() {
           <SmartPayDemo />
         </div>
 
-        {/* Hackathon Info */}
-        <Card className="mt-12 border border-yellow-200 bg-yellow-50">
+        {/* Agent Economy Info */}
+        <Card className="mt-12 border border-green-200 bg-green-50">
           <CardHeader>
-            <CardTitle className="text-center text-yellow-800">
-              Solana x402 Hackathon Submission
+            <CardTitle className="text-center text-green-800">
+              Decentralized Agent Economy
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-yellow-700 mb-4">
-              This project demonstrates the future of AI agent economics - where agents 
-              don't just use payments, they optimize them intelligently.
+            <p className="text-green-700 mb-4">
+              This project demonstrates the next frontier: autonomous agents that negotiate 
+              with each other, pay transparently, and coordinate complex multi-service solutions. 
+              No centralized intermediary—just pure agent-to-agent coordination via x402.
             </p>
             <div className="flex justify-center gap-4">
               <Button 
                 variant="outline"
-                onClick={() => window.open('https://solana-x402-hackathon.devpost.com', '_blank')}
+                onClick={() => window.open('https://build.avax.network/hackathons/5ce3a8c2-21db-40fa-b40f-f82ecdde99db#submission', '_blank')}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Hackathon Details
               </Button>
               <Button 
-                onClick={() => window.open('https://github.com/your-repo/tree/solana-enhancement', '_blank')}
+                onClick={() => window.open('https://github.com/thisyearnofear/imperfectcoach', '_blank')}
               >
                 <Github className="h-4 w-4 mr-2" />
                 Source Code

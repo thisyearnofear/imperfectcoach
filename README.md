@@ -4,16 +4,22 @@
 
 **🔗 Live Demo:** [imperfectcoach.netlify.app](https://imperfectcoach.netlify.app)
  
-> **🏆 Avalanche Hack2Build: Payments x402 Participant**  
-> Implementing autonomous agent payments with x402 protocol across Base, Avalanche, and Solana.
+> **🏆 Avalanche Hack2Build: x402 Agent Economy Participant**  
+> Building a decentralized agent economy where autonomous agents negotiate, pay for, and exchange services via x402 protocol on Avalanche, Base, and Solana.
 
 ---
 
 ## 🎯 What is Imperfect Coach?
 
-Imperfect Coach is an **autonomous AI agent system** that combines computer vision, multi-step reasoning, and tool integration to deliver personalized fitness coaching. The agent independently analyzes workout performance, queries historical data, benchmarks against similar athletes, and generates adaptive training plans—all without human intervention.
+Imperfect Coach is an **autonomous AI agent system** that demonstrates a **decentralized agent economy powered by x402**. Multiple specialized agents (fitness coach, nutrition planner, massage booking, calendar coordinator) negotiate, pay, and exchange services with each other using x402 micropayments—without any centralized middleman.
 
-We're transforming AI agents from simple payment users to payment optimizers with intelligent multi-chain routing.
+**The Vision**: Agents don't just use payments; they architect entire service workflows, make autonomous routing decisions, and coordinate multi-agent solutions. All transactions are metered, auditable, and revenue-split transparently.
+
+Users benefit from:
+- **Integrated Services**: One interface, multiple specialized agents cooperating
+- **Cost Transparency**: See exactly which agent did what and charged how much
+- **Agent Competition**: Services compete for quality and price
+- **Privacy Control**: Grant/revoke agent access to your data anytime
 
 ---
 
@@ -31,11 +37,12 @@ We're transforming AI agents from simple payment users to payment optimizers wit
 - **Accurate Rep Counting**: Automatic detection with range-of-motion validation
 - **Form Scoring**: 0-100% accuracy rating per exercise
 
-### 💰 x402 Multi-Chain Payments
-- **Server-Driven Protocol**: HTTP 402 Payment Required for API-native micropayments
-- **Multichain Support**: Base Sepolia, Avalanche C-Chain, Solana Devnet
-- **Zero Account Friction**: No signup, no KYC, just wallet + signature
-- **AI-Agent Native**: Designed for autonomous agents to pay for API access
+### 💰 x402 Decentralized Agent Economy
+- **Agent-to-Agent Payments**: Nutrition Agent pays Fitness Agent for data via x402
+- **Smart Routing**: Agents autonomously choose chains based on cost, speed, reliability
+- **Multichain Support**: Avalanche C-Chain (primary), Base Sepolia, Solana Devnet
+- **Zero Account Friction**: No signup, no KYC, just agent wallet + signature
+- **Transparent Settlement**: All payments logged on-chain, user sees full audit trail
 
 ### 🧠 Three Coaching Tiers
 - **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)

@@ -57,34 +57,79 @@ Meets all AWS-defined AI agent requirements:
 
 ## 💰 x402 Multi-Chain Payment Infrastructure
 
-### x402 Protocol: Server-Driven, AI-Agent Native
+### x402 Protocol: Server-Driven, AI-Agent Native Economy
 
-The x402 protocol allows AI agents to autonomously pay for API access without accounts or pre-authorization. We leverage **0xGasless AgentKit** to provide our agents with on-chain identity and autonomous payment capabilities.
- 
-**Agent-to-Agent Economy:**
-- **Identity**: Agents use 0xGasless Smart Accounts (ERC-4337)
-- **Settlement**: Instant, gasless payments on Base/Avalanche
- 
-**Correct x402 Flow:**
+The x402 protocol enables **true decentralized agent economies** where autonomous agents independently negotiate, pay for, and exchange services without pre-authorization or accounts. We leverage **0xGasless AgentKit** to provide our agents with on-chain identity and autonomous payment capabilities.
+
+**Core x402 Flow:**
 ```
-1. Client makes request without payment
-2. Server returns HTTP 402 with payment challenge
-3. Client signs the exact challenge from server
-4. Client retries with signed challenge in header
-5. Server verifies signature and settles payment
+1. Agent A requests service from Agent B (without payment)
+2. Agent B returns HTTP 402 with service pricing & requirements
+3. Agent A signs the challenge with its identity
+4. Agent A retries with signed payment authorization
+5. Agent B verifies signature and settles on-chain
+6. Service executes and both agents update state
 ```
+
+### Agent Economy Layers (Phase-based Implementation)
+
+#### Phase 1: User-Agent Payment Routing ✅ ACTIVE
+**Current**: Users pay via x402 for coaching tiers
+- Micro-payments to Solana (lower fees)
+- Premium services to Base/Avalanche (reliability)
+- **Enhancement**: Agent autonomously decides routing based on:
+  - Current network congestion
+  - Real-time gas prices
+  - Historical latency data
+  - User's preferred network
+
+#### Phase 2: Agent Identity & Discovery (NEXT)
+**Scenario**: Agents need to find and trust each other before transacting
+- **Registry**: Agents register capabilities, pricing, and health status
+- **Discovery**: Agents query the registry to find service providers (e.g., "Find me a nutrition agent < $0.05")
+- **Identity**: Cryptographic verification of agent identity via 0xGasless/Signatures
+- **Routing**: Protocol finds the best path/agent for the request
+
+#### Phase 3: Agent-to-Agent Data Exchange
+**Scenario**: Nutrition agent queries fitness agent about recent performance
+- **Agent A** (Fitness Coach): Has user's workout data, form metrics
+- **Agent B** (Nutrition Planner): Needs performance context to optimize diet
+- **Payment**: Agent B pays small fee for data access (x402)
+- **Privacy**: User controls what data agents can access
+- **Result**: Agents coordinate seamlessly; nutrition optimized with fitness context
+
+#### Phase 4: Multi-Service Marketplace (FUTURE)
+**Scenario**: Multi-agent services compete for user needs
+- **Coaching Agent**: Provides training plans ($0.10)
+- **Massage Booking Agent**: Books recovery sessions ($0.50/booking)
+- **Nutrition Agent**: Meal planning ($0.03 per meal)
+- **Calendar Agent**: Coordinates scheduling via x402 micro-payments
+- **Protocol**: Agents bid for user's needs, user controls budget & preferences
+- **Settlement**: All payments routed through RevenueSplitter with split rules
+
+#### Phase 5: Autonomous Agent Chaining (FUTURE)
+**Scenario**: Complex fitness goals require multiple agents
+1. User: "Prepare me for a triathlon in 12 weeks"
+2. Coach Agent analyzes fitness level (queries Benchmark Agent via x402)
+3. Coach Agent requests Nutrition Plan (pays Nutrition Agent via x402)
+4. Nutrition Agent requests Body Metrics (pays Fitness Agent via x402)
+5. All services coordinate with Calendar Agent for scheduling
+6. Each transaction is metered, auditable, and revenue-split
 
 ### Supported Networks
 | Network | Asset | Use Case | Status |
 |---------|-------|----------|--------|
-| **Base Sepolia** | USDC | Premium ($0.05) & Agent ($0.10) | ✅ Active |
-| **Avalanche C-Chain** | USDC | Premium tier | ✅ Active |
-| **Solana Devnet** | USDC | Micro-payments | ✅ Active |
+| **Avalanche C-Chain** | USDC | Primary - Enterprise reliability | ✅ Active |
+| **Base Sepolia** | USDC | Secondary - High throughput | ✅ Active |
+| **Solana Devnet** | USDC | Micro-payments - Lowest cost | ✅ Active |
 
 ### Technical Implementation
-- `src/lib/payments/x402-signer.ts` - Client signer (EOA & Smart compatible)
-- `src/lib/payments/x402-chains.ts` - Network configurations
+- `src/lib/payments/x402-signer.ts` - Client/Agent signer (EOA & Smart compatible)
+- `src/lib/payments/x402-chains.ts` - Network configurations & smart routing
+- `src/lib/payments/agent-router.ts` - **NEW**: Agent-driven routing based on network conditions
 - `aws-lambda/index.mjs` - Server uses **0xGasless AgentKit** for identity & verification
+- `aws-lambda/agent-discovery.mjs` - **NEW**: Agent registry and routing
+- `aws-lambda/inter-agent-payments.mjs` - **NEW**: Agent-to-agent payment settlement
 - **EIP-1271 Support**: Full support for Smart Account signatures
 
 ## 📜 Smart Contracts
@@ -246,3 +291,262 @@ export const ENDPOINTS = {
   AGENT_COACH: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/agent-coach",
 } as const;
 ```
+
+---
+
+## 🚀 X402 Agent Economy Implementation Roadmap
+
+### Principle: ENHANCEMENT FIRST + AGGRESSIVE CONSOLIDATION
+All work enhances existing payment/agent infrastructure. No new services created—only consolidated and extended.
+
+### PHASE 1: Consolidate Payment Routing (CURRENT)
+**Goal**: Single source of truth for payment logic, agent-driven network selection
+
+**Audit & Consolidation**:
+1. Identify all payment decision logic across:
+   - `src/components/PremiumAnalysisUpsell.tsx` (hardcoded chain logic)
+   - `src/components/AgentCoachUpsell.tsx` (duplicate payment flow)
+   - `aws-lambda/index.mjs` (server-side routing)
+2. Extract to `src/lib/payments/payment-router.ts`:
+   - Network health checks (gas prices, latency)
+   - Dynamic routing decisions (cost vs. speed vs. reliability)
+   - Fallback strategies
+3. **Remove duplication**: Delete `AgentCoachUpsell.tsx` payment code, use shared router
+4. **Result**: Single routing source, 40% less payment code
+
+**Timeline**: Week 1-2  
+**Metrics**: Code coverage +30%, payment logic consolidated to 1 module
+
+---
+
+### PHASE 2: Agent Identity & Discovery (NEXT)
+**Goal**: Agents can discover and call each other via x402
+
+**Implementation**:
+1. Create `src/lib/agents/agent-registry.ts`:
+   - Agent metadata: name, capabilities, pricing
+   - Health status: uptime, response times
+   - Payment terms: which chains accepted, fees
+
+2. Create `aws-lambda/agent-discovery.mjs`:
+   - Registry endpoint: `GET /agents?capability=nutrition&maxPrice=0.10`
+   - Agent heartbeat: each agent registers/pings every 60s
+   - Health tracking with Cloudwatch
+
+3. Create `aws-lambda/inter-agent-router.ts`:
+   - Fitness Agent can call: `POST /query` with x402 payment
+   - Router finds appropriate Agent B, validates pricing
+   - Establishes payment channel via x402
+
+**Interfaces**:
+```typescript
+interface Agent {
+  id: string;
+  name: string;
+  capabilities: string[];
+  endpoint: string;
+  pricing: Record<string, number>; // capability -> cost
+  acceptedChains: Chain[];
+  lastHealthCheck: number;
+  uptime: number; // 0-100
+}
+
+interface InterAgentRequest {
+  agentId: string;
+  capability: string;
+  payload: unknown;
+  maxPrice: number;
+  preferredChain?: Chain;
+}
+```
+
+**Timeline**: Week 3-4  
+**Metrics**: 2+ agents registering, successful inter-agent queries logged
+
+---
+
+### PHASE 3: Agent-to-Agent Data Exchange with x402 (PHASE 2 PRIORITY)
+**Goal**: Nutrition Agent pays Fitness Agent for user health data
+
+**Scenario**: 
+```
+Nutrition Agent: "Give me user's last 7 days of workout data"
+Fitness Agent: [402 Challenge] "Pay 0.01 USDC"
+Nutrition Agent: [Signs & pays via x402] "Here's my payment"
+Fitness Agent: [Returns data + mints transaction on-chain]
+Nutrition Agent: [Uses data] "Creating optimized meal plan..."
+```
+
+**Implementation**:
+1. Enhance `aws-lambda/index.mjs`:
+   - Add `POST /agent/query-health-data` endpoint
+   - Requires x402 payment for data access
+   - Logs access to ledger (user can audit who accessed what)
+
+2. Create `aws-lambda/agent-payment-middleware.ts`:
+   - Verify agent identity (wallet signature)
+   - Check x402 payment before granting access
+   - Rate limiting per agent per time period
+
+3. Update `src/lib/cdp.ts`:
+   - Track agent data access in user's history
+   - User dashboard shows "Agent X accessed your workout data - $0.01"
+   - User can revoke agent access at any time
+
+4. Privacy controls in frontend:
+   ```typescript
+   interface DataAccessPolicy {
+     agentId: string;
+     allowedDataTypes: string[]; // "workout", "nutrition", "calendar"
+     maxMonthlySpend: number;
+     expiresAt: number;
+   }
+   ```
+
+**Timeline**: Week 5-6  
+**Metrics**: Agents successfully querying data, transactions recorded on-chain
+
+---
+
+### PHASE 4: Multi-Service Marketplace (FUTURE - Q2)
+**Goal**: Calendar, Massage Booking, Nutrition agents all coordinate via x402
+
+**Architecture**:
+1. Extend Agent Registry with capability tiers:
+   - Fitness Coach (required)
+   - Nutrition Planner (optional, +$0.03 per plan)
+   - Massage Booking (optional, +$0.50 per session)
+   - Calendar Coordinator (free, embedded in coach)
+
+2. SmartContract: `BookingOrchestrator.sol`:
+   - User sets budget for services ($1.00/week)
+   - Coach Agent can allocate budget across services
+   - All x402 payments flow through RevenueSplitter
+   - User receives detailed breakdown
+
+3. Booking flow via x402:
+   ```
+   Coach Agent → Calendar Agent: "Book 3 sessions this week"
+   Calendar Agent → Massage Booking Agent: "Find 3 slots for massage"
+   Massage Booking Agent: [402] "Each slot costs $0.15"
+   Calendar Agent: [Pays via x402] "Book these 3 slots"
+   Massage Booking Agent: [Adds to calendar, settles payment]
+   Calendar Agent: Updates user calendar
+   ```
+
+**Timeline**: Q2 2025
+
+---
+
+### PHASE 5: Autonomous Agent Chaining (FUTURE - Q3)
+**Goal**: Complex requests trigger chains of agent calls, each settling independently
+
+**Example**:
+```
+User: "Optimize my fitness for tennis performance"
+
+Coach Agent:
+  1. Queries Benchmark Agent [x402 payment]
+  2. Requests Nutrition Agent's analysis [x402 payment]
+  3. Asks Calendar Agent for 3-month availability [free]
+  4. Requests Sport-Specific Training from Tennis Agent [x402 payment]
+  5. Coordinates all into 12-week plan
+
+Each agent pays its dependencies from its own budget.
+User sees transparent cost breakdown:
+  - Coach Agent: $0.10
+  - Nutrition: $0.05
+  - Benchmark: $0.02
+  - Tennis Coach: $0.08
+  Total: $0.25 (all from coaching budget)
+```
+
+**Timeline**: Q3 2025
+
+---
+
+## 🔒 Privacy & Consent Layer
+
+All agent-to-agent data exchange requires explicit user consent:
+
+**User Dashboard**:
+```
+🔐 Agent Permissions
+
+✅ Fitness Coach (Internal)
+   - Can access: Workout data, form metrics, calendar
+   
+❌ Nutrition Planner (disabled)
+   - Would access: Workout data, body metrics
+   - Cost: $0.03 per meal plan
+   [Enable this agent]
+
+❌ Massage Booking (disabled)
+   - Would access: Availability calendar
+   - Cost: $0.50 per booking
+   [Enable this agent]
+
+📊 Data Access Audit Log
+  [Today 10:30am] Fitness Coach accessed workout data
+  [Today 9:15am] Nutrition Agent accessed body metrics ($0.03)
+```
+
+**Smart Contract**: `DataAccessControl.sol`
+- User can revoke agent access instantly
+- Agent must request permission before each query type
+- All x402 payments logged immutably
+
+---
+
+## 📋 Implementation Checklist (Ordered by Principle Priority)
+
+### AGGRESSIVE CONSOLIDATION (Week 1-2)
+- [ ] Audit payment logic across all components
+- [ ] Extract to single `payment-router.ts` module
+- [ ] Remove duplicate payment code from upsell components
+- [ ] Create unit tests for router
+
+### ENHANCEMENT FIRST (Week 3-4)
+- [ ] Enhance Bedrock Agent with network health awareness
+- [ ] Add agent routing decision to agent tools
+- [ ] Bedrock Agent autonomously selects chain based on conditions
+
+### DRY (Week 3-6)
+- [ ] Agent Registry becomes single source of truth for agent info
+- [ ] Payment Router uses Registry for pricing
+- [ ] Frontend uses Discovery API instead of hardcoded agents
+
+### CLEAN & MODULAR (Week 5-6)
+- [ ] Separate concerns: Discovery, Routing, Payment, Privacy
+- [ ] Each module has clear interfaces and dependencies
+- [ ] Clear error handling for failed inter-agent calls
+
+### PERFORMANT (Week 5-6)
+- [ ] Cache agent registry (TTL 5 min)
+- [ ] Rate limit agent queries (avoid DDoS)
+- [ ] Monitor gas prices, update routing decisions every 10s
+
+---
+
+## 🎯 Success Metrics
+
+**Phase 1**: 
+- [ ] Single payment router handling 100% of payment decisions
+- [ ] Bedrock Agent autonomously chooses chain (logs show routing decisions)
+
+**Phase 2**:
+- [ ] 3+ agents registering in discovery
+- [ ] Agents successfully querying each other
+
+**Phase 3**:
+- [ ] Nutrition Agent successfully queries Fitness Agent data via x402
+- [ ] Data access audit log visible in user dashboard
+
+**Phase 4**:
+- [ ] Booking flow works across 3+ agents
+- [ ] User can enable/disable services and see cost breakdown
+
+**Overall**:
+- [ ] Revenue increasing (more agents = more users)
+- [ ] Code complexity decreasing (consolidation benefits)
+- [ ] Agent economy is the primary feature, not a secondary payment system
