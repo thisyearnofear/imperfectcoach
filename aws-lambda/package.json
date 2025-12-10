@@ -18,9 +18,11 @@
   "author": "Imperfect Coach",
   "license": "MIT",
   "dependencies": {
+    "@0xgasless/agentkit": "^0.0.16",
     "@aws-sdk/client-bedrock-agent-runtime": "^3.914.0",
     "@aws-sdk/client-bedrock-runtime": "^3.0.0",
     "@coinbase/coinbase-sdk": "^0.25.0",
+    "@payai/x402": "^0.7.1-payai.8",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.95.0",
     "bs58": "^6.0.0",

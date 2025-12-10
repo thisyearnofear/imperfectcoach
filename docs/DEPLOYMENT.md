@@ -73,7 +73,9 @@ cd aws-lambda
      --environment Variables='{
        "SOLANA_PRIVATE_KEY":"your-key",
        "SOLANA_TREASURY_ADDRESS":"your-address",
-       "SOLANA_RPC_URL":"https://api.devnet.solana.com"
+       "SOLANA_RPC_URL":"https://api.devnet.solana.com",
+       "AGENT_PRIVATE_KEY":"your-agent-evm-private-key",
+       "CX0_API_KEY":"your-0xgasless-api-key"
      }' \
      --region eu-north-1
    ```

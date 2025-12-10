@@ -8,10 +8,10 @@ set -e
 echo "🤖 Deploying AI Coach Agent Lambda..."
 
 # Configuration
-FUNCTION_NAME="imperfect-coach-agent"
+FUNCTION_NAME="imperfect-coach-premium-analysis"
 REGION="eu-north-1"
 RUNTIME="nodejs18.x"
-HANDLER="agent-coach-handler.handler"
+HANDLER="index.handler"
 ROLE_NAME="lambda-bedrock-execution-role"
 
 # Colors for output
@@ -24,7 +24,7 @@ echo -e "${BLUE}📦 Installing dependencies...${NC}"
 npm install
 
 echo -e "${BLUE}🗜️  Creating deployment package...${NC}"
-zip -r agent-coach-lambda.zip agent-coach-handler.mjs node_modules/ package.json -x "*.git*"
+zip -r agent-coach-lambda.zip index.mjs node_modules/ package.json -x "*.git*"
 
 echo -e "${BLUE}☁️  Checking if Lambda function exists...${NC}"
 if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION 2>/dev/null; then

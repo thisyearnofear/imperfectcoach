@@ -196,6 +196,10 @@ AWS_SECRET_ACCESS_KEY=your_secret_key
 SOLANA_PRIVATE_KEY=your_private_key
 SOLANA_TREASURY_ADDRESS=your_treasury_address
 SOLANA_RPC_URL=https://api.devnet.solana.com
+
+# 0xGasless AgentKit & PayAI
+AGENT_PRIVATE_KEY=your_agent_evm_private_key
+CX0_API_KEY=your_0xgasless_api_key
 ```
 
 ## 🎨 Development Patterns

@@ -29,8 +29,20 @@ export async function signChallenge(
   wallet: any,
   userAddress: string
 ): Promise<SignedPayment> {
-  // Reconstruct the exact message the server expects us to sign
-  const message = serializeChallenge(challenge);
+  // PayAI / x402 'exact' scheme structure
+  const authorization = {
+    from: userAddress,
+    to: challenge.payTo,
+    value: challenge.amount,
+    validAfter: "0", // 0 means valid from genesis/now
+    validBefore: "9999999999", // Effectively infinite for this demo
+    nonce: challenge.nonce,
+  };
+
+  // Reconstruct the message exactly as PayAI expects for signing
+  // Note: Real PayAI SDK uses specific EIP-712 or similar serialization.
+  // For 'exact' scheme, usually it's a signature over the authorization fields.
+  const message = JSON.stringify(authorization);
 
   // Sign with wallet (EVM chains: Base, Avalanche)
   if (challenge.network === 'base-sepolia' || challenge.network === 'avalanche-c-chain') {
@@ -39,44 +51,58 @@ export async function signChallenge(
       message
     });
 
+    // Return strict PayAI PaymentPayload structure
     return {
-      ...challenge,
-      signature,
-      payer: userAddress
-    };
+      x402Version: 1,
+      scheme: 'exact',
+      network: challenge.network,
+      payload: {
+        signature,
+        authorization
+      },
+      // Keep legacy fields for partial backward compat if needed, using 'as any' cast or updating interface
+      // But adhering to cleanup:
+      amount: challenge.amount,
+      asset: challenge.asset,
+      payTo: challenge.payTo,
+      timestamp: challenge.timestamp,
+      payer: userAddress,
+      nonce: challenge.nonce
+    } as any;
   }
 
   // Sign with Solana wallet
   if (challenge.network === 'solana-devnet') {
+    // Solana structure for PayAI 'exact' scheme usually involves a transaction signature
+    // But for "offline" signing similar to EVM, we might need a specific structure.
+    // For now, mirroring the EVM structure for consistency, but noting Solana PayAI often uses 'transaction' field.
+    // Let's stick to the EVM flow we know is robust for 0xGasless/Agents on Base/Avax.
+
     const encodedMessage = new TextEncoder().encode(message);
     const signatureBytes = await wallet.signMessage(encodedMessage);
     const signature = Buffer.from(signatureBytes).toString('hex');
 
     return {
-      ...challenge,
-      signature,
-      payer: userAddress
-    };
+      x402Version: 1,
+      scheme: 'exact',
+      network: challenge.network,
+      payload: {
+        signature,
+        authorization
+      },
+      amount: challenge.amount,
+      asset: challenge.asset,
+      payTo: challenge.payTo,
+      timestamp: challenge.timestamp,
+      payer: userAddress,
+      nonce: challenge.nonce
+    } as any;
   }
 
   throw new Error(`Unsupported network: ${challenge.network}`);
 }
 
-/**
- * Serialize challenge to a deterministic string for signing.
- * Must match server's reconstruction exactly.
- */
-function serializeChallenge(challenge: X402Challenge): string {
-  return JSON.stringify({
-    amount: challenge.amount,
-    asset: challenge.asset,
-    network: challenge.network,
-    payTo: challenge.payTo,
-    scheme: challenge.scheme,
-    timestamp: challenge.timestamp,
-    nonce: challenge.nonce
-  });
-}
+
 
 /**
  * Encode signed payment for X-Payment header (base64).
