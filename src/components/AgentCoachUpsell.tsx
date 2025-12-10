@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 import { trackPaymentTransaction } from "@/lib/cdp";
+import { PaymentRouter, PaymentResult } from "@/lib/payments/payment-router";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,18 +31,18 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   const [currentStep, setCurrentStep] = useState<string>("");
   const [progress, setProgress] = useState(0);
   const [activeTools, setActiveTools] = useState<string[]>([]);
-  const [error, setError] = useState<{title: string, message: string} | null>(null);
+  const [error, setError] = useState<{ title: string, message: string } | null>(null);
   const { toast } = useToast();
-  
+
   const clearError = () => {
     setError(null);
   };
-  
+
   // Wallet integration - support both EVM and Solana
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient({ chainId: baseSepolia.id });
   const { solanaAddress, isSolanaConnected } = useSolanaWallet();
-  
+
   // Determine which wallet is connected
   const walletAddress = address || solanaAddress;
   const walletConnected = isConnected || isSolanaConnected;
@@ -62,7 +63,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
     setCurrentStep("Initializing AI Coach Agent...");
 
     try {
-      // Simulate agent reasoning progress for UX
+      // Simulate agent reasoning progress for UI feedback
       const progressSteps = [
         { step: "Processing payment...", progress: 15, tools: [] },
         { step: "Agent analyzing workout data...", progress: 30, tools: [] },
@@ -73,7 +74,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
         { step: "Synthesizing insights...", progress: 95, tools: ["analyze_pose_data", "query_workout_history", "benchmark_performance", "generate_training_plan"] },
       ];
 
-      // Start progress simulation
+      // Start progress simulation background task
       let stepIndex = 0;
       const progressInterval = setInterval(() => {
         if (stepIndex < progressSteps.length) {
@@ -85,162 +86,44 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
         }
       }, 2000);
 
-      // Prepare request body with agent mode
-      const timestamp = Math.floor(Date.now() / 1000);
-      const requestBody = {
-        workoutData: {
-          ...workoutData,
-          userId: workoutData.userId || walletAddress,
-        },
-        agentMode: true, // Enable real agent functionality
-        payment: {
-          walletAddress: walletAddress,
-          signature: "placeholder", // Will be replaced with x402 signature
-          message: "I authorize payment for AI Agent analysis",
-          amount: "100000", // $0.10 USDC
-          timestamp,
-          chain: walletChain,
-        },
-      };
+      // Execute actual Agent Logic via x402
+      console.log("🤖 Starting Autonomous Agent loop via PaymentRouter...");
 
-      const apiUrl = "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
+      // NOTE: We don't need manual x402 challenge/sign/retry logic here anymore!
+      // The PaymentRouter handles the negotiation completely.
 
-      // First, make a request WITHOUT payment data to get the 402 challenge
-      // This is the x402 pattern - server tells us what payment it needs
-      let response = await fetch(apiUrl, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "X-Chain": walletChain || "base" // Tell server which chain we're using
-        },
-        body: JSON.stringify({
+      const result: PaymentResult = await PaymentRouter.execute({
+        apiUrl: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
+        requestBody: {
           workoutData: {
             ...workoutData,
             userId: workoutData.userId || walletAddress,
           },
-          agentMode: true,
-          // Don't send payment yet - wait for 402 challenge
-        }),
+          agentMode: true, // Enable real agent functionality
+          // Placeholder payment object for legacy compatibility
+          payment: {
+            walletAddress: walletAddress,
+            amount: "100000",
+            chain: walletChain
+          }
+        },
+        evmWallet: walletClient,
+        evmAddress: address, // 'address' from wagmi
+        preferredChain: walletChain === 'solana' ? 'solana' : 'base'
       });
 
-      // If we get a 402 Payment Required, handle the x402 flow
-      if (response.status === 402) {
-        console.log("💰 Payment required - processing x402 payment for agent...");
-
-        const paymentChallenge = await response.json();
-        console.log("🎯 Agent payment challenge received:", paymentChallenge);
-
-        // Extract payment requirements - support both old 'accepts' and new 'schemes' format
-        const paymentRequirement = paymentChallenge.accepts?.[0] || paymentChallenge.schemes?.[0];
-        if (!paymentRequirement) {
-          throw new Error("Invalid payment challenge - no payment requirements found");
-        }
-
-        // Create x402 payment payload
-        const paymentTimestamp = Math.floor(Date.now() / 1000);
-        const paymentNonce = crypto.randomUUID();
-
-        // Create payment message for x402 signature
-        const x402Message = `x402 Payment Authorization
-Scheme: ${paymentRequirement.scheme}
-Network: ${paymentRequirement.network}
-Asset: ${paymentRequirement.asset}
-Amount: ${paymentRequirement.amount}
-PayTo: ${paymentRequirement.payTo}
-Payer: ${walletAddress}
-Timestamp: ${paymentTimestamp}
-Nonce: ${paymentNonce}`;
-
-        console.log("🖊️ Signing x402 payment message for agent...");
-
-        // Generate signature for x402 payment based on wallet type
-        let x402Signature: string;
-        
-        if (walletChain === "solana" && isSolanaConnected) {
-          // Solana wallet signature using solanaWalletManager
-          const managerState = solanaWalletManager.getState();
-          if (!managerState.publicKey || !managerState.adapter) {
-            throw new Error("Solana wallet not properly connected");
-          }
-          
-          const messageBytes = new TextEncoder().encode(x402Message);
-          const signatureBytes = await solanaWalletManager.signMessage(messageBytes);
-          // Convert signature bytes to base64 for Solana
-          x402Signature = btoa(String.fromCharCode(...signatureBytes));
-        } else if (walletClient && address) {
-          // EVM wallet signature
-          x402Signature = await walletClient.signMessage({
-            account: address,
-            message: x402Message,
-          });
-        } else {
-          throw new Error("No wallet available for signing");
-        }
-
-        console.log("✅ x402 signature generated for agent");
-
-        // Update request body with x402 payment details
-        requestBody.payment = {
-          walletAddress: walletAddress,
-          signature: x402Signature,
-          message: x402Message,
-          amount: paymentRequirement.amount,
-          timestamp: paymentTimestamp,
-          nonce: paymentNonce,
-          scheme: paymentRequirement.scheme,
-          network: paymentRequirement.network,
-          asset: paymentRequirement.asset,
-          payTo: paymentRequirement.payTo,
-          chain: walletChain,
-        };
-
-        // Create x402 payment payload
-        const paymentPayload = {
-          signature: x402Signature,
-          message: x402Message,
-          amount: paymentRequirement.amount,
-          timestamp: paymentTimestamp,
-          nonce: paymentNonce,
-          scheme: paymentRequirement.scheme,
-          network: paymentRequirement.network,
-          asset: paymentRequirement.asset,
-          payTo: paymentRequirement.payTo,
-          payer: walletAddress,
-        };
-        
-        // Encode payment payload as base64 for x402 header (standard format)
-        const paymentHeader = btoa(JSON.stringify(paymentPayload));
-        console.log("📦 Created base64-encoded x402 payment header");
-        
-        // Make the actual request with payment in x402 header format
-        response = await fetch(apiUrl, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "X-Payment": paymentHeader,
-            "X-Chain": walletChain || "base"
-          },
-          body: JSON.stringify({
-            workoutData: {
-              ...workoutData,
-              userId: workoutData.userId || walletAddress,
-            },
-            agentMode: true,
-          }),
-        });
-      }
-
+      // Stop the simulation once real result (or error) comes back
       clearInterval(progressInterval);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Agent analysis failed");
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Agent analysis failed");
       }
 
-      const result = await response.json();
+      const agentResult = result.data;
+
       setProgress(100);
       setCurrentStep("Analysis complete!");
-      setAgentAnalysis(result);
+      setAgentAnalysis(agentResult);
 
       // Track payment transaction if available
       if (result.transactionHash) {
@@ -255,44 +138,41 @@ Nonce: ${paymentNonce}`;
 
       toast({
         title: "✅ AI Agent Analysis Complete",
-        description: `Used ${result.toolsUsed?.length || 0} tools in ${result.iterationsUsed || 0} reasoning steps`,
+        description: `Used ${agentResult.toolsUsed?.length || 0} tools in ${agentResult.iterationsUsed || 0} reasoning steps`,
       });
 
       if (onSuccess) {
-        onSuccess(result);
+        onSuccess(agentResult);
       }
-    } catch (error) {
-      console.error("Agent analysis error:", error);
-      
-      // Enhanced error messaging based on error type
+    } catch (err: unknown) {
+      console.error("Agent analysis error:", err);
+
+      // Enhanced error messaging
       let title = "Agent Analysis Failed";
       let message = "Unable to process autonomous analysis. Please try again.";
-      
-      if (error instanceof Error) {
-        if (error.message.includes("payment")) {
-          title = "Payment Required";
-          message = "Please ensure you have sufficient USDC funds for the agent analysis.";
-        } else if (error.message.includes("network")) {
-          title = "Network Error";
-          message = "Unable to connect to the agent service. Please check your connection and try again.";
-        } else if (error.message.includes("timeout")) {
-          title = "Request Timeout";
-          message = "The agent is taking longer than expected. Please try again in a few minutes.";
-        } else {
-          message = error.message;
-        }
+      const errMessage = err instanceof Error ? err.message : String(err);
+
+      if (errMessage.includes("payment") || errMessage.includes("Payment")) {
+        title = "Payment Required";
+        message = "Please ensure you have sufficient USDC funds.";
+      } else if (errMessage.includes("network")) {
+        title = "Network Error";
+        message = "Unable to connect to service.";
+      } else if (errMessage.includes("timeout")) {
+        title = "Request Timeout";
+        message = "The agent is taking longer than expected.";
+      } else {
+        message = errMessage;
       }
-      
-      // Set error state to show error view
+
       setError({ title, message });
-      
-      // Also show toast for immediate feedback
+
       toast({
         title: `❌ ${title}`,
         description: message,
         variant: "destructive",
       });
-      
+
       setProgress(0);
       setCurrentStep("");
     } finally {
@@ -317,7 +197,7 @@ Nonce: ${paymentNonce}`;
           <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4 text-center">
             <p className="text-sm text-red-300">{error.message}</p>
           </div>
-          
+
           <div className="flex gap-2 justify-center">
             <AnimatedButton
               onClick={clearError}
@@ -334,7 +214,7 @@ Nonce: ${paymentNonce}`;
               Close
             </AnimatedButton>
           </div>
-          
+
           <div className="text-xs text-muted-foreground pt-2 border-t text-center">
             <p>If this issue persists, please contact support with the error details above.</p>
           </div>
@@ -342,14 +222,14 @@ Nonce: ${paymentNonce}`;
       </Card>
     );
   }
-  
+
   // Processing view with live feedback
   if (isProcessing) {
     return (
       <Card className="border-purple-500/50 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/30 backdrop-blur-sm relative overflow-hidden">
         {/* Animated background */}
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-indigo-500/10 animate-pulse" />
-        
+
         <CardHeader className="relative">
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-purple-400 animate-pulse" />
@@ -363,7 +243,7 @@ Nonce: ${paymentNonce}`;
             Autonomous multi-step analysis in progress...
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-6 relative">
           {/* Progress Bar */}
           <div className="space-y-2">
@@ -397,7 +277,7 @@ Nonce: ${paymentNonce}`;
                 ].map((tool) => {
                   const Icon = tool.icon;
                   const isActive = activeTools.includes(tool.name);
-                  
+
                   return (
                     <div
                       key={tool.name}
@@ -624,7 +504,7 @@ Nonce: ${paymentNonce}`;
         </div>
 
         {/* Balance Display */}
-        <WalletBalanceDisplay 
+        <WalletBalanceDisplay
           variant="detailed"
           requiredAmount="0.10"
           className="mb-4"

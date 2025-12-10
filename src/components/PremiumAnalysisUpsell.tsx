@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useAccount, useWalletClient } from "wagmi";
-import { useWallet } from "@solana/wallet-adapter-react";
 import { baseSepolia } from "wagmi/chains";
-import { trackPaymentTransaction, updateTransactionStatus } from "@/lib/cdp";
+import { trackPaymentTransaction } from "@/lib/cdp";
+import { PaymentRouter, PaymentResult } from "@/lib/payments/payment-router";
+import { useSolanaWallet } from "@/hooks/useSolanaWallet";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +14,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2, Trophy, ExternalLink, CheckCircle } from "lucide-react";
-// Removed x402-fetch import due to wallet interface conflicts
 
 interface WorkoutData {
   exercise: string;
@@ -52,21 +52,18 @@ const PremiumAnalysisUpsell = ({
   const [error, setError] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [analysisData, setAnalysisData] = useState<string | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<
-    "idle" | "processing" | "verified" | "settled" | "complete"
-  >("idle");
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
-  
+
   // Base (EVM) wallet
-  const { isConnected: isBaseConnected } = useAccount();
+  const { isConnected: isBaseConnected, address: baseAddress } = useAccount();
   const { data: walletClient } = useWalletClient({
     chainId: baseSepolia.id,
   });
-  
-  // Solana wallet
-  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, connected: isSolanaConnected } = useWallet();
-  
-  // Determine which wallet is connected based on preferred chain
+
+  // Solana wallet (via centralized hook)
+  const { isSolanaConnected } = useSolanaWallet();
+
+  // Determine if we can proceed based on preferred chain
   const isConnected = preferredChain === 'solana' ? isSolanaConnected : isBaseConnected;
 
   const handlePaymentAndAnalysis = async () => {
@@ -77,210 +74,58 @@ const PremiumAnalysisUpsell = ({
 
     setIsLoading(true);
     setError(null);
-    setPaymentStatus("processing");
+    setTransactionHash(null);
 
     try {
-      let address: string;
-      let signature: string;
-      let message: string;
-      const timestamp = Date.now();
+      console.log("🚀 Starting premium analysis via PaymentRouter...");
 
-      // Handle Solana wallet
-      if (preferredChain === 'solana') {
-        if (!solanaPublicKey || !solanaSignMessage) {
-          throw new Error("Solana wallet not properly connected");
-        }
-        
-        address = solanaPublicKey.toBase58();
-        message = `Authorize payment of 0.05 USDC for premium workout analysis\nTimestamp: ${timestamp}\nAddress: ${address}`;
-        
-        console.log("✍️ Signing Solana payment authorization...");
-        const encodedMessage = new TextEncoder().encode(message);
-        const signatureBytes = await solanaSignMessage(encodedMessage);
-        signature = Buffer.from(signatureBytes).toString('base64');
-        console.log("✅ Solana payment authorization signed");
-      } 
-      // Handle Base (EVM) wallet
-      else {
-        if (!walletClient) {
-          throw new Error("Base wallet not properly connected");
-        }
-        
-        address = walletClient.account?.address;
-        if (!address) {
-          throw new Error("No wallet address found");
-        }
-        
-        message = `Authorize payment of 0.05 USDC for premium workout analysis\nTimestamp: ${timestamp}\nAddress: ${address}`;
-        
-        console.log("✍️ Signing Base payment authorization...");
-        signature = await walletClient.signMessage({
-          account: address,
-          message,
-        });
-        console.log("✅ Base payment authorization signed");
-      }
-
-      console.log("🚀 Starting premium analysis with x402 payment...");
-      console.log("💪 Workout data:", JSON.stringify(workoutData, null, 2));
-      console.log(`🔗 Using ${preferredChain} chain for payment`);
-
-      setPaymentStatus("verified");
-
-      const apiUrl =
-        "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
-
-      const requestBody = {
-        workoutData,
-        payment: {
-          walletAddress: address,
-          signature,
-          message,
-          amount: "50000",
-          timestamp,
+      const result: PaymentResult = await PaymentRouter.execute({
+        apiUrl: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
+        requestBody: {
+          workoutData,
+          // Legacy support: some endpoints might expect 'payment' object initially, 
+          // but x402 handles it via headers. We send minimal placeholder if needed.
+          payment: {
+            walletAddress: baseAddress || "solana-user",
+            timestamp: Date.now()
+          }
         },
-      };
-
-      console.log(
-        "💳 Making initial request to check for payment requirements..."
-      );
-
-      // First, make a request without payment to get the 402 challenge
-      let response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+        evmWallet: walletClient,
+        evmAddress: baseAddress,
+        preferredChain: preferredChain
       });
 
-      // If we get a 402 Payment Required, handle the x402 flow manually
-      if (response.status === 402) {
-        console.log("💰 Payment required - processing x402 payment...");
-
-        const paymentChallenge = await response.json();
-        console.log("🎯 Payment challenge received:", paymentChallenge);
-
-        // Extract payment requirements - support both old 'accepts' and new 'schemes' format
-        const availableSchemes = paymentChallenge.accepts || paymentChallenge.schemes;
-        if (!availableSchemes || availableSchemes.length === 0) {
-          throw new Error(
-            "Invalid payment challenge - no payment requirements found"
-          );
-        }
-        
-        // Select payment requirement based on preferred chain
-        let paymentRequirement;
-        if (preferredChain === 'solana') {
-          // Find Solana payment option
-          paymentRequirement = availableSchemes.find((scheme: any) => 
-            scheme.network?.includes('solana')
-          );
-          if (!paymentRequirement) {
-            console.warn('⚠️ Solana payment not available, falling back to Base');
-            paymentRequirement = availableSchemes[0];
-          }
-        } else {
-          // Find Base payment option
-          paymentRequirement = availableSchemes.find((scheme: any) => 
-            scheme.network?.includes('base') || scheme.network?.includes('ethereum')
-          ) || availableSchemes[0];
-        }
-        
-        // Determine actual chain from selected requirement
-        const chain = paymentRequirement.network?.includes('solana') ? 'solana' : 'base';
-        console.log(`🔗 Selected ${chain} payment scheme`);
-        
-        // Create payment payload with payer field for Lambda compatibility
-        const paymentPayload = {
-          scheme: paymentRequirement.scheme,
-          network: paymentRequirement.network,
-          asset: paymentRequirement.asset,
-          amount: paymentRequirement.amount,
-          chainId: paymentRequirement.chainId,
-          payTo: paymentRequirement.payTo,
-          payer: address, // Use 'payer' field that Lambda expects
-          from: address,
-          timestamp: Date.now(),
-          nonce: crypto.randomUUID(),
-          signature: signature, // Use the wallet signature we already have
-          message: message, // Include the original message that was signed
-        };
-
-        // Encode payment payload as base64 for x402 header
-        const paymentHeader = btoa(JSON.stringify(paymentPayload));
-        console.log("📦 Created x402 payment header");
-
-        setPaymentStatus("settled");
-
-        // Retry the request with the x402 payment header AND chain header
-        response = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Payment": paymentHeader,
-            "X-Chain": chain, // Add chain header to route correctly
-          },
-          body: JSON.stringify(requestBody),
-        });
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Analysis failed to complete");
       }
 
-      console.log("📡 x402 response status:", response.status);
-      console.log(
-        "📋 Response headers:",
-        Object.fromEntries(response.headers.entries())
-      );
+      console.log("✅ Analysis complete:", result.data);
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "Unknown error");
-        console.error("❌ x402 payment error response:", errorText);
-        throw new Error(
-          `Analysis failed with status ${response.status}: ${errorText}`
-        );
-      }
-
-      setPaymentStatus("settled");
-
-      // Parse analysis result
-      let analysisResult;
-      try {
-        const responseText = await response.text();
-        console.log("📄 Response length:", responseText.length);
-
-        analysisResult = JSON.parse(responseText);
-        console.log("✅ Analysis result parsed:", analysisResult);
-      } catch (parseError) {
-        console.error("💥 Failed to parse response:", parseError);
-        throw new Error(`Invalid response format: ${parseError.message}`);
-      }
+      const analysisResult = result.data;
 
       // Handle transaction hash from response
-      if (analysisResult.transactionHash) {
-        const txHash = analysisResult.transactionHash;
-        setTransactionHash(txHash);
+      if (result.transactionHash) {
+        setTransactionHash(result.transactionHash);
 
-        // Track the payment transaction with enhanced metadata
+        // Track the payment transaction 
         trackPaymentTransaction(
-          txHash,
-          "0.05", // amount
-          "USDC", // currency
-          "Premium workout analysis", // description
-          "x402 payment protocol" // facilitator
+          result.transactionHash,
+          "0.05",
+          "USDC",
+          "Premium workout analysis",
+          "x402 payment protocol"
         );
-
-        console.log("📝 Payment transaction tracked:", txHash);
       }
 
-      setPaymentStatus("complete");
       setAnalysisData(analysisResult.analysis);
       setShowResults(true);
       onAnalysisComplete(analysisResult);
+
     } catch (err: unknown) {
       console.error("💥 Premium Analysis Error:", err);
       const errorMessage =
         err instanceof Error ? err.message : "An unknown error occurred.";
       setError(errorMessage);
-      setPaymentStatus("idle");
     } finally {
       setIsLoading(false);
     }
@@ -290,7 +135,6 @@ const PremiumAnalysisUpsell = ({
     setShowResults(false);
     setAnalysisData(null);
     setError(null);
-    setPaymentStatus("idle");
     setTransactionHash(null);
     onOpenChange(false);
   };
@@ -347,47 +191,13 @@ const PremiumAnalysisUpsell = ({
               </ul>
             </div>
 
-            {/* Payment Status Indicator */}
-            {paymentStatus !== "idle" && (
+            {/* Status Indicator */}
+            {isLoading && (
               <div className="my-4 p-3 bg-blue-50 rounded-lg">
                 <div className="flex items-center gap-2 text-sm">
-                  {paymentStatus === "processing" && (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                      <span>Processing payment...</span>
-                    </>
-                  )}
-                  {paymentStatus === "verified" && (
-                    <>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>Payment verified, analyzing workout...</span>
-                    </>
-                  )}
-                  {paymentStatus === "settled" && (
-                    <>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>Payment settled, generating analysis...</span>
-                    </>
-                  )}
-                  {paymentStatus === "complete" && (
-                    <>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>Analysis complete!</span>
-                    </>
-                  )}
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                  <span>Processing secure x402 payment & analyzing...</span>
                 </div>
-                {transactionHash && (
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    <a
-                      href={`https://sepolia.basescan.org/tx/${transactionHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 hover:text-blue-600"
-                    >
-                      View transaction <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                )}
               </div>
             )}
 
@@ -408,11 +218,7 @@ const PremiumAnalysisUpsell = ({
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {paymentStatus === "processing" && "Processing Payment..."}
-                    {paymentStatus === "verified" && "Payment Verified..."}
-                    {paymentStatus === "settled" && "Analyzing Workout..."}
-                    {paymentStatus === "complete" && "Complete!"}
-                    {paymentStatus === "idle" && "Processing..."}
+                    Processing...
                   </>
                 ) : (
                   "Pay $0.05 USDC & Analyze"
@@ -447,6 +253,22 @@ const PremiumAnalysisUpsell = ({
                   {extractSummary(analysisData || "")}
                 </p>
               </div>
+
+              {/* Transaction Link */}
+              {transactionHash && (
+                <div className="p-2 bg-green-50/50 border border-green-100 rounded text-center">
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${transactionHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-green-600 hover:underline flex items-center justify-center gap-1"
+                  >
+                    <CheckCircle className="h-3 w-3" />
+                    Payment Verified on Blockchain
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
 
               {/* Full Analysis in Collapsible */}
               <details className="text-sm">

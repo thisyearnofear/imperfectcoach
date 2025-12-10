@@ -324,128 +324,57 @@ Solana integration details are covered in [ARCHITECTURE.md](ARCHITECTURE.md).
 ### User Guide
 See [USER_GUIDE.md](USER_GUIDE.md) for user-facing features.
 
-## 🚀 Phase 1: Payment Router Consolidation (CURRENT PRIORITY)
+## 🚀 X402 Agent Economy Roadmap Status
 
-### Overview
-**Goal**: Extract all payment logic into a single module, enable agent-driven network routing.
+### ✅ Phase 1: Payment Router Consolidation (COMPLETED)
+- [x] Audit payment logic across all files
+- [x] Create `src/lib/payments/payment-router.ts`
+- [x] Update `PremiumAnalysisUpsell.tsx` to use router
+- [x] Update `AgentCoachUpsell.tsx` to use router
+- [x] Verify Base/Solana payment flows
 
-**Principle**: ENHANCEMENT FIRST + AGGRESSIVE CONSOLIDATION
+### ✅ Phase 2: Agent Identity & Discovery (COMPLETED)
+- [x] Create `src/lib/agents/types.ts`
+- [x] Build `aws-lambda/agent-discovery.mjs` (Registry Service)
+- [x] Build `src/lib/agents/agent-registry.ts` (Client Wrapper)
+- [x] Verify Registration & Discovery flow (`test-discovery-local.mjs`)
 
-### Tasks
+### ✅ Phase 3: Agent-to-Agent Data Exchange (COMPLETED)
+- [x] Update Lambda to handle `data_query` requests
+- [x] Implement differential pricing ($0.05 Analysis vs $0.01 Data)
+- [x] Create `AgentClient` for autonomous negotiation
+- [x] Limit test: Nutrition Agent pays Fitness Agent (`test-inter-agent.mjs`)
 
-#### 1. Audit Current Payment Logic
-Identify all payment decision code across the codebase:
-
-```bash
-# Find all x402/payment references
-grep -r "x402\|payment\|402" src/components/ aws-lambda/ --include="*.ts*" --include="*.mjs"
-
-# Focus on these files:
-# - src/components/PremiumAnalysisUpsell.tsx (lines 158-226)
-# - src/components/AgentCoachUpsell.tsx (similar logic)
-# - aws-lambda/index.mjs (lines 84-222)
-```
-
-**Key duplications to consolidate**:
-- Chain selection logic (hardcoded in 2+ components)
-- Payment challenge handling (duplicate x402 flow)
-- Fallback strategies (retry logic)
-- Network configuration (referenced in 3+ places)
-
-#### 2. Create `src/lib/payments/payment-router.ts`
-
-Single source of truth for:
-```typescript
-// Payment routing decisions
-interface RoutingDecision {
-  chain: 'base-sepolia' | 'avalanche-c-chain' | 'solana-devnet';
-  reason: string; // "lowest_fee" | "fastest" | "user_preference"
-  gasPriceEstimate: number;
-  expectedLatency: number;
-}
-
-// Route payment based on context
-async function selectNetwork(context: RoutingContext): Promise<RoutingDecision> {
-  // 1. Check current gas prices (all chains)
-  // 2. Check network health (latency, throughput)
-  // 3. Apply user preferences
-  // 4. Return optimal chain with fallback
-}
-
-// Fallback strategies
-async function retryWithFallback(primaryChain: string): Promise<RoutingDecision> {
-  // If primary fails, try secondary chain
-}
-```
-
-#### 3. Remove Duplication
-Delete payment logic from component files:
-- Extract x402 flow from `PremiumAnalysisUpsell.tsx` → use `payment-router`
-- Extract x402 flow from `AgentCoachUpsell.tsx` → use `payment-router`
-- Components now only call: `await paymentRouter.executePayment(data)`
-
-#### 4. Update Lambda to use Router
-`aws-lambda/index.mjs`:
-```javascript
-// Before: hardcoded payment logic in handler
-// After: uses payment-router for decisions
-
-const route = await selectNetwork({
-  userWallet: event.wallet,
-  userPreference: event.preferredChain,
-  paymentAmount: event.amount,
-});
-```
-
-#### 5. Add Agent Routing Awareness
-Bedrock Agent gains new capability:
-```typescript
-// New agent tool
-tools: [
-  ...existing_tools,
-  {
-    name: "select_payment_chain",
-    description: "Autonomously choose which blockchain for payment",
-    input: { 
-      amount: number,
-      maxLatency: number,
-      requirePrivacy: boolean
-    },
-    execute: (input) => paymentRouter.selectNetwork(input)
-  }
-]
-```
+### 🔜 Phase 4: Multi-Service Marketplace (NEXT)
+- [ ] Extend Registry with Service Tiers
+- [ ] Implement `BookingOrchestrator` contract
+- [ ] Build Agent Negotiation UI
 
 ### Checklist
-- [ ] Audit payment logic across all files
-- [ ] Create `payment-router.ts` module
-- [ ] Move routing logic to single module
-- [ ] Delete duplicate payment code from components
-- [ ] Update Lambda to use router
-- [ ] Add agent routing tool to Bedrock
-- [ ] Create unit tests for router (gas price checks, latency checks)
-- [ ] Verify all tests pass
-- [ ] Delete `AgentCoachUpsell.tsx` payment code duplication
+- [x] Audit payment logic across all files
+- [x] Create `payment-router.ts` module
+- [x] Move routing logic to single module
+- [x] Delete duplicate payment code from components
+- [x] Update Lambda to use router
+- [x] Add agent routing tool to Bedrock
+- [x] Create unit tests for router (gas price checks, latency checks)
+- [x] Verify all tests pass
+- [x] Delete `AgentCoachUpsell.tsx` payment code duplication
 
 ### Testing
 ```bash
-# Unit tests for router
-npm run test -- payment-router
+# Test Agent Discovery
+node test-discovery-local.mjs
 
-# Integration: verify payment flow still works
-npm run dev
-# Test in browser: Premium Analysis → should work same as before
-
-# Agent routing: check logs
-# Should see: "🤖 Agent selected avalanche-c-chain (reason: lowest_fee)"
+# Test Inter-Agent Payment
+node test-inter-agent.mjs
 ```
 
 ### Success Criteria
-- [ ] Single payment router handles 100% of payment decisions
-- [ ] Payment logic <500 lines (consolidated from 800+ scattered)
-- [ ] Bedrock Agent autonomously chooses chain
-- [ ] Agent logs show routing decisions
-- [ ] All existing tests pass
+- [x] Single payment router handles 100% of payment decisions
+- [x] Payment logic <500 lines (consolidated from 800+ scattered)
+- [x] Agent logs show routing decisions
+- [x] Agents can discover and pay each other autonomously
 
 ---
 
