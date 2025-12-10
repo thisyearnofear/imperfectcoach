@@ -39,7 +39,7 @@ import { useDisplayName } from "@/hooks/useMemoryIdentity";
 
 type WalletVariant = "header" | "card" | "inline" | "minimal" | "dual";
 type WalletSize = "sm" | "md" | "lg";
-type ChainType = "base" | "solana" | "all";
+type ChainType = "base" | "avalanche" | "solana" | "all";
 
 interface UnifiedWalletProps {
   variant?: WalletVariant;
@@ -327,12 +327,20 @@ const AuthenticatedState = ({
   variant: WalletVariant;
   size: WalletSize;
 }) => {
-  const { address, displayName, signOut, timeUntilNextSubmission, canSubmit } =
+  const { address, displayName, signOut, timeUntilNextSubmission, canSubmit, chainName } =
     useUser();
 
   const formatTime = (seconds: number) => {
     const minutes = Math.ceil(seconds / 60);
     return minutes > 1 ? `${minutes}m` : `${seconds}s`;
+  };
+
+  // Get chain color based on name
+  const getChainColor = (chain?: string) => {
+    if (!chain) return "bg-gray-100 text-gray-700";
+    if (chain.includes("Base")) return "bg-blue-100 text-blue-700";
+    if (chain.includes("Avalanche")) return "bg-red-100 text-red-700";
+    return "bg-gray-100 text-gray-700";
   };
 
   if (variant === "header") {
@@ -342,6 +350,11 @@ const AuthenticatedState = ({
           <Trophy className="h-3 w-3 mr-1 shrink-0" />
           <span className="truncate">{displayName}</span>
         </Badge>
+        {chainName && (
+          <Badge className={`text-xs ${getChainColor(chainName)}`}>
+            {chainName}
+          </Badge>
+        )}
         {!canSubmit && timeUntilNextSubmission > 0 && (
           <Badge variant="outline" className="text-xs">
             <Clock className="h-3 w-3 mr-1" />
@@ -394,6 +407,11 @@ const AuthenticatedState = ({
           <Trophy className="h-3 w-3 mr-1" />
           <span>Authenticated</span>
         </Badge>
+        {chainName && (
+          <Badge className={`${getChainColor(chainName)}`}>
+            {chainName}
+          </Badge>
+        )}
         <div className="space-y-1">
           <CopyableAddress
             address={address!}

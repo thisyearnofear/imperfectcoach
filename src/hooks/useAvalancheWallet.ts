@@ -1,20 +1,20 @@
 import { useCallback } from "react";
 import { useEVMWallet } from "./useEVMWallet";
-import { baseSepolia } from "wagmi/chains";
+import { avalancheFuji } from "wagmi/chains";
 
 /**
- * @deprecated Use useEVMWallet instead for multi-chain support
- * Kept for backward compatibility - delegates to useEVMWallet with Base Sepolia default
+ * Avalanche C-Chain (Fuji testnet) wallet integration
+ * Single source of truth for Avalanche EVM wallet logic
  */
-export const useBaseWallet = () => {
-  const evmWallet = useEVMWallet({ defaultChain: baseSepolia, autoSignIn: true });
+export const useAvalancheWallet = () => {
+  const evmWallet = useEVMWallet({ defaultChain: avalancheFuji, autoSignIn: true });
 
-  const switchToBaseSepolia = useCallback(async () => {
-    await evmWallet.switchToChain(baseSepolia);
+  const switchToAvalancheFuji = useCallback(async () => {
+    await evmWallet.switchToChain(avalancheFuji);
   }, [evmWallet]);
 
   return {
-    // State (passthrough from useEVMWallet)
+    // State
     address: evmWallet.address,
     isConnected: evmWallet.isConnected,
     isAuthenticated: evmWallet.isAuthenticated,
@@ -22,12 +22,13 @@ export const useBaseWallet = () => {
     error: evmWallet.error,
     copied: evmWallet.copied,
     authState: evmWallet.authState,
+    chainId: evmWallet.chainId,
 
     // Actions
     connectWallet: evmWallet.connectWallet,
     disconnectWallet: evmWallet.disconnectWallet,
     signIn: evmWallet.signIn,
-    switchToBaseSepolia,
+    switchToAvalancheFuji,
     getDisplayName: evmWallet.getDisplayName,
     copyAddress: evmWallet.copyAddress,
   };

@@ -23,8 +23,19 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}📦 Installing dependencies...${NC}"
 npm install
 
+echo -e "${BLUE}🔨 Bundling with esbuild...${NC}"
+# Bundle everything into a single file, excluding AWS SDK (in runtime)
+npx esbuild index.mjs \
+  --bundle \
+  --platform=node \
+  --target=node18 \
+  --outfile=dist/index.js \
+  --external:@aws-sdk/* 
+
 echo -e "${BLUE}🗜️  Creating deployment package...${NC}"
-zip -r agent-coach-lambda.zip index.mjs node_modules/ package.json -x "*.git*"
+cd dist
+zip -r ../agent-coach-lambda.zip index.js
+cd ..
 
 echo -e "${BLUE}☁️  Checking if Lambda function exists...${NC}"
 if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION 2>/dev/null; then

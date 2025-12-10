@@ -12,7 +12,7 @@ import {
 } from "viem";
 import { baseSepolia } from "viem/chains";
 import { Agentkit } from "@0xgasless/agentkit";
-import { verify, settle } from "@payai/x402";
+import { verify, settle } from "@payai/x402/facilitator";
 
 
 
@@ -111,12 +111,7 @@ function generateNonce() {
 // Removed: generateNonce (PayAI handles)
 // Removed: serializeChallenge (PayAI handles)
 
-/**
- * Generate a random nonce for replay attack prevention
- */
-function generateNonce() {
-  return Math.random().toString(36).substring(2, 15);
-}
+
 
 /**
  * Verify x402 payment signature & Settle on-chain via PayAI
