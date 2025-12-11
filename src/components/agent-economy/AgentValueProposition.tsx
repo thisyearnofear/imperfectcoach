@@ -16,7 +16,7 @@ import {
     getAgentProfilesList,
     AGENT_ECONOMY_VALUE,
     TRADITIONAL_COSTS
-} from '@/lib/agents/agent-economy-context';
+} from '@/lib/agents/profiles';
 
 interface AgentValuePropositionProps {
     variant?: 'compact' | 'full';

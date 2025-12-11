@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AgentRegistry } from "@/lib/agents/agent-registry";
+import { AgentRegistry } from "@/lib/agents/registry";
 import { AgentProfile, ServiceTier, AgentCapability } from "@/lib/agents/types";
 import { TIER_PRICE_MULTIPLIERS } from "@/lib/agents/service-tiers";
 import { Star, MapPin, TrendingUp, AlertCircle } from "lucide-react";

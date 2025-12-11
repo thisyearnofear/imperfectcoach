@@ -186,8 +186,7 @@ const PremiumAnalysisUpsell = ({
                 </li>
                 <li>A permanent, verifiable record of your progress</li>
                 <li>
-                  Payment goes directly to RevenueSplitter contract on Base
-                  Sepolia
+                  Payment settled via x402 on your preferred chain
                 </li>
               </ul>
             </div>

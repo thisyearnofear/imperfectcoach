@@ -42,17 +42,9 @@ export interface PaymentResult {
     transactionHash?: string;
 }
 
-/**
- * Phase D: Escrow booking payment context
- * Used for service tier bookings with SLA enforcement
- */
-export interface BookingPaymentContext extends RoutingContext {
-    bookingId?: string;              // Booking ID from agent discovery
-    agentId?: string;                // Target agent ID
-    serviceTier?: string;            // basic | pro | premium
-    slaDurationMs?: number;          // Expected completion time in ms
-    escrowContractAddress?: string;  // RevenueSplitter contract on-chain
-}
+// DEPRECATED: BookingPaymentContext & Phase D booking methods removed
+// Agent-to-agent payments are now immediate via x402 without escrow
+// See: PaymentRouter.execute() for standard x402 negotiation
 
 /**
  * PaymentRouter: Centralized logic for x402 payment negotiation and execution.
@@ -157,168 +149,9 @@ export class PaymentRouter {
         }
     }
 
-    /**
-     * Execute a booking payment with escrow (Phase D)
-     * Creates on-chain escrow via RevenueSplitter before service execution
-     */
-    static async executeBookingPayment(context: BookingPaymentContext): Promise<PaymentResult> {
-        const { apiUrl, requestBody, bookingId, agentId, serviceTier, slaDurationMs, escrowContractAddress } = context;
-
-        console.log(`📅 PaymentRouter: Processing booking payment [${bookingId}] for ${serviceTier} tier`);
-
-        try {
-            // Step 1: Execute standard payment flow
-            const paymentResult = await this.execute(context);
-            
-            if (!paymentResult.success) {
-                return paymentResult;
-            }
-
-            // Step 2: Optionally create on-chain escrow (Phase D)
-            // If escrow contract provided, lock funds in booking escrow
-            if (escrowContractAddress && slaDurationMs) {
-                console.log(`🔒 PaymentRouter: Creating on-chain escrow for booking ${bookingId}`);
-                
-                const escrowTx = await this.createEscrowBooking(
-                    escrowContractAddress,
-                    agentId,
-                    slaDurationMs,
-                    paymentResult.transactionHash,
-                    context
-                );
-
-                return {
-                    success: true,
-                    data: {
-                        ...paymentResult.data,
-                        bookingId,
-                        escrowTx,
-                        escrowed: true,
-                        message: "Payment created and locked in escrow until SLA verification"
-                    },
-                    transactionHash: escrowTx
-                };
-            }
-
-            // Step 3: Standard payment (no escrow) - booking managed off-chain
-            return {
-                success: true,
-                data: {
-                    ...paymentResult.data,
-                    bookingId,
-                    escrowed: false,
-                    message: "Payment successful, booking active"
-                },
-                transactionHash: paymentResult.transactionHash
-            };
-
-        } catch (error: any) {
-            console.error("❌ PaymentRouter: Booking payment failed:", error);
-            return {
-                success: false,
-                error: error.message || "Booking payment error"
-            };
-        }
-    }
-
-    /**
-     * Create on-chain escrow booking (Phase D)
-     * Locks funds in RevenueSplitter until SLA verification or timeout
-     */
-    private static async createEscrowBooking(
-        contractAddress: string,
-        agentId: string | undefined,
-        slaDurationMs: number,
-        paymentTx: string | undefined,
-        context: BookingPaymentContext
-    ): Promise<string> {
-        // Phase D placeholder for on-chain escrow creation
-        // Full implementation would use ethers.js/viem to call RevenueSplitter.createBooking()
-        
-        console.log(`🔐 Escrow: Would lock funds in ${contractAddress} for ${slaDurationMs}ms SLA`);
-        console.log(`   Agent: ${agentId}, Payment TX: ${paymentTx}`);
-        
-        // Return mock transaction hash (would be real tx hash in production)
-        return `escrow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    }
-
-    /**
-     * Cancel booking and initiate refund (Phase D)
-     * Called if booking expires or service cannot be completed
-     */
-    static async cancelBookingPayment(
-        bookingId: string,
-        escrowContractAddress: string,
-        reason: string
-    ): Promise<PaymentResult> {
-        console.log(`❌ PaymentRouter: Cancelling booking ${bookingId} - ${reason}`);
-
-        try {
-            // Phase D placeholder for on-chain refund
-            // Full implementation would call RevenueSplitter.cancelBooking(bookingId)
-            
-            const refundTx = `refund-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            
-            return {
-                success: true,
-                data: {
-                    bookingId,
-                    status: "cancelled",
-                    reason,
-                    refundTx,
-                    message: "Booking cancelled, refund initiated"
-                },
-                transactionHash: refundTx
-            };
-        } catch (error: any) {
-            return {
-                success: false,
-                error: error.message || "Cancellation failed"
-            };
-        }
-    }
-
-    /**
-     * Complete booking and verify SLA (Phase D)
-     * Called after service execution to check if SLA was met
-     */
-    static async completeBookingPayment(
-        bookingId: string,
-        escrowContractAddress: string,
-        executionTimeMs: number,
-        expectedSLAMs: number
-    ): Promise<PaymentResult> {
-        const slaMet = executionTimeMs <= expectedSLAMs;
-        
-        console.log(`✅ PaymentRouter: Completing booking ${bookingId}`);
-        console.log(`   Execution: ${executionTimeMs}ms, SLA: ${expectedSLAMs}ms, Met: ${slaMet}`);
-
-        try {
-            // Phase D placeholder for on-chain completion
-            // Full implementation would call RevenueSplitter.completeBooking(bookingId)
-            
-            const settlementTx = `settlement-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            
-            return {
-                success: true,
-                data: {
-                    bookingId,
-                    status: "completed",
-                    slaMet,
-                    executionTimeMs,
-                    expectedSLAMs,
-                    penalty: slaMet ? 0 : expectedSLAMs * 0.1, // 10% penalty default
-                    message: slaMet ? "SLA met, full payment released" : "SLA breached, 10% penalty applied"
-                },
-                transactionHash: settlementTx
-            };
-        } catch (error: any) {
-            return {
-                success: false,
-                error: error.message || "Settlement failed"
-            };
-        }
-    }
+    // DEPRECATED METHODS REMOVED: executeBookingPayment, createEscrowBooking, cancelBookingPayment, completeBookingPayment
+    // Phase D (escrow) functionality removed—agent payments are immediate via x402
+    // For SLA enforcement, agents report completion to Reap Protocol reputation service
 
     /**
      * Processes a 402 Challenge: Selects scheme, generates signature, returns header.

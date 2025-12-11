@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { AgentContribution, AgentCoordinationResult } from '@/lib/agents/types';
-import { formatNetworkName, AGENT_ECONOMY_VALUE } from '@/lib/agents/agent-economy-context';
+import { formatNetworkName, AGENT_ECONOMY_VALUE } from '@/lib/agents/profiles';
 
 interface AgentContributionListProps {
     coordination: AgentCoordinationResult;

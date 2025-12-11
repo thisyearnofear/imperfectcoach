@@ -30,7 +30,7 @@ import {
   getRandomProcessingMessage,
   AGENT_PROFILES,
   formatNetworkName
-} from "@/lib/agents/agent-economy-context";
+} from "@/lib/agents/profiles";
 
 interface AgentCoachUpsellProps {
   workoutData: {

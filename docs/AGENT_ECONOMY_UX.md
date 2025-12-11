@@ -63,10 +63,10 @@ export interface AgentCoordinationResult {
 }
 ```
 
-### Agent Economy Context (New)
+### Agent Economy Profiles
 
 ```typescript
-// src/lib/agents/agent-economy-context.ts
+// src/lib/agents/profiles.ts (consolidated from agent-economy-context.ts)
 
 export const AGENT_PROFILES = {
   fitness_coach: {
@@ -141,9 +141,11 @@ export const AGENT_PROFILES = {
    - Add `AgentContribution` interface
    - Add `AgentCoordinationResult` interface
 
-2. **Create `src/lib/agents/agent-economy-context.ts`**
-   - Static agent profiles with costs
-   - Helper to generate mock coordination results
+2. **File structure (consolidated)**:
+   - `src/lib/agents/types.ts` - All type definitions
+   - `src/lib/agents/profiles.ts` - Agent profiles & economy helpers
+   - `src/lib/agents/registry.ts` - Agent discovery
+   - `src/lib/agents/index.ts` - Clean exports
 
 3. **Enhance `PaymentRouter`**
    - Return coordination metadata in result
@@ -278,14 +280,17 @@ export const AGENT_PROFILES = {
 - `src/components/AgentCoachUpsell.tsx` - Major UI enhancement
 - `src/lib/payments/payment-router.ts` - Return coordination metadata
 
-### Files to CREATE (New, Minimal)
-- `src/lib/agents/agent-economy-context.ts` - Agent profiles constant
-- `src/components/agent-economy/AgentContributionList.tsx` - Reusable breakdown
-- `src/components/agent-economy/AgentCoordinationProgress.tsx` - Processing viz
-- `src/components/agent-economy/index.ts` - Barrel export
+### Files CREATED (Implementation)
+- `src/lib/agents/profiles.ts` - Agent profiles & helpers (from agent-economy-context.ts)
+- `src/lib/agents/index.ts` - Clean consolidated exports
+- `src/components/agent-economy/` - AgentContributionList, AgentCoordinationProgress, AgentValueProposition
 
-### Files to DELETE (Consolidation)
-- None identified yet - existing structure is clean
+### Files DELETED (Consolidation)
+- `src/lib/agents/agent-economy-context.ts` → consolidated to `profiles.ts`
+- `src/lib/agents/booking-types.ts` → merged into `types.ts`
+- `src/lib/payments/solana-payment.ts` (unused)
+- `contracts/RevenueSplitter.sol` → replaced with `AgentRegistry.sol`
+- 6 Lambda test files (Phase D & legacy)
 
 ---
 

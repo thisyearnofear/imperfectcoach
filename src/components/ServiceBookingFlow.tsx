@@ -16,7 +16,7 @@ import { ServiceTierSelector } from "./ServiceTierSelector";
 import { AgentServiceBrowser } from "./AgentServiceBrowser";
 import { Loader2, CheckCircle, AlertCircle, ExternalLink } from "lucide-react";
 import { ServiceTier, AgentCapability, AgentProfile } from "@/lib/agents/types";
-import { PaymentRouter, BookingPaymentContext } from "@/lib/payments/payment-router";
+import { PaymentRouter, RoutingContext } from "@/lib/payments/payment-router";
 import { API_ENDPOINTS } from "@/lib/config";
 import { useSolanaWallet } from "@/hooks/useSolanaWallet";
 
@@ -104,8 +104,8 @@ export const ServiceBookingFlow = ({
         `📅 Booking Flow: Starting ${booking.selectedTier} tier booking for agent ${booking.selectedAgent.id}`
       );
 
-      // Prepare booking payment context
-      const context: BookingPaymentContext = {
+      // Prepare payment context
+      const context: RoutingContext = {
         apiUrl: `${API_ENDPOINTS.AGENT_DISCOVERY}/agents/${booking.selectedAgent.id}/book`,
         requestBody: {
           capability,
@@ -119,14 +119,10 @@ export const ServiceBookingFlow = ({
         evmWallet: walletClient,
         evmAddress: baseAddress,
         preferredChain,
-        bookingId: `booking-${Date.now()}`,
-        agentId: booking.selectedAgent.id,
-        serviceTier: booking.selectedTier,
-        slaDurationMs: 8000, // 8 second SLA for basic
       };
 
-      // Execute booking payment with x402 protocol
-      const result = await PaymentRouter.executeBookingPayment(context);
+      // Execute payment via standard x402 flow
+      const result = await PaymentRouter.execute(context);
 
       if (!result.success) {
         throw new Error(result.error || "Booking failed");

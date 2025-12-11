@@ -590,10 +590,18 @@ export const JUMPS_LEADERBOARD_CONFIG: ContractConfig = {
 export const FITNESS_LEADERBOARD_CONFIG: ContractConfig =
   JUMPS_LEADERBOARD_CONFIG;
 
-// RevenueSplitter contract configuration
-export const REVENUE_SPLITTER_CONFIG: ContractConfig = {
-  address: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA", // RevenueSplitter on Base Sepolia
-  abi: [] as const, // Add ABI if needed for direct interactions
+// AgentRegistry contract configuration (for agent discovery & pricing)
+// Deployed on Base Sepolia & Avalanche Fuji
+// Stores agent endpoints, capabilities, and pricing for x402 negotiation
+export const AGENT_REGISTRY_CONFIG: ContractConfig = {
+  address: "0xfE997dEdF572CA17d26400bCDB6428A8278a0627", // Base Sepolia deployment
+  abi: [] as const, // See AgentRegistry.sol for full ABI
+};
+
+// Deployment addresses
+export const AGENT_REGISTRY_ADDRESSES = {
+  "base-sepolia": "0xfE997dEdF572CA17d26400bCDB6428A8278a0627",
+  "avalanche-fuji": "0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC",
 };
 
 // Solana Leaderboard configuration - using the jumps program for leaderboard queries

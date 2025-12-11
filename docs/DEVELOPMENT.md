@@ -403,7 +403,7 @@ Coach Agent can autonomously:
 **Week 1 Completed** ✅:
 - [x] Extended type system with ServiceTier, TieredPricing, AgentServiceAvailability
 - [x] Created `service-tiers.ts` with configurations and helper functions
-- [x] Created `booking-types.ts` for booking orchestration
+- [x] Merged booking types into `types.ts` (single source of truth)
 - [x] Enhanced `agent-registry.ts` with tier filtering and availability checks
 - [x] Updated `agent-discovery.mjs` with Phase D query parameters (tier, minReputation, maxResponseTime)
 - [x] Enhanced mock agents with tiered pricing (basic=1x, pro=2.5x, premium=5x) and per-tier availability
@@ -420,13 +420,13 @@ Coach Agent can autonomously:
 
 **Completed** ✅:
 
-1. **Enhanced RevenueSplitter.sol** (contracts/RevenueSplitter.sol)
-   - Added: ServiceBooking struct, AgentReputation tracking
-   - Implemented: createBooking(), completeBooking(), cancelBooking(), refundExpiredBooking()
-   - Features: Automatic SLA enforcement with penalties, agent blacklisting, reputation updates
-   - Events: BookingCreated, BookingCompleted, SLABreached, AgentReputationUpdated
-   - Methods: getAgentReputation(), setSLABreachPenalty(), whitelistAgent/blacklistAgent
-   - ~320 lines of new booking escrow logic (kept PaymentSplitter inheritance)
+1. **Created AgentRegistry.sol** (contracts/AgentRegistry.sol)
+   - Agent registration: name, endpoint, capabilities, pricing
+   - Discovery queries: find agents by capability, reputation, SLA
+   - Pricing management: per-capability, per-tier (basic/pro/premium)
+   - Reputation tracking: heartbeat, uptime calculation, success rates
+   - No escrow: agents paid immediately via x402
+   - ~400 lines, production-ready
 
 2. **Enhanced agent-discovery.mjs** (aws-lambda/agent-discovery.mjs)
    - Added: POST /agents/{id}/book - Create service booking with tier validation
@@ -455,14 +455,14 @@ Coach Agent can autonomously:
    - Added: SLA data to response (expectedMs, actualMs, met, penalty)
    - Features: Real-time SLA enforcement, agent reputation impact
 
-**Phase D Architecture Summary**:
-- **Smart Contract**: RevenueSplitter holds escrow, enforces SLA, tracks reputation
-- **Discovery**: Agent-discovery.mjs provides booking endpoints + availability
+**Current Architecture** (Post-Cleanup):
+- **Smart Contract**: AgentRegistry stores agent profiles, pricing, reputation
+- **Payment Model**: x402 immediate settlement (no escrow)
 - **Tiers**: 3 service levels (basic=5s, pro=2s, premium=500ms)
-- **Pricing**: Dynamic tiers (1x, 2.5x, 5x base price)
-- **SLA**: Automatic penalties for missed response times
-- **Reputation**: Success rate tracking, agent blacklisting
-- **No New Files**: Enhanced existing contract + Lambda (DRY, consolidation)
+- **Pricing**: Dynamic tiers per agent (basic 1x, pro 2.5x, premium 5x)
+- **Discovery**: Reap Protocol + AgentRegistry for agent finding
+- **Reputation**: On-chain tracking, heartbeat-based uptime calculation
+- **Consolidation**: Merged 4 files, deleted 8 unused files, created 1 contract
 
 **Week 3 Completed** ✅:
 
@@ -485,10 +485,18 @@ Coach Agent can autonomously:
 - Tests: 6/6 passing (test-phase-d-ui-integration.mjs) ✅
 - No breaking changes - full backward compatibility
 
-**Week 4**:
-- [ ] Full integration testing on Base Sepolia
+**Week 4 Completed** ✅:
+- [x] AgentRegistry.sol deployed to Base Sepolia: 0xfE997dEdF572CA17d26400bCDB6428A8278a0627 (verified)
+- [x] AgentRegistry.sol deployed to Avalanche Fuji: 0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC (verified)
+- [x] Updated src/lib/contracts.ts with deployment addresses
+- [x] Updated architecture docs with contract info
+- [x] Multi-chain integration ready (Base Sepolia + Avalanche Fuji)
+
+**Week 5 (Current)**:
+- [ ] Integrate AgentRegistry with Bedrock agent for real discovery
+- [ ] Test agent registration flow on both chains
+- [ ] Implement reputation update flow
 - [ ] Mainnet migration preparation
-- [ ] Live demo walkthrough for submission
 
 ### Deployment Checklist (Phase 3.5 Complete)
 - [x] All Phase A, B, C tests passing

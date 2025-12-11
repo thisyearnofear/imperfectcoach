@@ -1,9 +1,14 @@
 /**
- * Agent Economy Context
- * 
- * Static definitions of available agents in the economy.
- * This serves as the single source of truth for agent information
- * used across the UI for visualization and cost breakdowns.
+ * Agent Profiles & Economy Context
+ *
+ * Static definitions of available agents in the agent economy.
+ * Serves as the single source of truth for:
+ * - Agent profile information used in UI
+ * - Cost calculations and value comparisons
+ * - Processing messages during agent coordination
+ *
+ * In production, real agents are discovered from Reap Protocol registry.
+ * These profiles are used for UI testing and fallback scenarios.
  */
 
 import { AgentEconomyProfile, AgentCoordinationResult, AgentContribution, ContributionStatus } from './types';

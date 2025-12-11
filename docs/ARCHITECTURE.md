@@ -31,10 +31,11 @@
 ┌─────────────────────────────────────────────────────────┐
 │              MULTI-CHAIN BLOCKCHAIN                     │
 ├─────────────────────────────────────────────────────────┤
-│  Payments    →  x402pay + Smart Routing                │
-│  Base        →  USDC (Base Sepolia) - Premium/Agent    │
-│  Solana      →  SOL/USDC (Devnet) - Micro-payments     │
-│  Treasury    →  CDP Wallet + RevenueSplitter            │
+│  Payments    →  x402 + Immediate Settlement            │
+│  Base        →  USDC (Base Sepolia) - Agent discovery  │
+│  Avalanche   →  USDC (Fuji) - Primary settlement       │
+│  Solana      →  SOL/USDC (Devnet) - Fallback           │
+│  Registry    →  AgentRegistry.sol - Agent profiles     │
 │  Records     →  ImperfectCoachPassport NFT              │
 │  Leaderboard →  On-chain permanent tracking             │
 └─────────────────────────────────────────────────────────┘
@@ -56,6 +57,21 @@ Meets all AWS-defined AI agent requirements:
 - `generate_training_plan`: Creates personalized 4-week programs
 
 ## 💰 x402 Multi-Chain Payment Infrastructure
+
+### AgentRegistry Smart Contract ✅ DEPLOYED
+
+Production deployments on testnet chains:
+- **Base Sepolia**: `0xfE997dEdF572CA17d26400bCDB6428A8278a0627`
+  - Verified: https://base-sepolia.blockscout.com/address/0xfE997dEdF572CA17d26400bCDB6428A8278a0627?tab=contract
+- **Avalanche Fuji**: `0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC`
+  - Verified: https://repo.sourcify.dev/43113/0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC/
+
+**Smart Contract Features:**
+- Agent registration (name, endpoint, capabilities, pricing)
+- Discovery queries (find agents by capability, reputation, SLA)
+- Pricing management (per-capability, per-tier: basic/pro/premium)
+- Reputation tracking (heartbeat, uptime calculation, success rates)
+- No escrow: agents paid immediately via x402
 
 ### x402 Protocol: Server-Driven, AI-Agent Native Economy
 
@@ -119,12 +135,11 @@ The x402 protocol enables **true decentralized agent economies** where autonomou
      - Reap's built-in x402 negotiation loops
      - Agent-to-agent settlement signing
      - Atomic payment execution
-  3. **Phase C: Settlement** (FUTURE)
-     - Real USDC transfers on Base/Avalanche
-     - Agent revenue splitting via RevenueSplitter
-     - On-chain audit trail for all payments
-- **Test Script**: `aws-lambda/test-reap-integration.mjs`
-- **Reap Dependencies**: `@reap-protocol/sdk` in Lambda layer
+  3. **Phase C: Settlement** ✅ COMPLETE
+     - Real USDC transfers on Avalanche Fuji
+     - Immediate x402 payment, no escrow batching
+     - On-chain reputation tracking via AgentRegistry
+  - **Reap Dependencies**: `@reap-protocol/sdk` in Lambda layer
 
 #### Phase 4: Multi-Service Marketplace (FUTURE - Q2)
 **Goal**: Calendar, Massage Booking, Nutrition agents all coordinate via x402
@@ -147,11 +162,11 @@ The x402 protocol enables **true decentralized agent economies** where autonomou
    - Massage Booking (optional, +$0.50 per session)
    - Calendar Coordinator (free, embedded in coach)
 
-2. SmartContract: `BookingOrchestrator.sol`:
-   - User sets budget for services ($1.00/week)
-   - Coach Agent can allocate budget across services
-   - All x402 payments flow through RevenueSplitter
-   - User receives detailed breakdown
+2. Coach Agent orchestrates x402 negotiation:
+   - User requests full coaching
+   - Coach discovers specialists via Reap
+   - Coach pays each via x402 micropayments
+   - All settlements recorded on-chain
 
 3. Booking flow via x402:
    ```

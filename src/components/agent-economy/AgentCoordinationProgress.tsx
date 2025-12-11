@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { AgentCoordinationResult, ContributionStatus } from '@/lib/agents/types';
-import { formatNetworkName, getRandomProcessingMessage, AGENT_PROFILES } from '@/lib/agents/agent-economy-context';
+import { formatNetworkName, getRandomProcessingMessage, AGENT_PROFILES } from '@/lib/agents/profiles';
 
 interface AgentCoordinationProgressProps {
     coordination: AgentCoordinationResult;

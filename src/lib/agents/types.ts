@@ -138,3 +138,106 @@ export interface AgentEconomyProfile {
     baseCost: string;
     capability: AgentCapability;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Service Booking Types (Phase D)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type BookingStatus = "pending" | "confirmed" | "processing" | "completed" | "cancelled" | "failed";
+
+export interface ServiceBooking {
+    id: string;
+    agentId: string;
+    capability: AgentCapability;
+    tier: ServiceTier;
+    status: BookingStatus;
+    priceUSDC: string;
+    paymentChain: string;
+    requestData?: any;
+    createdAt: number;
+    expiresAt: number;
+    startedAt?: number;
+    completedAt?: number;
+    result?: any;
+    transactionHash?: string;
+    errorMessage?: string;
+}
+
+export interface BookServiceRequest {
+    agentId: string;
+    capability: AgentCapability;
+    tier: ServiceTier;
+    requestData?: any;
+}
+
+export interface BookingResponse {
+    success: boolean;
+    booking?: ServiceBooking;
+    error?: string;
+}
+
+export interface ServiceNegotiation {
+    agentId: string;
+    capability: AgentCapability;
+    tier: ServiceTier;
+    price: string;
+    responseSLA: number;
+    minReputation?: number;
+    maxConcurrent?: number;
+    accepted?: boolean;
+    expiresAt?: number;
+}
+
+export interface MultiBookingRequest {
+    bookings: Array<{
+        agentId: string;
+        capability: AgentCapability;
+        tier: ServiceTier;
+        requestData?: any;
+    }>;
+    timeout?: number;
+}
+
+export interface MultiBookingResult {
+    success: boolean;
+    bookings: ServiceBooking[];
+    totalCost: string;
+    completionTime?: number;
+    failedBookings?: Array<{
+        agentId: string;
+        error: string;
+    }>;
+}
+
+export interface BookingHistory {
+    userId?: string;
+    bookings: ServiceBooking[];
+    totalSpent: string;
+    averageRating?: number;
+    lastBooking?: ServiceBooking;
+}
+
+export interface ServiceAvailabilitySummary {
+    agentId: string;
+    capability: AgentCapability;
+    tiers: {
+        basic?: {
+            available: boolean;
+            price: string;
+            nextSlot: number;
+            sla: number;
+        };
+        pro?: {
+            available: boolean;
+            price: string;
+            nextSlot: number;
+            sla: number;
+        };
+        premium?: {
+            available: boolean;
+            price: string;
+            nextSlot: number;
+            sla: number;
+        };
+    };
+}

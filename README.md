@@ -11,15 +11,16 @@
 
 ## 🎯 What is Imperfect Coach?
 
-Imperfect Coach is an **autonomous AI agent system** that demonstrates a **decentralized agent economy powered by x402**. Multiple specialized agents (fitness coach, nutrition planner, massage booking, calendar coordinator) negotiate, pay, and exchange services with each other using x402 micropayments—without any centralized middleman.
+Imperfect Coach is an **autonomous AI agent system** that demonstrates a **decentralized agent economy powered by x402 and Reap Protocol**. Multiple specialized agents (fitness coach, nutrition planner, biomechanics analyzer, recovery specialist) discover each other via Reap, negotiate x402 pricing in real-time, and exchange services using trustless micropayments.
 
-**The Vision**: Agents don't just use payments; they architect entire service workflows, make autonomous routing decisions, and coordinate multi-agent solutions. All transactions are metered, auditable, and revenue-split transparently.
+**The Vision**: Agents autonomously discover specialists, negotiate pricing, execute transactions, and build reputation—all without escrow contracts or central orchestration. Every service is paid immediately via x402. Every SLA is tracked on-chain.
 
 Users benefit from:
-- **Integrated Services**: One interface, multiple specialized agents cooperating
-- **Cost Transparency**: See exactly which agent did what and charged how much
-- **Agent Competition**: Services compete for quality and price
-- **Privacy Control**: Grant/revoke agent access to your data anytime
+- **True Agent Economy**: Agents compete and pay each other for quality, driving better results
+- **Real-Time Pricing Discovery**: Each request triggers fresh agent negotiation
+- **Transparent Cost Breakdown**: Exact breakdown of which agent earned what via x402
+- **Reputation-Driven Quality**: Agent success rates verified on-chain
+- **Multi-Chain Flexibility**: Fast on Avalanche, cheap on Base, optimized for Solana
 
 ---
 
@@ -37,21 +38,19 @@ Users benefit from:
 - **Accurate Rep Counting**: Automatic detection with range-of-motion validation
 - **Form Scoring**: 0-100% accuracy rating per exercise
 
-### 💰 x402 Decentralized Agent Economy (Avalanche Primary)
-- **Agent-to-Agent Payments**: Nutrition Agent pays Fitness Agent for data via x402
-- **Smart Routing**: Agents autonomously choose chains based on cost, speed, reliability
-- **Primary Network**: Avalanche C-Chain (Fuji testnet for demos)
-- **Multi-Chain Fallback**: Base Sepolia, Solana Devnet
-- **Zero Account Friction**: No signup, no KYC, just agent wallet + signature
-- **Transparent Settlement**: All payments logged on-chain, user sees full audit trail
-
-### 🌐 Reap Protocol Integration (Phase 3.5)
-- **Real Agent Discovery**: Query actual specialists from Reap's x402 & A2A registries ✅
-- **x402 Negotiation**: Agent-to-agent payment negotiation loops ✅
-- **Blockchain Settlement**: Real USDC transfers on Base/Avalanche ✅
-- **Hybrid Fallback**: Core agents always available if Reap unavailable
-- **Multi-Chain**: Base Sepolia, Avalanche Fuji, mainnet support
-- **Complete Integration**: Phase A (discovery) ✅, Phase B (negotiation) ✅, Phase C (settlement) ✅
+### 💰 x402 Agent Economy (Immediate Payments, No Escrow)
+- **Agent-to-Agent x402 Payments**: Agents pay each other directly for services
+- **Reap Protocol Discovery**: Real agent discovery from Reap registries (Phase A ✅)
+- **Real-Time Negotiation**: Dynamic pricing negotiation per request (Phase B ✅)
+- **Immediate Settlement**: Direct USDC transfers via x402, no batching (Phase C ✅)
+- **AgentRegistry Contract**: On-chain agent profiles, capabilities, and reputation
+  - **Base Sepolia**: `0xfE997dEdF572CA17d26400bCDB6428A8278a0627` ✅ Verified
+  - **Avalanche Fuji**: `0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC` ✅ Verified
+- **Smart Chain Routing**: Agents autonomously select networks by cost/speed
+- **Primary Network**: Avalanche C-Chain (fastest finality for agent coordination)
+- **Multi-Chain Support**: Base Sepolia, Solana Devnet for flexibility
+- **On-Chain Reputation**: Agent success rates tracked and verified
+- **Zero Escrow**: No pre-locking of funds, immediate peer-to-peer value exchange
 
 ### 🧠 Coaching & Service Tiers
 - **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)
@@ -112,11 +111,12 @@ pnpm run dev
 - Supabase Edge Functions
 - Smart Contracts (Base Sepolia)
 
-**Payments**
-- x402 protocol (HTTP 402 Payment Required)
+**Payments & Agent Economy**
+- x402 protocol (HTTP 402 Payment Required, immediate settlement)
 - **Avalanche C-Chain** (primary - Fuji testnet), Base Sepolia, Solana Devnet
-- USDC stablecoin settlement
-- **Reap Protocol**: Real agent discovery & x402 negotiation (Phases A-C complete)
+- USDC stablecoin with automatic network routing
+- **Reap Protocol**: Real agent discovery (Phase A), negotiation (Phase B), settlement (Phase C)
+- **AgentRegistry Contract**: On-chain agent profiles, pricing, and reputation
 
 ---
 
