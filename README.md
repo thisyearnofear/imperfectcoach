@@ -4,8 +4,8 @@
 
 **🔗 Live Demo:** [imperfectcoach.netlify.app](https://imperfectcoach.netlify.app)
  
-> **🏆 Avalanche Hack2Build: x402 Agent Economy Participant**  
-> Building a decentralized agent economy where autonomous agents negotiate, pay for, and exchange services via x402 protocol on Avalanche, Base, and Solana.
+> **🏆 Avalanche Hack2Build: x402 Agent Economy**  
+> **Avalanche C-Chain primary deployment** with decentralized agent economy where autonomous agents negotiate, pay for, and exchange services via x402 protocol. Multi-chain support: Avalanche, Base, Solana.
 
 ---
 
@@ -37,10 +37,11 @@ Users benefit from:
 - **Accurate Rep Counting**: Automatic detection with range-of-motion validation
 - **Form Scoring**: 0-100% accuracy rating per exercise
 
-### 💰 x402 Decentralized Agent Economy
+### 💰 x402 Decentralized Agent Economy (Avalanche Primary)
 - **Agent-to-Agent Payments**: Nutrition Agent pays Fitness Agent for data via x402
 - **Smart Routing**: Agents autonomously choose chains based on cost, speed, reliability
-- **Multichain Support**: Avalanche C-Chain (primary), Base Sepolia, Solana Devnet
+- **Primary Network**: Avalanche C-Chain (Fuji testnet for demos)
+- **Multi-Chain Fallback**: Base Sepolia, Solana Devnet
 - **Zero Account Friction**: No signup, no KYC, just agent wallet + signature
 - **Transparent Settlement**: All payments logged on-chain, user sees full audit trail
 
@@ -113,9 +114,9 @@ pnpm run dev
 
 **Payments**
 - x402 protocol (HTTP 402 Payment Required)
-- Base Sepolia, Avalanche C-Chain, Solana Devnet
+- **Avalanche C-Chain** (primary - Fuji testnet), Base Sepolia, Solana Devnet
 - USDC stablecoin settlement
-- **Reap Protocol**: Real agent discovery & x402 negotiation (Phase A - ACTIVE)
+- **Reap Protocol**: Real agent discovery & x402 negotiation (Phases A-C complete)
 
 ---
 
@@ -127,7 +128,8 @@ pnpm run dev
 - **[Deployment](docs/DEPLOYMENT.md)** - Deployment procedures and monitoring
 
 ### Quick References
-- **[AWS Deployment Script](aws-lambda/deploy.sh)** - One-command Lambda deployment
+- **[AWS Deployment Guide](docs/AWS_DEPLOYMENT_SETUP.md)** - Lambda deployment via S3
+- **[Avalanche Deployment](aws-lambda/deploy-s3.sh)** - Automated deployment script
 - **[Supabase Functions](supabase/)** - Edge function source code
 
 ---

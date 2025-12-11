@@ -20,9 +20,34 @@ The Lambda function dependencies (~800MB node_modules) exceed AWS Lambda's direc
 - Remove unused peer dependencies
 - Requires monorepo restructuring
 
-## Option 1: Configure S3 Deployment
+## Quick Deploy (Recommended) ✅
 
-### Step 1: Create IAM Policy
+```bash
+cd aws-lambda
+./deploy-s3.sh
+```
+
+The script automatically:
+- Installs production dependencies
+- Aggressively prunes node_modules (removes .md, .map, test dirs)
+- Creates S3 bucket if needed
+- Uploads to S3 (supports up to 5GB)
+- Updates Lambda function code
+- Cleans up old versions (keeps last 5)
+
+---
+
+## Option 1: Configure S3 Deployment (Current Setup)
+
+### Prerequisites
+
+1. **IAM Policy** - Already configured ✅
+2. **S3 Bucket** - Created automatically on first deploy
+3. **AWS CLI** - Must be installed and configured
+
+### Manual Setup
+
+#### Step 1: Create IAM Policy
 
 1. Go to **AWS IAM Console** → **Policies** → **Create Policy**
 2. Use the JSON editor and paste:
@@ -63,13 +88,13 @@ The Lambda function dependencies (~800MB node_modules) exceed AWS Lambda's direc
 3. Name it: `ImperfectCoachLambdaS3Deploy`
 4. Click **Create Policy**
 
-### Step 2: Attach Policy to Your IAM User
+#### Step 2: Attach Policy to Your IAM User
 
 1. Go to **IAM Console** → **Users** → Select your user (e.g., `imperfectform`)
 2. Click **Add Permissions** → **Attach Policies**
 3. Search for `ImperfectCoachLambdaS3Deploy` and attach it
 
-### Step 3: Deploy Using S3
+#### Step 3: Deploy Using S3
 
 ```bash
 cd aws-lambda
@@ -77,11 +102,33 @@ cd aws-lambda
 ```
 
 The script will:
-1. Create the S3 bucket (if needed)
-2. Build the deployment package
-3. Upload to S3
-4. Update Lambda via S3 reference
-5. Clean up old versions (keeps last 5)
+1. Clean and install production dependencies
+2. Prune unnecessary files from node_modules
+3. Create S3 bucket (if needed)
+4. Build deployment package (~50MB after pruning)
+5. Upload to S3
+6. Update Lambda function code
+7. Clean up old S3 versions
+
+### How It Works
+
+The deployment process solves the 70MB Lambda upload limit by:
+
+1. **Aggressive Pruning** - Removes markdown, TypeScript source, maps, test files
+   - Reduces 797MB node_modules → ~50MB zip
+   - Keeps only production JavaScript files
+
+2. **S3 Upload** - Bypasses the 70MB direct upload limit
+   - Supports packages up to 5GB
+   - Stores deployment history in S3
+
+3. **S3 Reference** - Lambda loads code from S3
+   - Uses `--s3-bucket` and `--s3-key` parameters
+   - Supports containers up to 10GB in future
+
+4. **Version Management** - Keeps last 5 deployments
+   - Easy rollback if needed
+   - Cleans up old S3 versions automatically
 
 ## Option 2: Lambda Layers
 
@@ -141,13 +188,15 @@ aws lambda update-function-code \
 
 **Note**: Lambda Layers can exceed 250MB limit due to @ workspace scoping. S3 deployment is more reliable.
 
-## Current Setup
+## Current Setup ✅
 
 Your account is configured with:
 - **Region**: eu-north-1
 - **Account ID**: 595105651762
 - **IAM User**: imperfectform
-- **Missing Permission**: S3 access for deployment buckets
+- **IAM Policy**: ImperfectCoachLambdaS3Deploy ✅
+- **S3 Bucket**: imperfect-coach-lambda-deployments-595105651762 ✅
+- **Latest Deployment**: Function deployed successfully via S3 ✅
 
 ## Troubleshooting
 

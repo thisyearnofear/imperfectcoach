@@ -74,17 +74,20 @@ export class PaymentRouter {
         // Detect available chains based on connected wallets
         const isSolanaAvailable = solanaWalletManager.isConnected();
         const isBaseAvailable = !!evmWallet && !!evmAddress;
+        const isAvalancheAvailable = !!evmWallet && !!evmAddress; // Avalanche uses same EVM wallet as Base
 
-        if (!isSolanaAvailable && !isBaseAvailable) {
+        if (!isSolanaAvailable && !isAvalancheAvailable && !isBaseAvailable) {
             throw new Error("No wallet connected. Please connect a wallet to proceed.");
         }
 
         // Determine initial chain hint header
-        let chainHeader = "base-sepolia"; // Default
+        let chainHeader = "avalanche-fuji"; // Default to Avalanche (Hack2Build primary)
         if (preferredChain === "solana" && isSolanaAvailable) {
             chainHeader = "solana-devnet";
         } else if (preferredChain === "base" && isBaseAvailable) {
             chainHeader = "base-sepolia";
+        } else if (preferredChain === "avalanche" && isAvalancheAvailable) {
+            chainHeader = "avalanche-fuji";
         } else if (isSolanaAvailable) {
             chainHeader = "solana-devnet";
         }
