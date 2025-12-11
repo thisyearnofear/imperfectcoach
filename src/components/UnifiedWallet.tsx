@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EVMWalletConnector } from "@/components/EVMWalletConnector";
 import {
   Card,
   CardContent,
@@ -656,7 +657,8 @@ export const UnifiedWallet = ({
   const { isConnected, isAuthenticated, isLoading, connectAndSignIn, switchToChain } =
     useUser();
   const { address: baseAddress } = useAccount();
-  const [showChainSelector, setShowChainSelector] = React.useState(false);
+  const [showAuthSelector, setShowAuthSelector] = React.useState(false);
+  const [activeAuthPath, setActiveAuthPath] = React.useState<AuthPath | null>(null);
   
   // Solana state
   const [solanaState, setSolanaState] = React.useState({
@@ -688,13 +690,15 @@ export const UnifiedWallet = ({
       if (path === "solana") {
         setSolanaState(prev => ({ ...prev, connecting: true }));
         await solanaWalletManager.connect("phantom");
+        setShowAuthSelector(false);
       } else if (path === "smart-account") {
         // Smart Account (Base Sepolia via Coinbase)
         await connectAndSignIn();
+        setShowAuthSelector(false);
       } else if (path === "evm") {
-        // EVM Wallet - TODO: integrate RainbowKit/ConnectKit for chain selection
-        // For now, trigger connect which will show wallet options
-        await connectAndSignIn();
+        // EVM Wallet - Show RainbowKit interface for wallet selection
+        setActiveAuthPath("evm");
+        setShowAuthSelector(false);
       }
     } catch (error) {
       console.error(`${path} connection failed:`, error);
@@ -939,6 +943,32 @@ export const UnifiedWallet = ({
     );
   }
 
+  // Show EVM Wallet Connector when that path is selected
+  if (activeAuthPath === "evm") {
+    return (
+      <div className={cn("w-full space-y-4", className)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setActiveAuthPath(null)}
+          className="text-xs text-muted-foreground"
+        >
+          ← Back
+        </Button>
+        <EVMWalletConnector
+          onConnected={(address, chainId) => {
+            console.log("EVM wallet connected:", address, chainId);
+            setActiveAuthPath(null);
+            onConnect?.();
+          }}
+          onChainChanged={(chainId) => {
+            console.log("EVM chain changed:", chainId);
+          }}
+        />
+      </div>
+    );
+  }
+
   // Render based on variant
   if (variant === "header" || variant === "minimal") {
     const baseActive = isConnected || !!baseAddress;
@@ -951,7 +981,7 @@ export const UnifiedWallet = ({
         return (
           <div className={cn("flex items-center gap-2", className)}>
             <SolanaWalletState
-              onConnect={() => setShowChainSelector(true)}
+              onConnect={() => setShowAuthSelector(true)}
               isConnecting={solanaState.connecting}
               address={solanaState.address}
               onDisconnect={handleSolanaDisconnect}
@@ -959,8 +989,8 @@ export const UnifiedWallet = ({
               size={size}
             />
             <AuthPathSelector
-              isOpen={showChainSelector}
-              onClose={() => setShowChainSelector(false)}
+              isOpen={showAuthSelector}
+              onClose={() => setShowAuthSelector(false)}
               onSelect={handleAuthPathSelected}
             />
           </div>
@@ -981,7 +1011,7 @@ export const UnifiedWallet = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowChainSelector(true)}
+              onClick={() => setShowAuthSelector(true)}
               className="text-xs text-muted-foreground hover:text-foreground"
               title="Connect additional wallet"
             >
@@ -989,8 +1019,8 @@ export const UnifiedWallet = ({
             </Button>
           )}
           <AuthPathSelector
-            isOpen={showChainSelector}
-            onClose={() => setShowChainSelector(false)}
+            isOpen={showAuthSelector}
+            onClose={() => setShowAuthSelector(false)}
             onSelect={handleAuthPathSelected}
           />
         </div>
@@ -1001,7 +1031,7 @@ export const UnifiedWallet = ({
     return (
       <>
         <Button
-          onClick={() => setShowChainSelector(true)}
+          onClick={() => setShowAuthSelector(true)}
           disabled={isLoading || solanaState.connecting}
           size={variant === "header" ? "default" : "sm"}
           className={variant === "header" ? "" : "h-auto p-1"}
@@ -1017,8 +1047,8 @@ export const UnifiedWallet = ({
           )}
         </Button>
         <AuthPathSelector
-          isOpen={showChainSelector}
-          onClose={() => setShowChainSelector(false)}
+          isOpen={showAuthSelector}
+          onClose={() => setShowAuthSelector(false)}
           onSelect={handleAuthPathSelected}
         />
       </>
@@ -1081,7 +1111,7 @@ export const UnifiedWallet = ({
 
           {solanaState.connected && !isConnected ? (
             <SolanaWalletState
-              onConnect={() => setShowChainSelector(true)}
+              onConnect={() => setShowAuthSelector(true)}
               isConnecting={solanaState.connecting}
               address={solanaState.address}
               onDisconnect={handleSolanaDisconnect}
@@ -1097,7 +1127,7 @@ export const UnifiedWallet = ({
               size={size}
               variant={variant}
               isLoading={isLoading}
-              onConnect={() => setShowChainSelector(true)}
+              onConnect={() => setShowAuthSelector(true)}
             />
           )}
 
@@ -1106,7 +1136,7 @@ export const UnifiedWallet = ({
               <p className="text-sm font-medium mb-3">Additional Networks</p>
               {!solanaState.connected && isConnected && (
                 <SolanaWalletState
-                  onConnect={() => setShowChainSelector(true)}
+                  onConnect={() => setShowAuthSelector(true)}
                   isConnecting={solanaState.connecting}
                   address={solanaState.address}
                   onDisconnect={handleSolanaDisconnect}
@@ -1119,8 +1149,8 @@ export const UnifiedWallet = ({
         </CardContent>
       </Card>
       <AuthPathSelector
-        isOpen={showChainSelector}
-        onClose={() => setShowChainSelector(false)}
+        isOpen={showAuthSelector}
+        onClose={() => setShowAuthSelector(false)}
         onSelect={handleAuthPathSelected}
       />
     </>

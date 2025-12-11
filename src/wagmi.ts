@@ -1,6 +1,7 @@
 import { http, createConfig } from "wagmi";
 import { base, baseSepolia, avalanche, avalancheFuji } from "wagmi/chains";
 import { coinbaseWallet, metaMask, walletConnect } from "wagmi/connectors";
+import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 
 // App logo URL - use production URL if available, otherwise localhost with common dev port
 const APP_LOGO_URL = import.meta.env.VITE_APP_URL 
@@ -34,6 +35,25 @@ export const walletConnectConnector = walletConnect({
   },
 });
 
+// RainbowKit configuration for EVM wallet path (Base + Avalanche)
+export const rainbowkitConfig = getDefaultConfig({
+  appName: 'Imperfect Coach',
+  projectId: WALLETCONNECT_PROJECT_ID,
+  chains: [baseSepolia, avalancheFuji],
+  ssr: true,
+  transports: {
+    [baseSepolia.id]: http(
+      import.meta.env.VITE_BASE_SEPOLIA_RPC_URL ||
+        "https://sepolia.base.org"
+    ),
+    [avalancheFuji.id]: http(
+      import.meta.env.VITE_AVALANCHE_FUJI_RPC_URL ||
+        "https://api.avax-test.network/ext/bc/C/rpc"
+    ),
+  },
+});
+
+// Legacy wagmi config for smart account path (Coinbase only)
 export const config = createConfig({
   chains: [base, baseSepolia, avalanche, avalancheFuji],
   // turn off injected provider discovery
