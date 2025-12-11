@@ -353,35 +353,24 @@ const AuthenticatedState = ({
   if (variant === "header") {
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="secondary" className="text-xs">
+        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
           <Trophy className="h-3 w-3 mr-1 shrink-0" />
-          <span className="truncate">{displayName}</span>
+          <span className="truncate max-w-24">{displayName}</span>
         </Badge>
-        {chainName && (
-          <Badge className={`text-xs ${getChainColor(chainName)}`}>
-            {chainName}
-          </Badge>
-        )}
-        {!canSubmit && timeUntilNextSubmission > 0 && (
-          <Badge variant="outline" className="text-xs">
-            <Clock className="h-3 w-3 mr-1" />
-            {formatTime(timeUntilNextSubmission)}
-          </Badge>
-        )}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={signOut}
-                className="h-8 px-2 shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                className="h-8 px-2 shrink-0"
               >
                 <LogOut className="h-3 w-3" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Sign out and disconnect wallet</p>
+              <p>Disconnect wallet</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -455,43 +444,27 @@ const ConnectedNotAuthenticatedState = ({
   if (variant === "header") {
     return (
       <div className="flex items-center gap-2">
-        <CopyableAddress
-          address={address!}
-          displayName={displayName}
-          size="sm"
-        />
-        {isLoading ? (
-          <Badge variant="secondary" className="text-xs">
-            <Clock className="h-3 w-3 mr-1" />
-            Signing...
-          </Badge>
-        ) : (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={signInWithEthereum}
-                  className="h-7 px-2 text-xs shrink-0 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                >
-                  Retry SIWE
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Retry Sign-In with Ethereum if auto-signing failed</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+          {isLoading ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              <span>Signing...</span>
+            </>
+          ) : (
+            <>
+              <Trophy className="h-3 w-3 mr-1 shrink-0" />
+              <span className="truncate max-w-24">{displayName}</span>
+            </>
+          )}
+        </Badge>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={signOut}
-                className="h-8 px-2 shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                className="h-8 px-2 shrink-0"
               >
                 <LogOut className="h-3 w-3" />
               </Button>
@@ -556,85 +529,57 @@ const ConnectedNotAuthenticatedState = ({
   );
 };
 
-type ChainSelection = "base" | "avalanche" | "solana";
+type AuthPath = "smart-account" | "solana" | "evm";
 
-const ChainSelectionModal = ({
+const AuthPathSelector = ({
   isOpen,
   onClose,
   onSelect,
 }: {
   isOpen: boolean;
-  onSelect: (chain: ChainSelection) => void;
+  onSelect: (path: AuthPath) => void;
   onClose: () => void;
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Select Network</DialogTitle>
+          <DialogTitle>Connect Wallet</DialogTitle>
           <DialogDescription>
-            Choose which blockchain network you'd like to connect to
+            Choose your preferred authentication method
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-3 py-4">
-          {/* EVM Chain: Base */}
+          {/* Smart Account: Coinbase Smart Wallet + Base */}
           <Card 
             className="cursor-pointer border-2 hover:border-blue-400 transition-colors"
             onClick={() => {
-              onSelect("base");
+              onSelect("smart-account");
               onClose();
             }}
           >
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base text-blue-700">
                 <Shield className="h-5 w-5" />
-                Base Sepolia
+                Smart Account (Base)
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                Fast, secure EVM chain powered by Ethereum
+                Secure smart contract wallet via Coinbase
               </p>
               <div className="text-xs text-gray-600">
-                ✓ Premium analysis payments
+                ✓ Account abstraction
                 <br />
-                ✓ Agent coaching sessions
+                ✓ Gasless transactions
                 <br />
-                ✓ Full Web3 compatibility
+                ✓ Recommended for beginners
               </div>
             </CardContent>
           </Card>
 
-          {/* EVM Chain: Avalanche */}
-          <Card 
-            className="cursor-pointer border-2 hover:border-red-400 transition-colors"
-            onClick={() => {
-              onSelect("avalanche");
-              onClose();
-            }}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base text-red-700">
-                <Zap className="h-5 w-5" />
-                Avalanche Fuji
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                High-performance avalanche subnet with custom runtimes
-              </p>
-              <div className="text-xs text-gray-600">
-                ✓ Customizable subnets
-                <br />
-                ✓ Lower fees than Ethereum
-                <br />
-                ✓ Institutional-grade security
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Solana */}
+          {/* Solana: Phantom Wallet */}
           <Card 
             className="cursor-pointer border-2 hover:border-purple-400 transition-colors"
             onClick={() => {
@@ -645,26 +590,54 @@ const ChainSelectionModal = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base text-purple-700">
                 <Zap className="h-5 w-5" />
-                Solana Devnet
+                Solana (Phantom)
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                Ultra-fast blockchain with minimal transaction costs
+                Ultra-fast blockchain for micro-payments
               </p>
               <div className="text-xs text-gray-600">
                 ✓ 1-second confirmation
                 <br />
-                ✓ Micro-payments enabled
+                ✓ Micro-payment optimization
                 <br />
-                ✓ 90% fee reduction potential
+                ✓ 90% lower fees
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* EVM Wallet: RainbowKit/ConnectKit (Base + Avalanche) */}
+          <Card 
+            className="cursor-pointer border-2 hover:border-emerald-400 transition-colors"
+            onClick={() => {
+              onSelect("evm");
+              onClose();
+            }}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base text-emerald-700">
+                <Wallet className="h-5 w-5" />
+                EVM Wallet
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Connect any EVM wallet (Base or Avalanche)
+              </p>
+              <div className="text-xs text-gray-600">
+                ✓ MetaMask, WalletConnect, etc.
+                <br />
+                ✓ Choice of Base or Avalanche
+                <br />
+                ✓ Maximum wallet flexibility
               </div>
             </CardContent>
           </Card>
         </div>
 
         <p className="text-xs text-muted-foreground text-center mt-4">
-          💡 All networks support the same features. Choose based on your preference.
+          💡 Choose the method that works best for you. You can connect multiple wallets later.
         </p>
       </DialogContent>
     </Dialog>
@@ -710,21 +683,22 @@ export const UnifiedWallet = ({
     return () => clearInterval(interval);
   }, [chains]);
 
-  const handleChainSelected = async (chain: ChainSelection) => {
+  const handleAuthPathSelected = async (path: AuthPath) => {
     try {
-      if (chain === "solana") {
+      if (path === "solana") {
         setSolanaState(prev => ({ ...prev, connecting: true }));
         await solanaWalletManager.connect("phantom");
-      } else {
-        // EVM (Base or Avalanche)
+      } else if (path === "smart-account") {
+        // Smart Account (Base Sepolia via Coinbase)
         await connectAndSignIn();
-        if (chain === "avalanche") {
-          await switchToChain("avalanche");
-        }
+      } else if (path === "evm") {
+        // EVM Wallet - TODO: integrate RainbowKit/ConnectKit for chain selection
+        // For now, trigger connect which will show wallet options
+        await connectAndSignIn();
       }
     } catch (error) {
-      console.error(`${chain} connection failed:`, error);
-      alert(`Failed to connect to ${chain}. Please try again.`);
+      console.error(`${path} connection failed:`, error);
+      alert(`Failed to connect via ${path}. Please try again.`);
     } finally {
       setSolanaState(prev => ({ ...prev, connecting: false }));
     }
@@ -984,10 +958,10 @@ export const UnifiedWallet = ({
               variant={variant}
               size={size}
             />
-            <ChainSelectionModal
+            <AuthPathSelector
               isOpen={showChainSelector}
               onClose={() => setShowChainSelector(false)}
-              onSelect={handleChainSelected}
+              onSelect={handleAuthPathSelected}
             />
           </div>
         );
@@ -1014,10 +988,10 @@ export const UnifiedWallet = ({
               + Network
             </Button>
           )}
-          <ChainSelectionModal
+          <AuthPathSelector
             isOpen={showChainSelector}
             onClose={() => setShowChainSelector(false)}
-            onSelect={handleChainSelected}
+            onSelect={handleAuthPathSelected}
           />
         </div>
       );
@@ -1042,10 +1016,10 @@ export const UnifiedWallet = ({
             </>
           )}
         </Button>
-        <ChainSelectionModal
+        <AuthPathSelector
           isOpen={showChainSelector}
           onClose={() => setShowChainSelector(false)}
-          onSelect={handleChainSelected}
+          onSelect={handleAuthPathSelected}
         />
       </>
     );
@@ -1144,10 +1118,10 @@ export const UnifiedWallet = ({
           )}
         </CardContent>
       </Card>
-      <ChainSelectionModal
+      <AuthPathSelector
         isOpen={showChainSelector}
         onClose={() => setShowChainSelector(false)}
-        onSelect={handleChainSelected}
+        onSelect={handleAuthPathSelected}
       />
     </>
   );
