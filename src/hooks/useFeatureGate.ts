@@ -1,6 +1,6 @@
 import { useUserAuth, useUserBlockchain, useUserDisplay } from "./useUserHooks";
 import { usePremiumAccess } from "./usePremiumAccess";
-import { useSolanaWallet } from "./useSolanaWallet";
+import { useWalletConnection } from "./useWalletConnection";
 
 type Feature =
   | "AI_SUMMARY"
