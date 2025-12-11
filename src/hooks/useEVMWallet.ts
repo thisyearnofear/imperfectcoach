@@ -239,12 +239,14 @@ export const useEVMWallet = (options: UseEVMWalletOptions = {}) => {
     if (wasConnected === "true" && !isConnected && !isLoading && connectors.length > 0) {
       console.log('Auto-reconnecting to previously connected wallet');
       const connector = connectors[0]; // Use first available connector (usually Coinbase)
-      connect({ connector }).catch(err => {
+      try {
+        connect({ connector });
+      } catch (err) {
         console.warn('Auto-reconnection failed:', err);
         localStorage.removeItem("wasEVMWalletConnected");
-      });
+      }
     }
-  }, []);
+  }, [connect, connectors, isConnected, isLoading]);
 
   // Track wallet connection state for future auto-reconnect
   useEffect(() => {
