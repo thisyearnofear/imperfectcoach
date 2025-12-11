@@ -84,12 +84,18 @@ The x402 protocol enables **true decentralized agent economies** where autonomou
 
 #### Phase 2: Agent Identity & Discovery ✅ COMPLETE (Alpha)
 **Goal**: Agents can discover and call each other via x402
-- **Status**: Implemented (`aws-lambda/agent-discovery.mjs`)
-- **Registry**: Lambda-based service supporting:
-  - `GET /agents`: Discovery by capability
+- **Status**: Implemented with **REAP PROTOCOL INTEGRATION** (`aws-lambda/agent-discovery.mjs`)
+- **Registry**: Lambda-based hybrid discovery:
+  - Real agents via **Reap Protocol** (`x402` & `A2A` registries)
+  - Core agents as fallback (always available)
+  - `GET /agents?capability=nutrition_planning`: Queries Reap first
   - `POST /agents/register`: Dynamic registration
   - `POST /agents/heartbeat`: Liveness check
-- **Client**: `AgentRegistry` class for easy lookup
+- **Reap Integration** (`aws-lambda/lib/reap-integration.mjs`):
+  - `searchAgents(capability, protocol)`: Find real specialists
+  - `discoverAgentsHybrid()`: Unified Reap + core discovery
+  - Deduplication & reputation sorting
+- **Client**: `AgentRegistry` class logs discovery source (reap-protocol-hybrid vs core-agents)
 
 #### Phase 3: Agent-to-Agent Data Exchange ✅ COMPLETE (Alpha)
 **Goal**: Nutrition Agent pays Fitness Agent for user health data
@@ -101,9 +107,28 @@ The x402 protocol enables **true decentralized agent economies** where autonomou
   4. Payment Verified → Data Returned
 - **Pricing**: Differential pricing implemented ($0.05 analysis vs $0.01 data)
 
+#### Phase 3.5: Real Inter-Agent Payments (CURRENT - Dec 2024)
+**Goal**: Migrate from simulated payments to REAL blockchain settlement
+- **Status**: IN PROGRESS - Reap Protocol Integration (Phase A)
+- **Payment Migration**:
+  1. **Phase A: Discovery** ✅ DONE
+     - Agents discovered via Reap Protocol registries
+     - Real `x402` & `A2A` specialists returned
+     - Core agents as fallback
+  2. **Phase B: Negotiation** (NEXT)
+     - Reap's built-in x402 negotiation loops
+     - Agent-to-agent settlement signing
+     - Atomic payment execution
+  3. **Phase C: Settlement** (FUTURE)
+     - Real USDC transfers on Base/Avalanche
+     - Agent revenue splitting via RevenueSplitter
+     - On-chain audit trail for all payments
+- **Test Script**: `aws-lambda/test-reap-integration.mjs`
+- **Reap Dependencies**: `@reap-protocol/sdk` in Lambda layer
+
 #### Phase 4: Multi-Service Marketplace (FUTURE - Q2)
 **Goal**: Calendar, Massage Booking, Nutrition agents all coordinate via x402
-- **Status**: Planned
+- **Status**: Planned (depends on Phase 3.5 real payments)
 - **Architecture**:
   1. Extend Agent Registry with capability tiers
   2. SmartContract: `BookingOrchestrator.sol`

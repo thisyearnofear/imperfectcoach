@@ -4,11 +4,14 @@ import { API_ENDPOINTS } from "@/lib/config";
 /**
  * Client-Side Registry Wrapper
  * Queries the Discovery Service to find available agents.
+ * 
+ * PHASE A: Now integrates Reap Protocol for real agent discovery!
  * Falls back to mock data if service is unavailable.
  */
 export class AgentRegistry {
     /**
      * Find agents matching specific criteria
+     * Phase A: Queries Reap Protocol for real specialist agents
      */
     static async findAgents(query: DiscoveryQuery): Promise<AgentProfile[]> {
         try {
@@ -26,6 +29,13 @@ export class AgentRegistry {
             }
 
             const data = await response.json();
+            
+            // Phase A telemetry
+            if (data.discoverySource) {
+                console.log(`🌐 Agent Discovery Source: ${data.discoverySource}`);
+                console.log(`   Found ${data.agents?.length || 0} agents at ${data.timestamp}`);
+            }
+            
             return data.agents || [];
         } catch (error) {
             console.error("Agent Registry Error:", error);
@@ -41,6 +51,8 @@ export class AgentRegistry {
             {
                 id: "agent-fitness-core-01",
                 name: "Imperfect Coach Core",
+                emoji: "🏋️",
+                role: "coordinator",
                 description: "Primary fitness analysis agent using Bedrock Nova Lite.",
                 capabilities: ["fitness_analysis", "benchmark_analysis"],
                 pricing: {
@@ -56,6 +68,8 @@ export class AgentRegistry {
             {
                 id: "agent-nutrition-mock",
                 name: "Nutrition Planner",
+                emoji: "🥗",
+                role: "specialist",
                 description: "Specialized in post-workout nutrition.",
                 capabilities: ["nutrition_planning"],
                 pricing: {

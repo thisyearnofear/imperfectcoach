@@ -21,6 +21,7 @@
 - x402 protocol (server-driven challenges)
 - Base Sepolia, Avalanche C-Chain, Solana Devnet
 - USDC/SOL stablecoin settlement
+- **Reap Protocol**: Real agent discovery & settlement (Phase A)
 
 ## 🚀 Quick Start for Developers
 
@@ -77,6 +78,11 @@ npm run lint
 # Test Lambda functions locally
 cd aws-lambda
 node index.mjs
+
+# Test Reap Protocol Integration
+node test-reap-integration.mjs      # Phase A: Discovery
+node test-reap-phase-b.mjs          # Phase B: x402 Negotiation
+node test-reap-phase-c.mjs          # Phase C: Real Settlement
 ```
 
 ### x402 Protocol Testing
@@ -200,6 +206,11 @@ SOLANA_RPC_URL=https://api.devnet.solana.com
 # 0xGasless AgentKit & PayAI
 AGENT_PRIVATE_KEY=your_agent_evm_private_key
 CX0_API_KEY=your_0xgasless_api_key
+
+# Reap Protocol Integration (Phase 3.5)
+AGENT_WALLET_KEY=your_agent_evm_wallet_private_key  # For autonomous agent identity
+AVALANCHE_RPC=https://api.avax-test.network/ext/bc/C/rpc
+REAP_ENDPOINT=https://api.reap.io  # Or custom Reap deployment
 ```
 
 ## 🎨 Development Patterns
@@ -344,6 +355,21 @@ See [USER_GUIDE.md](USER_GUIDE.md) for user-facing features.
 - [x] Implement differential pricing ($0.05 Analysis vs $0.01 Data)
 - [x] Create `AgentClient` for autonomous negotiation
 - [x] Limit test: Nutrition Agent pays Fitness Agent (`test-inter-agent.mjs`)
+
+### 🔄 Phase 3.5: Real Inter-Agent Payments (IN PROGRESS - Dec 2024)
+**Status**: Reap Protocol Integration Phase A, B, C
+- [x] Add `@reap-protocol/sdk` to Lambda dependencies
+- [x] Create `aws-lambda/lib/reap-integration.mjs` module
+- [x] Implement hybrid discovery (Reap + Core agents)
+- [x] Update Lambda handler to query Reap for real specialists
+- [x] Add discovery telemetry to Lambda logs
+- [x] Create `test-reap-integration.mjs` validation script
+- [x] Phase A: Real agent discovery via Reap ✅ DONE
+- [x] Phase B: Implement Reap's x402 negotiation loops ✅ DONE
+- [x] Phase C: Real blockchain settlement & revenue splitting ✅ DONE
+- [x] Add `call_specialist_agent` tool to Bedrock
+- [x] Create Phase B & C test scripts
+- [x] Agent-to-agent payment integration complete
 
 ### 🔜 Phase 4: Multi-Service Marketplace (NEXT)
 - [ ] Extend Registry with Service Tiers

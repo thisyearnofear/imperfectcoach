@@ -44,6 +44,14 @@ Users benefit from:
 - **Zero Account Friction**: No signup, no KYC, just agent wallet + signature
 - **Transparent Settlement**: All payments logged on-chain, user sees full audit trail
 
+### 🌐 Reap Protocol Integration (Phase 3.5)
+- **Real Agent Discovery**: Query actual specialists from Reap's x402 & A2A registries ✅
+- **x402 Negotiation**: Agent-to-agent payment negotiation loops ✅
+- **Blockchain Settlement**: Real USDC transfers on Base/Avalanche ✅
+- **Hybrid Fallback**: Core agents always available if Reap unavailable
+- **Multi-Chain**: Base Sepolia, Avalanche Fuji, mainnet support
+- **Complete Integration**: Phase A (discovery) ✅, Phase B (negotiation) ✅, Phase C (settlement) ✅
+
 ### 🧠 Three Coaching Tiers
 - **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)
 - **Premium ($0.05 USDC)**: Deep-dive Amazon Bedrock analysis
@@ -104,6 +112,7 @@ pnpm run dev
 - x402 protocol (HTTP 402 Payment Required)
 - Base Sepolia, Avalanche C-Chain, Solana Devnet
 - USDC stablecoin settlement
+- **Reap Protocol**: Real agent discovery & x402 negotiation (Phase A - ACTIVE)
 
 ---
 

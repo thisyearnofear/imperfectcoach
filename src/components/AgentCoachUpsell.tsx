@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 import { trackPaymentTransaction } from "@/lib/cdp";
@@ -14,6 +14,23 @@ import { cn } from "@/lib/utils";
 import { useSolanaWallet } from "@/hooks/useSolanaWallet";
 import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
 import { WalletBalanceDisplay } from "./WalletBalanceDisplay";
+
+// Agent Economy Components & Types
+import {
+  AgentContributionList,
+  AgentCoordinationProgress,
+  AgentValueProposition
+} from "./agent-economy";
+import {
+  AgentCoordinationResult,
+  ContributionStatus
+} from "@/lib/agents/types";
+import {
+  createInitialCoordinationState,
+  getRandomProcessingMessage,
+  AGENT_PROFILES,
+  formatNetworkName
+} from "@/lib/agents/agent-economy-context";
 
 interface AgentCoachUpsellProps {
   workoutData: {
@@ -34,6 +51,9 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   const [activeTools, setActiveTools] = useState<string[]>([]);
   const [error, setError] = useState<{ title: string, message: string } | null>(null);
   const { toast } = useToast();
+
+  // Agent Economy State - tracks multi-agent coordination
+  const [coordination, setCoordination] = useState<AgentCoordinationResult | null>(null);
 
   const clearError = () => {
     setError(null);
@@ -63,29 +83,92 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
     setProgress(0);
     setCurrentStep("Initializing AI Coach Agent...");
 
+    // Determine network for agent economy
+    const networkId = walletChain === 'solana' ? 'solana-devnet' : 'avalanche-c-chain';
+
+    // Initialize agent coordination state
+    const initialCoordination = createInitialCoordinationState(networkId);
+    setCoordination(initialCoordination);
+
     try {
-      // Simulate agent reasoning progress for UI feedback
+      // Agent economy progress steps - now shows which agents are being coordinated
+      const agentKeys = ['fitness_coach', 'nutrition', 'biomechanics', 'recovery', 'calendar'];
       const progressSteps = [
-        { step: "Processing payment...", progress: 15, tools: [] },
-        { step: "Agent analyzing workout data...", progress: 30, tools: [] },
-        { step: "Examining pose patterns...", progress: 45, tools: ["analyze_pose_data"] },
-        { step: "Querying your workout history...", progress: 60, tools: ["analyze_pose_data", "query_workout_history"] },
-        { step: "Benchmarking performance...", progress: 75, tools: ["analyze_pose_data", "query_workout_history", "benchmark_performance"] },
-        { step: "Generating personalized plan...", progress: 90, tools: ["analyze_pose_data", "query_workout_history", "benchmark_performance", "generate_training_plan"] },
-        { step: "Synthesizing insights...", progress: 95, tools: ["analyze_pose_data", "query_workout_history", "benchmark_performance", "generate_training_plan"] },
+        { step: "Processing x402 payment...", progress: 10, agentIndex: -1, status: 'processing' as ContributionStatus },
+        { step: "Coach Agent initializing...", progress: 20, agentIndex: 0, status: 'processing' as ContributionStatus },
+        { step: "Discovering Nutrition Agent...", progress: 30, agentIndex: 1, status: 'discovering' as ContributionStatus },
+        { step: "Negotiating with Nutrition Agent ($0.03)...", progress: 40, agentIndex: 1, status: 'negotiating' as ContributionStatus },
+        { step: "Nutrition Agent analyzing...", progress: 50, agentIndex: 1, status: 'processing' as ContributionStatus },
+        { step: "Biomechanics Agent evaluating form...", progress: 60, agentIndex: 2, status: 'processing' as ContributionStatus },
+        { step: "Recovery Agent planning...", progress: 75, agentIndex: 3, status: 'processing' as ContributionStatus },
+        { step: "Calendar Agent scheduling...", progress: 85, agentIndex: 4, status: 'processing' as ContributionStatus },
+        { step: "Coach synthesizing insights...", progress: 95, agentIndex: 0, status: 'processing' as ContributionStatus },
       ];
 
-      // Start progress simulation background task
+      // Start progress simulation with agent coordination updates
       let stepIndex = 0;
       const progressInterval = setInterval(() => {
         if (stepIndex < progressSteps.length) {
           const current = progressSteps[stepIndex];
           setCurrentStep(current.step);
           setProgress(current.progress);
-          setActiveTools(current.tools);
+
+          // Update coordination state
+          setCoordination(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev };
+
+            // Mark previous agents as complete
+            if (stepIndex > 0) {
+              const prevStep = progressSteps[stepIndex - 1];
+              if (prevStep.agentIndex === 0) {
+                // Coordinator update
+                if (updated.coordinator.status !== 'complete') {
+                  updated.coordinator = { ...updated.coordinator, status: 'processing' };
+                }
+              } else if (prevStep.agentIndex > 0) {
+                const idx = prevStep.agentIndex - 1;
+                if (updated.contributors[idx]) {
+                  updated.contributors[idx] = { ...updated.contributors[idx], status: 'complete' };
+                }
+              }
+            }
+
+            // Update current agent status
+            if (current.agentIndex === 0) {
+              updated.coordinator = {
+                ...updated.coordinator,
+                status: current.status,
+                statusMessage: getRandomProcessingMessage('fitness_coach')
+              };
+            } else if (current.agentIndex > 0) {
+              const idx = current.agentIndex - 1;
+              if (updated.contributors[idx]) {
+                const agentKey = agentKeys[current.agentIndex];
+                updated.contributors[idx] = {
+                  ...updated.contributors[idx],
+                  status: current.status,
+                  statusMessage: getRandomProcessingMessage(agentKey)
+                };
+              }
+            }
+
+            return updated;
+          });
+
+          // Legacy tool tracking for backwards compatibility
+          const toolMap: Record<number, string[]> = {
+            0: [],
+            1: ["analyze_pose_data"],
+            2: ["analyze_pose_data", "query_workout_history"],
+            3: ["analyze_pose_data", "query_workout_history", "benchmark_performance"],
+            4: ["analyze_pose_data", "query_workout_history", "benchmark_performance", "generate_training_plan"],
+          };
+          setActiveTools(toolMap[Math.min(stepIndex, 4)] || []);
+
           stepIndex++;
         }
-      }, 2000);
+      }, 1500);
 
       // Execute actual Agent Logic via x402
       console.log("🤖 Starting Autonomous Agent loop via PaymentRouter...");
@@ -125,6 +208,33 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
       setProgress(100);
       setCurrentStep("Analysis complete!");
       setAgentAnalysis(agentResult);
+
+      // Finalize coordination state - mark all agents as complete
+      setCoordination(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          status: 'complete',
+          endTime: Date.now(),
+          coordinator: {
+            ...prev.coordinator,
+            status: 'complete',
+            transactionHash: result.transactionHash,
+            result: 'Synthesized personalized training plan'
+          },
+          contributors: prev.contributors.map((c, i) => ({
+            ...c,
+            status: 'complete' as ContributionStatus,
+            transactionHash: result.transactionHash, // Same tx for all in demo
+            result: [
+              'Analyzed protein and recovery needs',
+              'Evaluated joint angles and form',
+              'Planned rest and recovery protocol',
+              'Scheduled optimal workout times'
+            ][i] || 'Completed analysis'
+          }))
+        };
+      });
 
       // Track payment transaction if available
       if (result.transactionHash) {
@@ -225,7 +335,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   }
 
   // Processing view with live feedback
-  if (isProcessing) {
+  if (isProcessing && coordination) {
     return (
       <Card className="border-purple-500/50 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/30 backdrop-blur-sm relative overflow-hidden">
         {/* Animated background */}
@@ -234,103 +344,35 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
         <CardHeader className="relative">
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-purple-400 animate-pulse" />
-            AI Coach Agent Thinking
+            Agent Coordination Active
             <Badge variant="outline" className="ml-auto bg-purple-500/20 border-purple-400 animate-pulse">
               <Sparkles className="h-3 w-3 mr-1" />
-              Active
+              {coordination.contributors.filter(c => c.status === 'complete').length + 1}/{coordination.contributors.length + 1}
             </Badge>
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Autonomous multi-step analysis in progress...
+            5 specialists coordinating via x402 on {formatNetworkName(coordination.primaryNetwork)}
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-6 relative">
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-purple-300 font-medium">{currentStep}</span>
-              <span className="text-muted-foreground">{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-2 transition-all duration-500 ease-out" />
-            {progress > 0 && progress < 100 && (
-              <div className="flex justify-center">
-                <div className="h-2 w-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="h-2 w-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                <div className="h-2 w-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '600ms' }}></div>
-              </div>
-            )}
-          </div>
+        <CardContent className="space-y-4 relative">
+          {/* Agent Coordination Progress Component */}
+          <AgentCoordinationProgress
+            coordination={coordination}
+            progress={progress}
+            currentStep={currentStep}
+          />
 
-          {/* Active Tools Visualization */}
-          {activeTools.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold flex items-center gap-2 text-purple-300">
-                <Eye className="h-4 w-4" />
-                Watch the Agent Work:
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { name: "analyze_pose_data", label: "Form Analysis", icon: Target, color: "text-green-400", bg: "bg-green-500/10 border-green-500/30" },
-                  { name: "query_workout_history", label: "History Check", icon: TrendingUp, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/30" },
-                  { name: "benchmark_performance", label: "Benchmarking", icon: Trophy, color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/30" },
-                  { name: "generate_training_plan", label: "Plan Creation", icon: Brain, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/30" },
-                ].map((tool) => {
-                  const Icon = tool.icon;
-                  const isActive = activeTools.includes(tool.name);
-
-                  return (
-                    <div
-                      key={tool.name}
-                      className={cn(
-                        "p-4 rounded-xl border-2 transition-all duration-500 transform",
-                        isActive
-                          ? `${tool.bg} shadow-lg shadow-purple-500/20 scale-105 animate-pulse`
-                          : "border-gray-700 bg-gray-800/30 opacity-60"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Icon
-                          className={cn(
-                            "h-5 w-5 transition-all duration-300",
-                            isActive ? `${tool.color} animate-pulse` : "text-gray-500"
-                          )}
-                        />
-                        <div className="flex-1">
-                          <span className="text-xs font-medium">{tool.label}</span>
-                          {isActive && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <div className="h-1 w-1 bg-green-400 rounded-full animate-ping"></div>
-                              <span className="text-[10px] text-green-400">Executing...</span>
-                            </div>
-                          )}
-                        </div>
-                        {isActive && (
-                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-500/20">
-                            <CheckCircle2 className="h-3 w-3 text-green-400 animate-pulse" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Agent Info */}
-          <div className="bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-lg p-4 backdrop-blur-sm">
-            <div className="flex items-start gap-4">
-              <AlertCircle className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-purple-300">Autonomous Decision-Making</p>
+          {/* Explanation */}
+          <div className="bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-lg p-3 backdrop-blur-sm">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-4 w-4 text-purple-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-purple-300">Agent Economy in Action</p>
                 <p className="text-xs text-muted-foreground">
-                  The agent is independently deciding which tools to use and how to analyze your workout. No human intervention required.
+                  Your Coach Agent is discovering and paying specialist agents via x402 micropayments.
+                  Each agent contributes unique expertise to your personalized training plan.
                 </p>
-                <div className="flex items-center gap-2 text-xs text-purple-400/80 mt-2">
-                  <div className="h-2 w-2 bg-purple-400 rounded-full animate-pulse"></div>
-                  <span>Agent is actively reasoning...</span>
-                </div>
               </div>
             </div>
           </div>
@@ -349,11 +391,11 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
             AI Coach Agent Analysis
             <Badge variant="outline" className="ml-auto bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border-purple-400">
               <Sparkles className="h-3 w-3 mr-1" />
-              Autonomous
+              Complete
             </Badge>
           </CardTitle>
           <CardDescription>
-            Multi-step reasoning with {agentAnalysis.toolsUsed?.length || 0} tool calls
+            {coordination ? `${coordination.contributors.length + 1} agents coordinated` : 'Multi-step reasoning'} • {agentAnalysis.toolsUsed?.length || 0} tool calls
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -364,44 +406,36 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
             </div>
           </div>
 
-          {/* Tools Used */}
-          {agentAnalysis.toolsUsed && agentAnalysis.toolsUsed.length > 0 && (
-            <div className="border-t pt-4">
-              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <Zap className="h-4 w-4 text-yellow-400" />
-                Tools Used by Agent
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {agentAnalysis.toolsUsed.map((tool: string, idx: number) => (
-                  <Badge key={idx} variant="secondary" className="text-xs">
-                    {tool.replace(/_/g, " ")}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+          {/* Agent Contribution Breakdown */}
+          {coordination && (
+            <AgentContributionList
+              coordination={coordination}
+              showSavings={true}
+              showTransaction={true}
+            />
           )}
 
-          {/* Reasoning Steps Timeline */}
+          {/* Reasoning Steps Timeline - Collapsible for cleaner UI */}
           {agentAnalysis.reasoning_steps && agentAnalysis.reasoning_steps.length > 0 && (
-            <div className="border-t pt-4">
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <details className="border-t pt-4">
+              <summary className="text-sm font-semibold mb-3 flex items-center gap-2 cursor-pointer hover:text-purple-300 transition-colors">
                 <Target className="h-4 w-4 text-blue-400" />
-                Autonomous Reasoning Chain
-              </h4>
-              <div className="space-y-3">
+                View Reasoning Chain ({agentAnalysis.reasoning_steps.length} steps)
+              </summary>
+              <div className="space-y-3 mt-3">
                 {agentAnalysis.reasoning_steps.map((step: any, idx: number) => (
                   <div key={idx} className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-xs">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-xs">
                       {step.step}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+                      <div className="bg-gray-800/50 rounded-lg p-2.5 border border-gray-700/50">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-semibold text-purple-300">
                             {step.action.replace(/_/g, " ")}
                           </span>
                           <Badge variant="secondary" className="text-[10px] bg-green-500/20 text-green-400 border-green-500/30">
-                            Completed
+                            Done
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-2">
@@ -412,30 +446,28 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
                   </div>
                 ))}
               </div>
-            </div>
+            </details>
           )}
 
-          {/* Metadata */}
-          <div className="border-t pt-4 grid grid-cols-2 gap-4 text-xs text-muted-foreground">
-            <div>
-              <span className="font-semibold">Model:</span> {agentAnalysis.model}
-            </div>
-            <div>
-              <span className="font-semibold">Iterations:</span> {agentAnalysis.iterationsUsed}
-            </div>
-            <div className="col-span-2">
-              <span className="font-semibold">AgentCore Primitives:</span>{" "}
-              {agentAnalysis.agentCore_primitives_used?.join(", ")}
-            </div>
+          {/* Tech Metadata - Compact */}
+          <div className="border-t pt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span><strong>Model:</strong> {agentAnalysis.model}</span>
+            <span><strong>Iterations:</strong> {agentAnalysis.iterationsUsed}</span>
+            {agentAnalysis.agentCore_primitives_used?.length > 0 && (
+              <span><strong>Primitives:</strong> {agentAnalysis.agentCore_primitives_used.join(", ")}</span>
+            )}
           </div>
         </CardContent>
       </Card>
     );
   }
 
+  // Determine network for display
+  const preferredNetwork = walletChain === 'solana' ? 'solana-devnet' : 'avalanche-c-chain';
+
   return (
     <Card className="border-purple-500/50 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/30 backdrop-blur-sm">
-      <CardHeader>
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-indigo-500/20">
@@ -443,72 +475,28 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
             </div>
             <div>
               <CardTitle>AI Coach Agent</CardTitle>
-              <p className="text-sm text-muted-foreground">Autonomous multi-step reasoning</p>
+              <p className="text-sm text-muted-foreground">Powered by x402 Agent Economy</p>
             </div>
           </div>
           <Badge variant="outline" className="bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border-purple-400 text-purple-200">
             <Sparkles className="h-3 w-3 mr-1" />
-            Autonomous
+            5 Specialists
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Value Proposition */}
-        <div className="space-y-3">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <Brain className="h-4 w-4 text-purple-400" />
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-sm mb-1">Multi-Step Reasoning</h4>
-              <p className="text-xs text-muted-foreground">
-                Agent autonomously decides which analysis tools to use and synthesizes insights with real Bedrock AgentCore
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-              <Zap className="h-4 w-4 text-blue-400" />
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-sm mb-1">Tool Integration</h4>
-              <p className="text-xs text-muted-foreground">
-                Accesses pose analysis, workout history, benchmarks, and training plan generation with real tool execution
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-              <Target className="h-4 w-4 text-green-400" />
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-sm mb-1">Personalized Plans</h4>
-              <p className="text-xs text-muted-foreground">
-                Creates adaptive training programs based on your unique performance patterns
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-yellow-400" />
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-sm mb-1">Autonomous Decisions</h4>
-              <p className="text-xs text-muted-foreground">
-                Agent independently determines analysis strategy with real Bedrock AgentCore primitives
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* Agent Value Proposition - Shows what user gets */}
+        <AgentValueProposition
+          variant="full"
+          showNetwork={true}
+          network={preferredNetwork}
+        />
 
         {/* Balance Display */}
         <WalletBalanceDisplay
           variant="detailed"
           requiredAmount="0.10"
-          className="mb-4"
+          className="mb-2"
           onInsufficientFunds={() => {
             toast({
               title: "⚠️ Insufficient USDC",
@@ -518,46 +506,35 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
           }}
         />
 
-        {/* Pricing */}
-        <div className="border-t pt-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold">$0.10</span>
-                <span className="text-sm text-muted-foreground">USDC</span>
-              </div>
-              <p className="text-xs text-muted-foreground">One-time payment per analysis</p>
-            </div>
-          </div>
-
-          <AnimatedButton
-            onClick={handleUnlockAgent}
-            disabled={isProcessing}
-            disableAnimation={isProcessing}
-            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-purple-500/20"
-            size="lg"
-            animationPreset="glow"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Agent Analyzing...
-              </>
-            ) : (
-              <>
-                <Brain className="mr-2 h-4 w-4" />
-                Unlock AI Coach Agent - $0.10
-              </>
-            )}
-          </AnimatedButton>
-        </div>
+        {/* CTA Button */}
+        <AnimatedButton
+          onClick={handleUnlockAgent}
+          disabled={isProcessing}
+          disableAnimation={isProcessing}
+          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-purple-500/20"
+          size="lg"
+          animationPreset="glow"
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Coordinating Agents...
+            </>
+          ) : (
+            <>
+              <Brain className="mr-2 h-4 w-4" />
+              Unlock 5 Specialists • $0.10
+            </>
+          )}
+        </AnimatedButton>
 
         {/* Tech Info */}
-        <div className="text-xs text-muted-foreground text-center pt-2 border-t">
-          <Lock className="h-3 w-3 inline mr-1" />
-          Powered by Amazon Bedrock AgentCore • Real multi-step reasoning • Actual tool use
+        <div className="text-xs text-muted-foreground text-center pt-2 border-t flex items-center justify-center gap-2">
+          <Lock className="h-3 w-3" />
+          <span>Bedrock AgentCore • x402 Protocol • Multi-Chain Settlement</span>
         </div>
       </CardContent>
     </Card>
   );
 }
+

@@ -9,8 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Brain, Zap, Sparkles, ChevronRight, Check, Camera, Target } from "lucide-react";
+import { Brain, Sparkles, ChevronRight, Check, Camera, Target, Users, Network, DollarSign } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { AgentValueProposition } from "@/components/agent-economy/AgentValueProposition";
+import { CoachingTierCard } from "@/components/CoachingTierCard";
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -69,108 +71,91 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       description: "Choose what works for you",
       content: (
         <div className="space-y-3">
-          {/* Free Tier */}
-          <div className="border-2 border-green-500/50 rounded-lg p-4 bg-green-500/5">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                <Check className="h-4 w-4 text-green-400" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-sm">Free Tier</h4>
-                <Badge variant="outline" className="text-xs">Always Available</Badge>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground ml-10">
-              Real-time coaching, rep counting, form scoring
-            </p>
-          </div>
-
-          {/* Premium Tier */}
-          <div className="border rounded-lg p-4 bg-card hover:bg-accent/50 transition-colors">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <Zap className="h-4 w-4 text-blue-400" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-sm">Premium Tier</h4>
-                <Badge variant="outline" className="text-xs">$0.05 USDC</Badge>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground ml-10">
-              Deep-dive analysis, detailed breakdown, recommendations
-            </p>
-          </div>
-
-          {/* Agent Tier */}
-          <div className="border-2 border-purple-500/50 rounded-lg p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <Brain className="h-4 w-4 text-purple-400" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-sm flex items-center gap-1">
-                  AI Agent Tier
-                  <Sparkles className="h-3 w-3 text-purple-400" />
-                </h4>
-                <Badge variant="outline" className="text-xs">$0.10 USDC</Badge>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground ml-10">
-              Autonomous coaching, training plans, benchmarking
-            </p>
-          </div>
+          {/* Coaching Tiers - Using shared component */}
+          <CoachingTierCard tier="free" className="mb-3" />
+          <CoachingTierCard tier="premium" className="mb-3" />
+          <CoachingTierCard tier="agent" showAgentEconomyInfo={true} />
 
           <p className="text-center text-xs text-muted-foreground mt-4">
-            💡 Start free, upgrade anytime!
+            💡 Start free, upgrade to agent coordination anytime!
           </p>
         </div>
       ),
     },
     {
-      title: "How It Works",
-      description: "Simple 3-step process",
+      title: "Agent Economy Explained",
+      description: "How 5 specialists work together for you",
       content: (
         <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-bold text-blue-400">1</span>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-1">Set Up Your Camera</h4>
-              <p className="text-xs text-muted-foreground">
-                Position your device so we can see your full body. Good lighting helps!
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-bold text-blue-400">2</span>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-1">Choose Your Exercise & Coach</h4>
-              <p className="text-xs text-muted-foreground">
-                Pick pull-ups or jumps, select a coach personality, and start your workout!
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-bold text-blue-400">3</span>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-1">Get Real-Time Feedback</h4>
-              <p className="text-xs text-muted-foreground">
-                Watch your form score, hear coaching tips, and track your progress!
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 mt-4">
-            <p className="text-xs text-center font-medium">
-              🎯 After your workout, choose your analysis level
+          <div className="text-center mb-4">
+            <Badge variant="secondary" className="mb-2">
+              <Network className="h-3 w-3 mr-1" />
+              x402 Multi-Agent Coordination
+            </Badge>
+            <p className="text-sm text-muted-foreground">
+              Instead of hiring 5 separate experts, our AI agents coordinate to give you comprehensive coaching at a fraction of the cost.
             </p>
+          </div>
+
+          {/* Agent Value Proposition - Compact version */}
+          <div className="bg-gradient-to-r from-purple-500/5 to-blue-500/5 border border-purple-500/20 rounded-lg p-3">
+            <AgentValueProposition variant="compact" showNetwork={false} />
+          </div>
+
+          {/* How it works steps */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-bold text-blue-400">1</span>
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1">You Request Analysis</h4>
+                <p className="text-xs text-muted-foreground">
+                  After your workout, choose the Agent Tier for comprehensive insights.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-bold text-blue-400">2</span>
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1">Agents Coordinate</h4>
+                <p className="text-xs text-muted-foreground">
+                  5 AI specialists (Fitness, Nutrition, Biomechanics, Recovery, Scheduling) work together via x402 protocol.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-bold text-blue-400">3</span>
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1">Receive Personalized Plan</h4>
+                <p className="text-xs text-muted-foreground">
+                  Get a comprehensive training program with insights from all specialists.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Cost Comparison */}
+          <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 mt-3">
+            <div className="flex items-center justify-between text-sm mb-1">
+              <span className="font-medium">Your Cost</span>
+              <span className="text-lg font-bold text-green-400">$0.10</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Traditional cost</span>
+              <span className="line-through">$350+</span>
+            </div>
+            <div className="text-center mt-2">
+              <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                Save 99.97%
+              </Badge>
+            </div>
           </div>
         </div>
       ),
@@ -184,7 +169,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <Check className="h-10 w-10 text-green-400" />
           </div>
           <p className="text-muted-foreground">
-            You now know everything to get started with Imperfect Coach!
+            You're ready to experience AI-powered coaching with multi-agent coordination!
           </p>
           <div className="space-y-2 text-left bg-card border rounded-lg p-4">
             <h4 className="font-semibold text-sm mb-2">Quick Tips:</h4>
@@ -199,11 +184,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-400" />
-                Stay in frame during your workout
+                Try Agent Tier for 5x the insights at 1/1000th the cost
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-400" />
-                Upgrade for deeper insights anytime
+                Agents coordinate via x402 for comprehensive analysis
               </li>
             </ul>
           </div>

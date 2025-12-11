@@ -20,9 +20,13 @@ import {
   CheckCircle,
   X,
   ChevronRight,
+  Users,
+  Network,
+  DollarSign,
 } from "lucide-react";
 import { InlineWallet } from "./UnifiedWallet";
 import { cn } from "@/lib/utils";
+import { AgentValueProposition } from "@/components/agent-economy/AgentValueProposition";
 
 interface OnboardingCarouselProps {
   onComplete: () => void;
@@ -163,55 +167,72 @@ export const OnboardingCarousel = ({
               </Card>
             </CarouselItem>
 
-            {/* Slide 3: Blockchain Achievements */}
+            {/* Slide 3: Agent Economy Value */}
             <CarouselItem>
               <Card className="border-2">
                 <CardContent className="flex flex-col items-center justify-center p-8 md:p-12 space-y-6">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full blur-2xl opacity-20" />
-                    <Trophy className="h-20 w-20 text-yellow-600 relative z-10" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full blur-2xl opacity-20" />
+                    <Users className="h-20 w-20 text-purple-600 relative z-10" />
                   </div>
                   <div className="space-y-2 text-center">
                     <h2 className="text-3xl font-bold">
-                      On-Chain Achievements
+                      Agent Economy Power
                     </h2>
                     <p className="text-lg text-muted-foreground">
-                      Your fitness records, permanently verified
+                      5 AI specialists coordinate for your success
                     </p>
                   </div>
                   <div className="space-y-4 w-full max-w-xl">
-                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
-                      <div className="p-3 bg-blue-500 rounded-lg">
-                        <Wallet className="h-6 w-6 text-white" />
+                    {/* Agent Value Proposition */}
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+                      <AgentValueProposition variant="compact" showNetwork={true} />
+                    </div>
+
+                    {/* Key Benefits */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+                        <DollarSign className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-sm">99.97% Savings</p>
+                          <p className="text-xs text-muted-foreground">
+                            $0.10 instead of $350+ for 5 experts
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-semibold">Base Sepolia Testnet</p>
-                        <p className="text-xs text-muted-foreground">
-                          Immutable workout records on blockchain
-                        </p>
+                      <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                        <Network className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-sm">x402 Coordination</p>
+                          <p className="text-xs text-muted-foreground">
+                            Multi-chain agent collaboration
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg">
-                      <div className="p-3 bg-yellow-500 rounded-lg">
-                        <TrendingUp className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold">Global Leaderboard</p>
-                        <p className="text-xs text-muted-foreground">
-                          Compete with athletes worldwide
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
-                      <div className="p-3 bg-green-500 rounded-lg">
-                        <CheckCircle className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold">Verified PRs</p>
-                        <p className="text-xs text-muted-foreground">
-                          Prove your personal records cryptographically
-                        </p>
-                      </div>
+
+                    {/* What You Get */}
+                    <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                      <p className="text-sm font-medium text-center">
+                        <Badge variant="secondary" className="mb-2">
+                          <Zap className="h-3 w-3 mr-1" />
+                          Comprehensive Analysis
+                        </Badge>
+                      </p>
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          Fitness, Nutrition, Biomechanics insights
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          Recovery and scheduling optimization
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          Personalized 4-week training plans
+                        </li>
+                      </ul>
                     </div>
                   </div>
                 </CardContent>
@@ -231,7 +252,7 @@ export const OnboardingCarousel = ({
                       Ready to Get Started?
                     </h2>
                     <p className="text-lg text-muted-foreground">
-                      Connect your wallet to unlock all features
+                      Connect your wallet to unlock agent economy
                     </p>
                   </div>
                   <div className="w-full max-w-md space-y-4">
@@ -259,21 +280,21 @@ export const OnboardingCarousel = ({
                     </div>
                     <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg space-y-4">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Connected Benefits</span>
-                        <Badge className="bg-blue-600">Unlock Now</Badge>
+                        <span className="font-medium">Agent Economy Access</span>
+                        <Badge className="bg-purple-600">Unlock Now</Badge>
                       </div>
                       <ul className="space-y-2 text-sm">
                         <li className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-blue-600" />
-                          On-chain workout records
+                          <CheckCircle className="h-4 w-4 text-purple-600" />
+                          Multi-agent coordination via x402
                         </li>
                         <li className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-blue-600" />
-                          Leaderboard participation
+                          <CheckCircle className="h-4 w-4 text-purple-600" />
+                          5 AI specialists for $0.10
                         </li>
                         <li className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-blue-600" />
-                          Premium analysis ($0.05/workout)
+                          <CheckCircle className="h-4 w-4 text-purple-600" />
+                          Comprehensive training plans
                         </li>
                       </ul>
                     </div>
