@@ -5,17 +5,11 @@
  */
 
 import React, { useEffect } from 'react';
-import { WagmiProvider } from 'wagmi';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { RainbowKitProvider, ConnectButton, useChainModal } from '@rainbow-me/rainbowkit';
+import { ConnectButton, useChainModal } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import '@rainbow-me/rainbowkit/styles.css';
-import { QueryClient } from '@tanstack/react-query';
-import { rainbowkitConfig } from '@/wagmi';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
-
-const queryClient = new QueryClient();
 
 interface EVMWalletConnectorProps {
   onConnected?: (address: string, chainId: number) => void;
@@ -23,10 +17,13 @@ interface EVMWalletConnectorProps {
 }
 
 /**
- * Inner component that uses RainbowKit hooks
- * Must be inside RainbowKitProvider
+ * EVMWalletConnector - Wraps RainbowKit ConnectButton
+ * Use this component in the auth flow when user selects "EVM Wallet"
  */
-const EVMWalletContent = ({ onConnected, onChainChanged }: EVMWalletConnectorProps) => {
+export const EVMWalletConnector = React.forwardRef<
+  HTMLDivElement,
+  EVMWalletConnectorProps
+>(({ onConnected, onChainChanged }, ref) => {
   const { address, isConnected, chainId } = useAccount();
   const { openChainModal } = useChainModal();
 
@@ -43,49 +40,25 @@ const EVMWalletContent = ({ onConnected, onChainChanged }: EVMWalletConnectorPro
   }, [chainId, onChainChanged]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3">
-        <ConnectButton />
-        
-        {isConnected && (
-          <Button
-            onClick={openChainModal}
-            variant="outline"
-            className="w-full"
-          >
-            <ChevronRight className="h-4 w-4 mr-2" />
-            Switch Network
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/**
- * EVMWalletConnector - Wraps RainbowKit provider with wagmi config
- * Use this component in the auth flow when user selects "EVM Wallet"
- */
-export const EVMWalletConnector = React.forwardRef<
-  HTMLDivElement,
-  EVMWalletConnectorProps
->(({ onConnected, onChainChanged }, ref) => {
-  return (
     <div ref={ref} className="w-full">
-      <WagmiProvider config={rainbowkitConfig}>
-        <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider
-            theme="light"
-            modalSize="compact"
-            showRecentTransactions={false}
-          >
-            <EVMWalletContent 
-              onConnected={onConnected}
-              onChainChanged={onChainChanged}
-            />
-          </RainbowKitProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-center">
+            <ConnectButton />
+          </div>
+
+          {isConnected && (
+            <Button
+              onClick={openChainModal}
+              variant="outline"
+              className="w-full"
+            >
+              <ChevronRight className="h-4 w-4 mr-2" />
+              Switch Network
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 });

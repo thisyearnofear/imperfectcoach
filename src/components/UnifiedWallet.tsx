@@ -60,15 +60,15 @@ interface UnifiedWalletProps {
   onAuthenticated?: () => void;
 }
 
-const WalletOnboarding = ({ 
+const WalletOnboarding = ({
   chains = "base",
-  onDismiss 
-}: { 
+  onDismiss
+}: {
   chains?: ChainType;
-  onDismiss?: () => void 
+  onDismiss?: () => void
 }) => {
   const showMultiChain = chains === "all";
-  
+
   return (
     <Alert className="border-primary/20 bg-primary/5">
       <Info className="h-4 w-4 text-primary" />
@@ -78,7 +78,7 @@ const WalletOnboarding = ({
             Welcome to Blockchain Fitness!
           </p>
           <p className="text-muted-foreground">
-            {showMultiChain 
+            {showMultiChain
               ? "Connect your wallets for optimal payment routing and cost savings across multiple blockchains."
               : "Connect your Coinbase Smart Wallet to compete on the global leaderboard and track your progress permanently on-chain."}
           </p>
@@ -176,7 +176,7 @@ const SolanaWalletState = ({
 }) => {
   const [copied, setCopied] = React.useState(false);
   const { displayName } = useDisplayName(address || undefined, 'solana');
-  
+
   const isPhantomAvailable = () => {
     return typeof window !== "undefined" && (window as any)?.solana?.isPhantom;
   };
@@ -417,7 +417,7 @@ const AuthenticatedState = ({
           <span>Authenticated</span>
         </Badge>
         {chainName && (
-          <Badge className={`${getChainColor(chainName)}`}>
+          <Badge className={getChainColorClasses(getChainColor(evmChainId)).badge}>
             {chainName}
           </Badge>
         )}
@@ -581,10 +581,10 @@ const AuthPathSelector = ({
             Choose your preferred authentication method
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-3 py-4">
           {/* Smart Account: Coinbase Smart Wallet + Base */}
-          <Card 
+          <Card
             className="cursor-pointer border-2 hover:border-blue-400 transition-colors"
             onClick={() => {
               onSelect("smart-account");
@@ -612,7 +612,7 @@ const AuthPathSelector = ({
           </Card>
 
           {/* Solana: Phantom Wallet */}
-          <Card 
+          <Card
             className="cursor-pointer border-2 hover:border-purple-400 transition-colors"
             onClick={() => {
               onSelect("solana");
@@ -640,7 +640,7 @@ const AuthPathSelector = ({
           </Card>
 
           {/* EVM Wallet: RainbowKit/ConnectKit (Base + Avalanche) */}
-          <Card 
+          <Card
             className="cursor-pointer border-2 hover:border-emerald-400 transition-colors"
             onClick={() => {
               onSelect("evm");
@@ -685,13 +685,13 @@ export const UnifiedWallet = ({
   onConnect,
   onAuthenticated,
 }: UnifiedWalletProps) => {
-  const { isConnected, isAuthenticated, isLoading, connectAndSignIn, switchToChain } =
+  const { isConnected, isAuthenticated, isLoading, connectAndSignIn, switchToChain, chainId: evmChainId } =
     useUser();
   const { address: baseAddress } = useAccount();
   const [showAuthSelector, setShowAuthSelector] = React.useState(false);
   const [activeAuthPath, setActiveAuthPath] = React.useState<AuthPath | null>(null);
-  const [evmChainId, setEvmChainId] = React.useState<number | null>(null);
-  
+
+
   // Solana state
   const [solanaState, setSolanaState] = React.useState({
     connected: false,
@@ -702,7 +702,7 @@ export const UnifiedWallet = ({
   // Monitor Solana wallet state
   React.useEffect(() => {
     if (chains !== "solana" && chains !== "all") return;
-    
+
     const updateSolanaState = () => {
       const state = solanaWalletManager.getState();
       setSolanaState({
@@ -725,7 +725,7 @@ export const UnifiedWallet = ({
         setShowAuthSelector(false);
       } else if (path === "smart-account") {
         // Smart Account (Base Sepolia via Coinbase)
-        await connectAndSignIn();
+        await connectAndSignIn("Coinbase Wallet");
         setShowAuthSelector(false);
       } else if (path === "evm") {
         // EVM Wallet - Show RainbowKit interface for wallet selection
@@ -843,7 +843,7 @@ export const UnifiedWallet = ({
                   onConnect={connectAndSignIn}
                 />
               )}
-              
+
               {baseConnected && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-green-600">
@@ -852,7 +852,7 @@ export const UnifiedWallet = ({
                   </div>
                   <div className="text-xs text-gray-600">
                     • Premium analysis payments
-                    • Agent coaching sessions  
+                    • Agent coaching sessions
                     • Established infrastructure
                   </div>
                 </div>
@@ -880,7 +880,7 @@ export const UnifiedWallet = ({
                 variant="card"
                 size={size}
               />
-              
+
               {solanaConnected && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-green-600">
@@ -912,7 +912,7 @@ export const UnifiedWallet = ({
                 </div>
               </div>
             )}
-            
+
             {oneConnected && (
               <div className="flex items-start gap-3">
                 <Info className="h-5 w-5 text-amber-600 mt-0.5" />
@@ -923,13 +923,13 @@ export const UnifiedWallet = ({
                   </div>
                   <div className="text-xs text-amber-600">
                     • Access to both payment networks
-                    • Automatic fee optimization  
+                    • Automatic fee optimization
                     • Seamless fallback systems
                   </div>
                 </div>
               </div>
             )}
-            
+
             {neitherConnected && (
               <div className="flex items-center gap-3">
                 <Wallet className="h-5 w-5 text-blue-600" />
@@ -990,13 +990,11 @@ export const UnifiedWallet = ({
         <EVMWalletConnector
           onConnected={(address, chainId) => {
             console.log("EVM wallet connected:", address, chainId);
-            setEvmChainId(chainId);
             setActiveAuthPath(null);
             onConnect?.();
           }}
           onChainChanged={(chainId) => {
             console.log("EVM chain changed:", chainId);
-            setEvmChainId(chainId);
           }}
         />
       </div>
@@ -1010,10 +1008,10 @@ export const UnifiedWallet = ({
     const anyActive = baseActive || solanaActive;
 
     // Determine which auth path is active
-    const activeAuthPath: AuthPath | null = 
-      solanaActive ? "solana" : 
-      baseActive ? "smart-account" : 
-      null;
+    const activeAuthPath: AuthPath | null =
+      solanaActive ? "solana" :
+        baseActive ? "smart-account" :
+          null;
 
     // If anything is connected, show authenticated state
     if (anyActive) {
@@ -1142,8 +1140,8 @@ export const UnifiedWallet = ({
             {isAuthenticated
               ? "You're ready to compete on the blockchain leaderboard!"
               : isConnected || solanaState.connected
-              ? "Complete authentication to unlock all features"
-              : "Select a blockchain network to get started"}
+                ? "Complete authentication to unlock all features"
+                : "Select a blockchain network to get started"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

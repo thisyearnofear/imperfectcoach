@@ -219,7 +219,7 @@ function buildSubmitScoreInstruction(
       { pubkey: userPublicKey, isSigner: true, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
-    data: instructionData,
+    data: instructionData as any,
   });
 }
 
@@ -234,7 +234,7 @@ function buildSubmitScoreInstruction(
  */
 export async function submitScoreToSolana(
   connection: Connection,
-  wallet: WalletContextState,
+  wallet: any,
   leaderboardAddress: PublicKey,
   score: number,
   exercise: ExerciseType

@@ -3,6 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useMemo, type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
+import { RainbowKitProvider, lightTheme, darkTheme } from "@rainbow-me/rainbowkit";
+import '@rainbow-me/rainbowkit/styles.css';
 
 import { config } from "@/wagmi";
 import { UserProvider } from "@/contexts/UserContext";
@@ -13,13 +15,15 @@ export function Web3Providers(props: { children: ReactNode }) {
 
   return (
     <WagmiProvider config={config}>
-      <SolanaProvider>
-        <QueryClientProvider client={queryClient}>
-          <UserProvider options={{ requireSiwe: false, enableSmartRefresh: true }}>
-            {props.children}
-          </UserProvider>
-        </QueryClientProvider>
-      </SolanaProvider>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider theme={lightTheme()}>
+          <SolanaProvider>
+            <UserProvider options={{ requireSiwe: false, enableSmartRefresh: true }}>
+              {props.children}
+            </UserProvider>
+          </SolanaProvider>
+        </RainbowKitProvider>
+      </QueryClientProvider>
     </WagmiProvider>
   );
 }

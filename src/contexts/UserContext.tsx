@@ -9,12 +9,12 @@ import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useLeaderboardParallel } from "@/hooks/useLeaderboardParallel";
 import { baseSepolia, avalancheFuji } from "wagmi/chains";
 import type { BlockchainScore } from "@/hooks/useBlockchainContracts";
-import { 
-  submitScoreToSolana, 
+import {
+  submitScoreToSolana,
   getTopUsersFromSolana,
   getUserScorePDA,
   getExerciseProgramId,
-  type ExerciseType 
+  type ExerciseType
 } from "@/lib/solana/leaderboard";
 import { PublicKey, Transaction, TransactionInstruction, SystemProgram } from "@solana/web3.js";
 
@@ -82,27 +82,27 @@ export interface UserActions {
   signOut: () => Promise<void>; // Alias for disconnectWallet for compatibility
   signIn: () => Promise<void>;
   signInWithEthereum: () => Promise<void>; // Alias for signIn
-  connectAndSignIn: () => Promise<void>;
+  connectAndSignIn: (connectorName?: string) => Promise<void>;
   resetAuth: () => Promise<void>; // Alias for disconnectWallet
   switchToChain: (chainName: 'base' | 'avalanche') => Promise<void>;
-  
+
   // Solana Wallet actions
   connectSolanaWallet: () => Promise<void>;
   disconnectSolanaWallet: () => Promise<void>;
   submitScoreToSolanaContract: (pullups: number, jumps: number, leaderboardAddress?: any) => Promise<{ signature?: string }>;
   getSolanaLeaderboard: (limit?: number) => Promise<any[]>;
-  
+
   // Submission and leaderboard
   submitScore: (pullups: number, jumps: number) => Promise<{ hash?: string }>;
   refreshLeaderboard: () => Promise<void>;
-  
+
   // UI helpers
   getDisplayName: () => string;
   copyAddress: () => Promise<void>;
   getCDPFeatures: () => any;
 }
 
-export interface UserContextType extends UserState, UserActions {}
+export interface UserContextType extends UserState, UserActions { }
 
 export const UserContext = createContext<UserContextType | null>(null);
 
@@ -123,15 +123,15 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
   const solanaWallet = useSolanaWalletAdapter();
   const contracts = useBlockchainContracts(evmWallet.address);
   const { basename } = useBasename(evmWallet.address);
-  
+
   // Combined leaderboard from both chains
-  const { 
-    leaderboard: combinedLeaderboard, 
+  const {
+    leaderboard: combinedLeaderboard,
     isLoading: isCombinedLeaderboardLoading,
     error: combinedLeaderboardError,
-    refetch: refreshSolanaLeaderboard 
+    refetch: refreshSolanaLeaderboard
   } = useLeaderboardParallel();
-  
+
   // Refresh state management
   const [refreshState, setRefreshState] = useState({
     isRefreshing: false,
@@ -265,47 +265,47 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
   const signInWithEthereum = useCallback(async () => {
     // Add a small delay to ensure wallet state is properly updated
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     // Add defensive checks
     if (!evmWallet.isConnected) {
       console.error("Cannot sign in with Ethereum: Wallet not connected");
       toast.error("Please connect your wallet first");
       return;
     }
-    
+
     if (!evmWallet.address) {
       console.error("Cannot sign in with Ethereum: No address available");
       toast.error("Wallet connected but no address available");
       return;
     }
-    
+
     await evmWallet.signIn();
   }, [evmWallet]);
 
-  const connectAndSignIn = useCallback(async () => {
+  const connectAndSignIn = useCallback(async (connectorName?: string) => {
     try {
-      await evmWallet.connectWallet();
-      
+      await evmWallet.connectWallet(connectorName);
+
       // Wait for connection to be fully established
       let attempts = 0;
       const maxAttempts = 20; // 10 seconds max wait
-      
+
       while (!evmWallet.isConnected && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 500));
         attempts++;
       }
-      
+
       if (!evmWallet.isConnected) {
         throw new Error("Wallet connection timeout");
       }
-      
+
       // Wait a bit more for the address to be available
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       if (!evmWallet.address) {
         throw new Error("Wallet connected but address not available");
       }
-      
+
       // Now sign in
       await evmWallet.signIn();
     } catch (error) {
