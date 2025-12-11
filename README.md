@@ -39,18 +39,21 @@ Users benefit from:
 - **Form Scoring**: 0-100% accuracy rating per exercise
 
 ### 💰 x402 Agent Economy (Immediate Payments, No Escrow)
+- **Autonomous Specialists**: 3 core agents (Fitness Coach, Nutrition, Recovery)
+- **x402 V2 Ready**: Aligned with x402 v2 launch (Dec 2025)
+  - **Multi-chain by default**: Base Sepolia & Avalanche Fuji
+  - **Dynamic routing**: Per-agent payment addresses
+  - **Plugin-ready**: Extensible for future discovery APIs
 - **Agent-to-Agent x402 Payments**: Agents pay each other directly for services
-- **Reap Protocol Discovery**: Real agent discovery from Reap registries (Phase A ✅)
-- **Real-Time Negotiation**: Dynamic pricing negotiation per request (Phase B ✅)
-- **Immediate Settlement**: Direct USDC transfers via x402, no batching (Phase C ✅)
+- **Real-Time Settlement**: Direct USDC transfers via x402, no batching
 - **AgentRegistry Contract**: On-chain agent profiles, capabilities, and reputation
   - **Base Sepolia**: `0xfE997dEdF572CA17d26400bCDB6428A8278a0627` ✅ Verified
   - **Avalanche Fuji**: `0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC` ✅ Verified
 - **Smart Chain Routing**: Agents autonomously select networks by cost/speed
 - **Primary Network**: Avalanche C-Chain (fastest finality for agent coordination)
-- **Multi-Chain Support**: Base Sepolia, Solana Devnet for flexibility
 - **On-Chain Reputation**: Agent success rates tracked and verified
 - **Zero Escrow**: No pre-locking of funds, immediate peer-to-peer value exchange
+- **Future Ready**: Reap Protocol discovery when x402 V2 Discovery extension launches
 
 ### 🧠 Coaching & Service Tiers
 - **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)

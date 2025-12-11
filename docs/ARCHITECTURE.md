@@ -125,21 +125,22 @@ The x402 protocol enables **true decentralized agent economies** where autonomou
 
 #### Phase 3.5: Real Inter-Agent Payments (CURRENT - Dec 2024)
 **Goal**: Migrate from simulated payments to REAL blockchain settlement
-- **Status**: IN PROGRESS - Reap Protocol Integration (Phase A)
-- **Payment Migration**:
-  1. **Phase A: Discovery** ✅ DONE
-     - Agents discovered via Reap Protocol registries
-     - Real `x402` & `A2A` specialists returned
-     - Core agents as fallback
-  2. **Phase B: Negotiation** (NEXT)
-     - Reap's built-in x402 negotiation loops
-     - Agent-to-agent settlement signing
-     - Atomic payment execution
-  3. **Phase C: Settlement** ✅ COMPLETE
-     - Real USDC transfers on Avalanche Fuji
-     - Immediate x402 payment, no escrow batching
-     - On-chain reputation tracking via AgentRegistry
-  - **Reap Dependencies**: `@reap-protocol/sdk` in Lambda layer
+- **Status**: COMPLETE ✅ - x402 V2 Agent Economy Ready
+- **Architecture Decision**: Focus on owned agents + x402, defer external discovery
+  - **CORE_AGENTS** (3): Fitness Coach, Nutrition Planner, Recovery Booking
+    - Registered on AgentRegistry.sol (Base Sepolia & Avalanche Fuji)
+    - Full x402 payment support with SLA tracking
+    - Real reputation scoring on-chain
+  - **Future Integration**: Reap Protocol discovery when API stabilizes
+    - Reap's agent discovery endpoints not yet available
+    - Will integrate via x402 V2 Discovery extension when live
+    - No breaking changes needed—x402 V2 backward compatible
+- **x402 V2 Alignment**:
+  1. **Multi-chain by default** ✅ - Base Sepolia & Avalanche Fuji
+  2. **Dynamic payTo routing** ✅ - Per-agent payment addresses
+  3. **Plugin-driven discovery** 🔄 - Ready for Reap discovery
+  4. **Wallet-based access** 🔄 - SIWx coming in x402 V2
+  5. **Automatic service metadata** 🔄 - AgentRegistry acts as metadata source
 
 #### Phase 4: Multi-Service Marketplace (FUTURE - Q2)
 **Goal**: Calendar, Massage Booking, Nutrition agents all coordinate via x402

@@ -492,11 +492,24 @@ Coach Agent can autonomously:
 - [x] Updated architecture docs with contract info
 - [x] Multi-chain integration ready (Base Sepolia + Avalanche Fuji)
 
-**Week 5 (Current)**:
-- [ ] Integrate AgentRegistry with Bedrock agent for real discovery
-- [ ] Test agent registration flow on both chains
-- [ ] Implement reputation update flow
-- [ ] Mainnet migration preparation
+**Week 5 Completed** ✅:
+- [x] Investigated Reap Protocol integration
+  - [x] Tested Reap API connectivity (`https://avax2.api.reap.deals`)
+  - [x] Confirmed API online but agent discovery endpoints not yet available
+  - [x] Validated architecture decision: use CORE_AGENTS + x402 V2
+- [x] Updated architecture docs with x402 V2 alignment
+- [x] Confirmed CORE_AGENTS as primary solution:
+  - Fitness Coach (Bedrock), Nutrition Planner, Recovery Booking
+  - Full x402 payment support
+  - SLA tracking and reputation on-chain
+  - AgentRegistry.sol tracks all agents
+- [x] Strategy: Integrate Reap discovery later via x402 V2 Discovery extension
+
+**Week 5 (Current - Next Steps)**:
+- [ ] Wire CORE_AGENTS into Bedrock's call_specialist_agent tool
+- [ ] Test end-to-end x402 payment flow
+- [ ] Verify SLA tracking and reputation updates
+- [ ] Demo walkthrough script
 
 ### Deployment Checklist (Phase 3.5 Complete)
 - [x] All Phase A, B, C tests passing
