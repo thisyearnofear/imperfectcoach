@@ -231,7 +231,31 @@ export const useEVMWallet = (options: UseEVMWalletOptions = {}) => {
     }
   }, [address]);
 
-  // Auto-trigger SIWE after wallet connection (modern UX)
+  // Auto-reconnect to previously connected wallet (if available)
+  useEffect(() => {
+    // Check if wallet was previously connected and should auto-reconnect
+    const wasConnected = localStorage.getItem("wasEVMWalletConnected");
+    
+    if (wasConnected === "true" && !isConnected && !isLoading && connectors.length > 0) {
+      console.log('Auto-reconnecting to previously connected wallet');
+      const connector = connectors[0]; // Use first available connector (usually Coinbase)
+      connect({ connector }).catch(err => {
+        console.warn('Auto-reconnection failed:', err);
+        localStorage.removeItem("wasEVMWalletConnected");
+      });
+    }
+  }, []);
+
+  // Track wallet connection state for future auto-reconnect
+  useEffect(() => {
+    if (isConnected) {
+      localStorage.setItem("wasEVMWalletConnected", "true");
+    } else {
+      localStorage.removeItem("wasEVMWalletConnected");
+    }
+  }, [isConnected]);
+
+  // Auto-trigger SIWE after wallet connection (only if autoSignIn enabled)
   useEffect(() => {
     if (!autoSignIn) return;
     

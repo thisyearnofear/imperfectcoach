@@ -19,7 +19,7 @@ import {
 import { BlockchainScoreSubmission } from "./BlockchainScoreSubmission";
 import { InlineWallet } from "./UnifiedWallet";
 import { useFeatureAvailability } from "@/hooks/useFeatureGate";
-import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useUser } from "@/hooks/useUserHooks";
 import { Exercise, RepData, Achievement } from "@/lib/types";
 import { FadeIn } from "./ui/fade-in";
@@ -59,7 +59,7 @@ export const UnifiedActionCTA = ({
   bedrockSectionRef,
 }: UnifiedActionCTAProps) => {
   const { tier } = useFeatureAvailability("MULTIPLE_AI_COACHES");
-  const { isSolanaConnected, solanaAddress } = useSolanaWallet();
+  const { isSolanaConnected, solanaAddress } = useWalletConnection();
   const { isAuthenticated, address } = useUser();
 
   // Debug logging for tier detection

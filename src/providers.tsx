@@ -15,7 +15,7 @@ export function Web3Providers(props: { children: ReactNode }) {
     <WagmiProvider config={config}>
       <SolanaProvider>
         <QueryClientProvider client={queryClient}>
-          <UserProvider options={{ requireSiwe: true, enableSmartRefresh: true }}>
+          <UserProvider options={{ requireSiwe: false, enableSmartRefresh: true }}>
             {props.children}
           </UserProvider>
         </QueryClientProvider>

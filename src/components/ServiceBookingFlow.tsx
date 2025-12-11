@@ -18,7 +18,7 @@ import { Loader2, CheckCircle, AlertCircle, ExternalLink } from "lucide-react";
 import { ServiceTier, AgentCapability, AgentProfile } from "@/lib/agents/types";
 import { PaymentRouter, RoutingContext } from "@/lib/payments/payment-router";
 import { API_ENDPOINTS } from "@/lib/config";
-import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
 
 type BookingStep = "tier-select" | "agent-select" | "confirm" | "processing" | "complete" | "error";
 
@@ -60,7 +60,7 @@ export const ServiceBookingFlow = ({
   const { data: walletClient } = useWalletClient({
     chainId: baseSepolia.id,
   });
-  const { isSolanaConnected } = useSolanaWallet();
+  const { isSolanaConnected } = useWalletConnection();
 
   const isConnected = preferredChain === "solana" ? isSolanaConnected : isBaseConnected;
 

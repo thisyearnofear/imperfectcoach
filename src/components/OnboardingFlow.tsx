@@ -24,8 +24,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   useEffect(() => {
     // Check if user has seen onboarding
+    // Only show once per browser/device
     const hasSeenOnboarding = localStorage.getItem("hasSeenOnboarding");
     if (!hasSeenOnboarding) {
+      // Mark as seen immediately to avoid showing multiple times
+      localStorage.setItem("hasSeenOnboarding", "true");
       setIsOpen(true);
     }
   }, []);

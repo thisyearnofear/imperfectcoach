@@ -9,6 +9,14 @@ import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useLeaderboardParallel } from "@/hooks/useLeaderboardParallel";
 import { baseSepolia, avalancheFuji } from "wagmi/chains";
 import type { BlockchainScore } from "@/hooks/useBlockchainContracts";
+import { 
+  submitScoreToSolana, 
+  getTopUsersFromSolana,
+  getUserScorePDA,
+  getExerciseProgramId,
+  type ExerciseType 
+} from "@/lib/solana/leaderboard";
+import { PublicKey, Transaction, TransactionInstruction, SystemProgram } from "@solana/web3.js";
 
 export interface UserState {
   // EVM Wallet state (Base + Avalanche)
@@ -81,6 +89,8 @@ export interface UserActions {
   // Solana Wallet actions
   connectSolanaWallet: () => Promise<void>;
   disconnectSolanaWallet: () => Promise<void>;
+  submitScoreToSolanaContract: (pullups: number, jumps: number, leaderboardAddress?: any) => Promise<{ signature?: string }>;
+  getSolanaLeaderboard: (limit?: number) => Promise<any[]>;
   
   // Submission and leaderboard
   submitScore: (pullups: number, jumps: number) => Promise<{ hash?: string }>;
@@ -108,7 +118,8 @@ interface UserProviderProps {
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children, options = {} }) => {
   // Initialize EVM wallet (supports Base, Avalanche, etc.)
-  const evmWallet = useEVMWallet({ defaultChain: baseSepolia, autoSignIn: true });
+  // autoSignIn: false - don't force sign-in on page load, only when user explicitly clicks
+  const evmWallet = useEVMWallet({ defaultChain: baseSepolia, autoSignIn: false });
   const solanaWallet = useSolanaWalletAdapter();
   const contracts = useBlockchainContracts(evmWallet.address);
   const { basename } = useBasename(evmWallet.address);
@@ -322,6 +333,62 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
     }
   }, [evmWallet]);
 
+  // Solana score submission helper (mirrors useSolanaWallet functionality)
+  const submitScoreToSolanaContract = useCallback(
+    async (pullups: number, jumps: number, leaderboardAddress?: PublicKey): Promise<{ signature?: string }> => {
+      if (!solanaWallet.solanaPublicKey || !solanaWallet.connection) {
+        toast.error("Please connect your Solana wallet first");
+        return {};
+      }
+
+      let exerciseType: ExerciseType;
+      let score: number;
+
+      if (pullups > 0) {
+        exerciseType = "pullups";
+        score = pullups;
+      } else if (jumps > 0) {
+        exerciseType = "jumps";
+        score = jumps;
+      } else {
+        toast.error("Please complete at least one exercise");
+        return {};
+      }
+
+      try {
+        const signature = await submitScoreToSolana(
+          solanaWallet.connection,
+          solanaWallet,
+          leaderboardAddress || new PublicKey("11111111111111111111111111111111"), // Placeholder
+          score,
+          exerciseType
+        );
+
+        toast.success(
+          `✅ ${exerciseType.charAt(0).toUpperCase() + exerciseType.slice(1)} score submitted to Solana!`
+        );
+        return { signature };
+      } catch (error) {
+        console.error("Error submitting score to Solana:", error);
+        const errorMsg = error instanceof Error ? error.message : "Failed to submit score";
+        toast.error(`❌ Failed to submit ${exerciseType} score: ${errorMsg}`);
+        return {};
+      }
+    },
+    [solanaWallet]
+  );
+
+  // Get Solana leaderboard
+  const getSolanaLeaderboard = useCallback(async (limit: number = 10) => {
+    try {
+      const leaderboard = await getTopUsersFromSolana(limit);
+      return leaderboard;
+    } catch (error) {
+      console.error("Error fetching Solana leaderboard:", error);
+      return [];
+    }
+  }, []);
+
   const actions: UserActions = {
     connectWallet: evmWallet.connectWallet,
     disconnectWallet: evmWallet.disconnectWallet,
@@ -333,6 +400,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
     switchToChain,
     connectSolanaWallet: solanaWallet.connectSolanaWallet,
     disconnectSolanaWallet: solanaWallet.disconnectSolanaWallet,
+    submitScoreToSolanaContract,
+    getSolanaLeaderboard,
     submitScore: scoreSubmission.submitScore,
     refreshLeaderboard,
     getDisplayName: evmWallet.getDisplayName,

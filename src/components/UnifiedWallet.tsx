@@ -549,6 +549,121 @@ const ConnectedNotAuthenticatedState = ({
   );
 };
 
+type ChainSelection = "base" | "avalanche" | "solana";
+
+const ChainSelectionModal = ({
+  isOpen,
+  onClose,
+  onSelect,
+}: {
+  isOpen: boolean;
+  onSelect: (chain: ChainSelection) => void;
+  onClose: () => void;
+}) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Select Network</DialogTitle>
+          <DialogDescription>
+            Choose which blockchain network you'd like to connect to
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid gap-3 py-4">
+          {/* EVM Chain: Base */}
+          <Card 
+            className="cursor-pointer border-2 hover:border-blue-400 transition-colors"
+            onClick={() => {
+              onSelect("base");
+              onClose();
+            }}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base text-blue-700">
+                <Shield className="h-5 w-5" />
+                Base Sepolia
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Fast, secure EVM chain powered by Ethereum
+              </p>
+              <div className="text-xs text-gray-600">
+                ✓ Premium analysis payments
+                <br />
+                ✓ Agent coaching sessions
+                <br />
+                ✓ Full Web3 compatibility
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* EVM Chain: Avalanche */}
+          <Card 
+            className="cursor-pointer border-2 hover:border-red-400 transition-colors"
+            onClick={() => {
+              onSelect("avalanche");
+              onClose();
+            }}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base text-red-700">
+                <Zap className="h-5 w-5" />
+                Avalanche Fuji
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                High-performance avalanche subnet with custom runtimes
+              </p>
+              <div className="text-xs text-gray-600">
+                ✓ Customizable subnets
+                <br />
+                ✓ Lower fees than Ethereum
+                <br />
+                ✓ Institutional-grade security
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Solana */}
+          <Card 
+            className="cursor-pointer border-2 hover:border-purple-400 transition-colors"
+            onClick={() => {
+              onSelect("solana");
+              onClose();
+            }}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base text-purple-700">
+                <Zap className="h-5 w-5" />
+                Solana Devnet
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Ultra-fast blockchain with minimal transaction costs
+              </p>
+              <div className="text-xs text-gray-600">
+                ✓ 1-second confirmation
+                <br />
+                ✓ Micro-payments enabled
+                <br />
+                ✓ 90% fee reduction potential
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <p className="text-xs text-muted-foreground text-center mt-4">
+          💡 All networks support the same features. Choose based on your preference.
+        </p>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export const UnifiedWallet = ({
   variant = "card",
   size = "md",
@@ -558,9 +673,10 @@ export const UnifiedWallet = ({
   onConnect,
   onAuthenticated,
 }: UnifiedWalletProps) => {
-  const { isConnected, isAuthenticated, isLoading, connectAndSignIn } =
+  const { isConnected, isAuthenticated, isLoading, connectAndSignIn, switchToChain } =
     useUser();
   const { address: baseAddress } = useAccount();
+  const [showChainSelector, setShowChainSelector] = React.useState(false);
   
   // Solana state
   const [solanaState, setSolanaState] = React.useState({
@@ -586,6 +702,26 @@ export const UnifiedWallet = ({
     const interval = setInterval(updateSolanaState, 1000);
     return () => clearInterval(interval);
   }, [chains]);
+
+  const handleChainSelected = async (chain: ChainSelection) => {
+    try {
+      if (chain === "solana") {
+        setSolanaState(prev => ({ ...prev, connecting: true }));
+        await solanaWalletManager.connect("phantom");
+      } else {
+        // EVM (Base or Avalanche)
+        await connectAndSignIn();
+        if (chain === "avalanche") {
+          await switchToChain("avalanche");
+        }
+      }
+    } catch (error) {
+      console.error(`${chain} connection failed:`, error);
+      alert(`Failed to connect to ${chain}. Please try again.`);
+    } finally {
+      setSolanaState(prev => ({ ...prev, connecting: false }));
+    }
+  };
 
   const handleSolanaConnect = async () => {
     setSolanaState(prev => ({ ...prev, connecting: true }));
@@ -824,106 +960,87 @@ export const UnifiedWallet = ({
 
   // Render based on variant
   if (variant === "header" || variant === "minimal") {
-    // If showing both chains, use exclusive mode (one at a time) for cleaner header
-    if (chains === "all") {
-      const baseActive = isConnected || !!baseAddress;
-      const solanaActive = solanaState.connected;
+    const baseActive = isConnected || !!baseAddress;
+    const solanaActive = solanaState.connected;
+    const anyActive = baseActive || solanaActive;
 
-      // Show whichever is connected, with option to switch
-      if (solanaActive) {
+    // If anything is connected, show authenticated state
+    if (anyActive) {
+      if (solanaActive && !baseActive) {
         return (
           <div className={cn("flex items-center gap-2", className)}>
             <SolanaWalletState
-              onConnect={handleSolanaConnect}
+              onConnect={() => setShowChainSelector(true)}
               isConnecting={solanaState.connecting}
               address={solanaState.address}
               onDisconnect={handleSolanaDisconnect}
               variant={variant}
               size={size}
             />
-            {baseActive && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  handleSolanaDisconnect();
-                }}
-                className="text-xs text-muted-foreground hover:text-foreground"
-                title="Switch to Base"
-              >
-                Switch to Base
-              </Button>
-            )}
+            <ChainSelectionModal
+              isOpen={showChainSelector}
+              onClose={() => setShowChainSelector(false)}
+              onSelect={handleChainSelected}
+            />
           </div>
         );
       }
 
-      if (baseActive) {
-        return (
-          <div className={cn("flex items-center gap-2", className)}>
-            <div>
-              {isAuthenticated ? (
-                <AuthenticatedState variant={variant} size={size} />
-              ) : isConnected ? (
-                <ConnectedNotAuthenticatedState variant={variant} size={size} />
-              ) : null}
-            </div>
+      // Base is connected (with or without Solana)
+      return (
+        <div className={cn("flex items-center gap-2", className)}>
+          <div>
+            {isAuthenticated ? (
+              <AuthenticatedState variant={variant} size={size} />
+            ) : isConnected ? (
+              <ConnectedNotAuthenticatedState variant={variant} size={size} />
+            ) : null}
+          </div>
+          {!solanaActive && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleSolanaConnect}
-              className="text-xs text-purple-600 hover:text-purple-700"
-              title="Switch to Solana"
+              onClick={() => setShowChainSelector(true)}
+              className="text-xs text-muted-foreground hover:text-foreground"
+              title="Connect additional wallet"
             >
-              Switch to Solana
+              + Network
             </Button>
-          </div>
-        );
-      }
-
-      // Neither connected - show Base connect button with Solana option
-      return (
-        <div className={cn("flex items-center gap-1", className)}>
-          <ConnectButton
-            size={size}
-            variant={variant}
-            isLoading={isLoading}
-            onConnect={connectAndSignIn}
+          )}
+          <ChainSelectionModal
+            isOpen={showChainSelector}
+            onClose={() => setShowChainSelector(false)}
+            onSelect={handleChainSelected}
           />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSolanaConnect}
-            disabled={solanaState.connecting}
-            className="text-xs border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800 transition-colors"
-            title="Connect Phantom wallet for Solana"
-          >
-            {solanaState.connecting ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <>◎ Solana</>
-            )}
-          </Button>
         </div>
       );
     }
 
-    // Single chain (Base) header
+    // Nothing connected - show unified connect button
     return (
-      <div className={cn("flex items-center", className)}>
-        {isAuthenticated ? (
-          <AuthenticatedState variant={variant} size={size} />
-        ) : isConnected ? (
-          <ConnectedNotAuthenticatedState variant={variant} size={size} />
-        ) : (
-          <ConnectButton
-            size={size}
-            variant={variant}
-            isLoading={isLoading}
-            onConnect={connectAndSignIn}
-          />
-        )}
-      </div>
+      <>
+        <Button
+          onClick={() => setShowChainSelector(true)}
+          disabled={isLoading || solanaState.connecting}
+          size={variant === "header" ? "default" : "sm"}
+          className={variant === "header" ? "" : "h-auto p-1"}
+          variant={variant === "minimal" ? "ghost" : "default"}
+        >
+          {variant === "minimal" ? (
+            <Wallet className="h-4 w-4" />
+          ) : (
+            <>
+              <Wallet className="h-4 w-4 mr-2" />
+              {isLoading || solanaState.connecting ? "Connecting..." : "Connect Wallet"}
+            </>
+          )}
+        </Button>
+        <ChainSelectionModal
+          isOpen={showChainSelector}
+          onClose={() => setShowChainSelector(false)}
+          onSelect={handleChainSelected}
+        />
+      </>
     );
   }
 
@@ -961,52 +1078,71 @@ export const UnifiedWallet = ({
 
   // Card variant
   return (
-    <Card className={cn("w-full", className)}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-primary">
-          <Wallet className="h-5 w-5" />
-          {isAuthenticated
-            ? "Wallet Connected"
-            : isConnected
-            ? "Complete Setup"
-            : "Connect Wallet"}
-        </CardTitle>
-        <CardDescription>
-          {isAuthenticated
-            ? "You're ready to compete on the blockchain leaderboard!"
-            : isConnected
-            ? "Complete authentication to unlock all features"
-            : "Connect your Coinbase Smart Wallet to get started"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {showOnboarding && !isConnected && <WalletOnboarding chains={chains} />}
+    <>
+      <Card className={cn("w-full", className)}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <Wallet className="h-5 w-5" />
+            {isAuthenticated || isConnected || solanaState.connected
+              ? "Wallet Connected"
+              : "Connect Wallet"}
+          </CardTitle>
+          <CardDescription>
+            {isAuthenticated
+              ? "You're ready to compete on the blockchain leaderboard!"
+              : isConnected || solanaState.connected
+              ? "Complete authentication to unlock all features"
+              : "Select a blockchain network to get started"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {showOnboarding && !isConnected && !solanaState.connected && <WalletOnboarding chains={chains} />}
 
-        {isAuthenticated ? (
-          <AuthenticatedState variant={variant} size={size} />
-        ) : isConnected ? (
-          <ConnectedNotAuthenticatedState variant={variant} size={size} />
-        ) : (
-          <ConnectButton
-            size={size}
-            variant={variant}
-            isLoading={isLoading}
-            onConnect={connectAndSignIn}
-          />
-        )}
+          {solanaState.connected && !isConnected ? (
+            <SolanaWalletState
+              onConnect={() => setShowChainSelector(true)}
+              isConnecting={solanaState.connecting}
+              address={solanaState.address}
+              onDisconnect={handleSolanaDisconnect}
+              variant="card"
+              size={size}
+            />
+          ) : isAuthenticated ? (
+            <AuthenticatedState variant={variant} size={size} />
+          ) : isConnected ? (
+            <ConnectedNotAuthenticatedState variant={variant} size={size} />
+          ) : (
+            <ConnectButton
+              size={size}
+              variant={variant}
+              isLoading={isLoading}
+              onConnect={() => setShowChainSelector(true)}
+            />
+          )}
 
-        {chains === "all" && (
-          <SolanaWalletState
-            onConnect={handleSolanaConnect}
-            isConnecting={solanaState.connecting}
-            address={solanaState.address}
-            onDisconnect={handleSolanaDisconnect}
-            variant="card"
-            size={size}
-          />
-        )}
-      </CardContent>
-    </Card>
+          {chains === "all" && (solanaState.connected || isConnected) && (
+            <div className="border-t pt-4">
+              <p className="text-sm font-medium mb-3">Additional Networks</p>
+              {!solanaState.connected && isConnected && (
+                <SolanaWalletState
+                  onConnect={() => setShowChainSelector(true)}
+                  isConnecting={solanaState.connecting}
+                  address={solanaState.address}
+                  onDisconnect={handleSolanaDisconnect}
+                  variant="card"
+                  size={size}
+                />
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <ChainSelectionModal
+        isOpen={showChainSelector}
+        onClose={() => setShowChainSelector(false)}
+        onSelect={handleChainSelected}
+      />
+    </>
   );
 };
 

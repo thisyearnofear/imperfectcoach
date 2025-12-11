@@ -4,7 +4,7 @@ import { baseSepolia } from "wagmi/chains";
 import { API_ENDPOINTS } from "@/lib/config";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { usePremiumAccess } from "@/hooks/usePremiumAccess";
-import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,7 +102,7 @@ const BedrockAnalysisSection = ({
   const { data: walletClient } = useWalletClient({
     chainId: baseSepolia.id,
   });
-  const { isSolanaConnected, solanaAddress } = useSolanaWallet();
+  const { isSolanaConnected, solanaAddress } = useWalletConnection();
 
   const handlePremiumAnalysis = async () => {
     if (!isConnected && !isSolanaConnected) {

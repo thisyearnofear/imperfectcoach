@@ -3,7 +3,7 @@ import { useAccount, useWalletClient } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { PaymentRouter, PaymentResult } from "@/lib/payments/payment-router";
-import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { API_ENDPOINTS } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,7 +62,7 @@ const PremiumAnalysisUpsell = ({
   });
 
   // Solana wallet (via centralized hook)
-  const { isSolanaConnected } = useSolanaWallet();
+  const { isSolanaConnected } = useWalletConnection();
 
   // Determine if we can proceed based on preferred chain
   const isConnected = preferredChain === 'solana' ? isSolanaConnected : isBaseConnected;

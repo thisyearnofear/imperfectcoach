@@ -40,7 +40,7 @@ export function useUserTier(): UserTier {
   const { hasSubmittedScore } = useUserBlockchain();
   const { basename } = useUserDisplay();
   const { hasPremiumAccess } = usePremiumAccess();
-  const { isSolanaConnected } = useSolanaWallet();
+  const { isSolanaConnected } = useWalletConnection();
 
   if (hasPremiumAccess) {
     return "premium";

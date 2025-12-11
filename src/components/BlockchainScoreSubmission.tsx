@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useUserAuth, useUserBlockchain } from "@/hooks/useUserHooks";
-import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { InlineWallet } from "./UnifiedWallet";
 import { NetworkStatus } from "./NetworkStatus";
 import { Exercise, RepData } from "@/lib/types";
@@ -60,13 +60,12 @@ export const BlockchainScoreSubmission = ({
     currentTxHash,
   } = useUserBlockchain();
 
-  // Solana chain hooks
+  // Unified wallet connection
   const {
     solanaAddress,
     isSolanaConnected,
-    isSolanaLoading,
     submitScoreToSolanaContract,
-  } = useSolanaWallet();
+  } = useWalletConnection();
 
   const [error, setError] = useState<string>();
 

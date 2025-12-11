@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, Brain, Zap, Target, TrendingUp, Lock, Sparkles, Eye, CheckCircle2, AlertCircle, Trophy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
 import { WalletBalanceDisplay } from "./WalletBalanceDisplay";
 
@@ -68,7 +68,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   // Wallet integration - support both EVM and Solana
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient({ chainId: baseSepolia.id });
-  const { solanaAddress, isSolanaConnected } = useSolanaWallet();
+  const { solanaAddress, isSolanaConnected } = useWalletConnection();
 
   // Determine which wallet is connected
   const walletAddress = address || solanaAddress;

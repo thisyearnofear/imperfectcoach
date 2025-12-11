@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
-import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { Connection } from "@solana/web3.js";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +39,7 @@ export function WalletBalanceDisplay({
   onInsufficientFunds,
 }: WalletBalanceDisplayProps) {
   const { address: baseAddress, isConnected: isBaseConnected } = useAccount();
-  const { isSolanaConnected, solanaAddress } = useSolanaWallet();
+  const { isSolanaConnected, solanaAddress } = useWalletConnection();
   const solanaConnection = new Connection('https://api.devnet.solana.com');
 
   const [baseBalance, setBaseBalance] = useState<ChainBalance>({
