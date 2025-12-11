@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EVMWalletConnector } from "@/components/EVMWalletConnector";
+import { getChainColorClasses, getChainColor, getSolanaColor, getEVMUnconnectedColor, getChainName } from "@/lib/chain-colors";
 import {
   Card,
   CardContent,
@@ -331,9 +332,13 @@ const ConnectButton = ({
 const AuthenticatedState = ({
   variant,
   size,
+  authPath,
+  evmChainId,
 }: {
   variant: WalletVariant;
   size: WalletSize;
+  authPath?: AuthPath | null;
+  evmChainId?: number | null;
 }) => {
   const { address, displayName, signOut, timeUntilNextSubmission, canSubmit, chainName } =
     useUser();
@@ -343,18 +348,25 @@ const AuthenticatedState = ({
     return minutes > 1 ? `${minutes}m` : `${seconds}s`;
   };
 
-  // Get chain color based on name
-  const getChainColor = (chain?: string) => {
-    if (!chain) return "bg-gray-100 text-gray-700";
-    if (chain.includes("Base")) return "bg-blue-100 text-blue-700";
-    if (chain.includes("Avalanche")) return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-700";
+  // Determine badge color based on auth path and chain
+  const getBadgeColor = () => {
+    if (authPath === "evm") {
+      const chainColor = getChainColor(evmChainId);
+      return getChainColorClasses(chainColor);
+    } else if (authPath === "solana") {
+      return getChainColorClasses(getSolanaColor());
+    } else {
+      // smart-account or default
+      return getChainColorClasses('blue');
+    }
   };
+
+  const badgeColor = getBadgeColor();
 
   if (variant === "header") {
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+        <Badge variant="secondary" className={`text-xs ${badgeColor.badge}`}>
           <Trophy className="h-3 w-3 mr-1 shrink-0" />
           <span className="truncate max-w-24">{displayName}</span>
         </Badge>
@@ -435,17 +447,36 @@ const AuthenticatedState = ({
 const ConnectedNotAuthenticatedState = ({
   variant,
   size,
+  authPath,
+  evmChainId,
 }: {
   variant: WalletVariant;
   size: WalletSize;
+  authPath?: AuthPath | null;
+  evmChainId?: number | null;
 }) => {
   const { address, displayName, signInWithEthereum, signOut, isLoading } =
     useUser();
 
+  // Determine badge color based on auth path and chain
+  const getBadgeColor = () => {
+    if (authPath === "evm") {
+      const chainColor = getChainColor(evmChainId);
+      return getChainColorClasses(chainColor);
+    } else if (authPath === "solana") {
+      return getChainColorClasses(getSolanaColor());
+    } else {
+      // smart-account or default
+      return getChainColorClasses('blue');
+    }
+  };
+
+  const badgeColor = getBadgeColor();
+
   if (variant === "header") {
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+        <Badge variant="secondary" className={`text-xs ${badgeColor.badge}`}>
           {isLoading ? (
             <>
               <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -659,6 +690,7 @@ export const UnifiedWallet = ({
   const { address: baseAddress } = useAccount();
   const [showAuthSelector, setShowAuthSelector] = React.useState(false);
   const [activeAuthPath, setActiveAuthPath] = React.useState<AuthPath | null>(null);
+  const [evmChainId, setEvmChainId] = React.useState<number | null>(null);
   
   // Solana state
   const [solanaState, setSolanaState] = React.useState({
@@ -958,11 +990,13 @@ export const UnifiedWallet = ({
         <EVMWalletConnector
           onConnected={(address, chainId) => {
             console.log("EVM wallet connected:", address, chainId);
+            setEvmChainId(chainId);
             setActiveAuthPath(null);
             onConnect?.();
           }}
           onChainChanged={(chainId) => {
             console.log("EVM chain changed:", chainId);
+            setEvmChainId(chainId);
           }}
         />
       </div>
@@ -974,6 +1008,12 @@ export const UnifiedWallet = ({
     const baseActive = isConnected || !!baseAddress;
     const solanaActive = solanaState.connected;
     const anyActive = baseActive || solanaActive;
+
+    // Determine which auth path is active
+    const activeAuthPath: AuthPath | null = 
+      solanaActive ? "solana" : 
+      baseActive ? "smart-account" : 
+      null;
 
     // If anything is connected, show authenticated state
     if (anyActive) {
@@ -1002,9 +1042,9 @@ export const UnifiedWallet = ({
         <div className={cn("flex items-center gap-2", className)}>
           <div>
             {isAuthenticated ? (
-              <AuthenticatedState variant={variant} size={size} />
+              <AuthenticatedState variant={variant} size={size} authPath={activeAuthPath} evmChainId={evmChainId} />
             ) : isConnected ? (
-              <ConnectedNotAuthenticatedState variant={variant} size={size} />
+              <ConnectedNotAuthenticatedState variant={variant} size={size} authPath={activeAuthPath} evmChainId={evmChainId} />
             ) : null}
           </div>
           {!solanaActive && (
