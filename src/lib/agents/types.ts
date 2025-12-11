@@ -9,10 +9,35 @@ export type AgentCapability =
 
 export type AgentRole = "coordinator" | "specialist" | "utility";
 
+export type ServiceTier = "basic" | "pro" | "premium";
+
+export interface ServiceTierConfig {
+    name: ServiceTier;
+    label: string;
+    description: string;
+    responseTime: number; // milliseconds SLA
+    features: string[];
+}
+
 export interface AgentPricing {
     baseFee: string; // USDC amount string (e.g. "0.05")
     asset: string;   // Token address or symbol
     chain: string;   // "base-sepolia" | "avalanche-c-chain" | "solana-devnet"
+}
+
+export interface TieredPricing {
+    basic: AgentPricing;
+    pro: AgentPricing;
+    premium: AgentPricing;
+}
+
+export interface AgentServiceAvailability {
+    tier: ServiceTier;
+    slots: number;           // Total concurrent slots available
+    slotsFilled: number;     // Currently booked
+    nextAvailable: number;   // Unix timestamp
+    responseSLA: number;     // milliseconds
+    uptime: number;          // 0-100 percentage
 }
 
 export interface AgentProfile {
@@ -21,19 +46,26 @@ export interface AgentProfile {
     emoji: string;
     role: AgentRole;
     description: string;
+    location?: string;          // Geographic location/region (e.g., "EU-North-1")
     capabilities: AgentCapability[];
     pricing: Partial<Record<AgentCapability, AgentPricing>>;
+    tieredPricing?: Partial<Record<AgentCapability, TieredPricing>>; // Phase D
     endpoint: string; // Public URL to call the agent
     status: "active" | "busy" | "offline";
     lastHeartbeat: number;
     reputationScore: number; // 0-100
+    successRate?: number;      // 0-1 success rate (e.g., 0.98 = 98%)
     tags: string[];
+    serviceAvailability?: Partial<Record<ServiceTier, AgentServiceAvailability>>; // Phase D
 }
 
 export interface DiscoveryQuery {
     capability?: AgentCapability;
     maxPrice?: number;
     chain?: string;
+    tier?: ServiceTier;           // Phase D: Filter by service tier
+    minReputation?: number;       // Phase D: Reputation filter
+    maxResponseTime?: number;     // Phase D: SLA filter (milliseconds)
 }
 
 export interface RegistrationRequest {

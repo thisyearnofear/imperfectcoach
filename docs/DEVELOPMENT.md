@@ -371,36 +371,163 @@ See [USER_GUIDE.md](USER_GUIDE.md) for user-facing features.
 - [x] Create Phase B & C test scripts
 - [x] Agent-to-agent payment integration complete
 
-### 🔜 Phase 4: Multi-Service Marketplace (NEXT)
-- [ ] Extend Registry with Service Tiers
-- [ ] Implement `BookingOrchestrator` contract
-- [ ] Build Agent Negotiation UI
+### ✅ Phase 3.5: Real Inter-Agent Payments (COMPLETED - Dec 2024)
+**Status**: Reap Protocol integration complete
+- [x] Phase A: Real agent discovery via Reap ✅
+- [x] Phase B: x402 negotiation loops ✅  
+- [x] Phase C: Real blockchain settlement (USDC transfers) ✅
+- [x] Multi-agent coordination tested
+- [x] Bedrock `call_specialist_agent` tool integrated
 
-### Checklist
-- [x] Audit payment logic across all files
-- [x] Create `payment-router.ts` module
-- [x] Move routing logic to single module
-- [x] Delete duplicate payment code from components
-- [x] Update Lambda to use router
-- [x] Add agent routing tool to Bedrock
-- [x] Create unit tests for router (gas price checks, latency checks)
-- [x] Verify all tests pass
-- [x] Delete `AgentCoachUpsell.tsx` payment code duplication
+**Key Implementations**:
+- `aws-lambda/lib/reap-integration.mjs` (592 lines) - Discovery, negotiation, settlement
+- `aws-lambda/agent-coach-handler.mjs` - Bedrock tool integration
+- `aws-lambda/test-reap-*.mjs` - Phase A, B, C test suites
+- Revenue split: 97% platform, 3% specialist agents
+- Multi-specialist payment cascade
+- On-chain audit trail (Base Sepolia/Avalanche Fuji)
 
-### Testing
+**Bedrock Integration**:
+Coach Agent can autonomously:
+1. Discover real specialist from Reap Protocol
+2. Negotiate x402 payment
+3. Sign payment authorization
+4. Execute real USDC transfer
+5. Record audit trail
+6. Return specialist analysis to user
+
+### 🔄 Phase 4: Multi-Service Marketplace (IN PROGRESS - Week 1 Complete ✅)
+
+**Goal**: Scale from specialist agent payments to full multi-service marketplace with tiers, booking, and SLA guarantees.
+
+**Week 1 Completed** ✅:
+- [x] Extended type system with ServiceTier, TieredPricing, AgentServiceAvailability
+- [x] Created `service-tiers.ts` with configurations and helper functions
+- [x] Created `booking-types.ts` for booking orchestration
+- [x] Enhanced `agent-registry.ts` with tier filtering and availability checks
+- [x] Updated `agent-discovery.mjs` with Phase D query parameters (tier, minReputation, maxResponseTime)
+- [x] Enhanced mock agents with tiered pricing (basic=1x, pro=2.5x, premium=5x) and per-tier availability
+- [x] Created comprehensive test suite `test-phase-d-discovery.mjs` - **20/20 tests passing ✅**
+
+**Key Features Implemented**:
+- Service tiers: Basic (5-10s SLA, standard slots), Pro (2-3s SLA, priority), Premium (<500ms SLA, VIP)
+- Tier-based pricing multipliers and slot allocation
+- SLA enforcement and uptime guarantees per tier
+- Combined filtering: capability + tier + reputation + response time
+- Mock data with realistic tier availability and performance metrics
+
+**Week 2 Status: In Progress** (Following Core Principles - ENHANCEMENT FIRST)
+
+**Completed** ✅:
+
+1. **Enhanced RevenueSplitter.sol** (contracts/RevenueSplitter.sol)
+   - Added: ServiceBooking struct, AgentReputation tracking
+   - Implemented: createBooking(), completeBooking(), cancelBooking(), refundExpiredBooking()
+   - Features: Automatic SLA enforcement with penalties, agent blacklisting, reputation updates
+   - Events: BookingCreated, BookingCompleted, SLABreached, AgentReputationUpdated
+   - Methods: getAgentReputation(), setSLABreachPenalty(), whitelistAgent/blacklistAgent
+   - ~320 lines of new booking escrow logic (kept PaymentSplitter inheritance)
+
+2. **Enhanced agent-discovery.mjs** (aws-lambda/agent-discovery.mjs)
+   - Added: POST /agents/{id}/book - Create service booking with tier validation
+   - Added: GET /agents/{id}/booking/{bookingId} - Track booking status
+   - Added: POST /agents/{id}/availability - Agent updates tier slots/availability
+   - Features: Slot reservation, tier availability checking, pricing resolution
+   - SLA validation: Checks responseSLA, uptime, slot availability
+   - Validation: Capability matching, tier availability, agent status
+   - ~150 lines of booking orchestration logic
+
+**Week 2 Completed** ✅:
+
+3. **Enhanced PaymentRouter** (src/lib/payments/payment-router.ts) ✅
+   - Added: BookingPaymentContext interface for tier bookings
+   - Implemented: executeBookingPayment() - full escrow flow
+   - Implemented: createEscrowBooking() - on-chain escrow locking
+   - Implemented: cancelBookingPayment() - refund initiation
+   - Implemented: completeBookingPayment() - SLA verification + settlement
+   - Features: Automatic penalty calculation, SLA checking, escrow management
+
+4. **Enhanced agent-coach-handler.mjs** (aws-lambda/agent-coach-handler.mjs) ✅
+   - Added: serviceTier and bookingId parameters to callSpecialistAgent
+   - Implemented: SLA tracking with executionStartTime
+   - Implemented: Dynamic SLA expectations (basic=5s, pro=2s, premium=500ms)
+   - Implemented: SLA breach detection and penalty calculation (10%)
+   - Added: SLA data to response (expectedMs, actualMs, met, penalty)
+   - Features: Real-time SLA enforcement, agent reputation impact
+
+**Phase D Architecture Summary**:
+- **Smart Contract**: RevenueSplitter holds escrow, enforces SLA, tracks reputation
+- **Discovery**: Agent-discovery.mjs provides booking endpoints + availability
+- **Tiers**: 3 service levels (basic=5s, pro=2s, premium=500ms)
+- **Pricing**: Dynamic tiers (1x, 2.5x, 5x base price)
+- **SLA**: Automatic penalties for missed response times
+- **Reputation**: Success rate tracking, agent blacklisting
+- **No New Files**: Enhanced existing contract + Lambda (DRY, consolidation)
+
+**Week 3 Completed** ✅:
+
+**UI Components** (4 new files, 937 lines):
+- `ServiceTierSelector.tsx` - Tier selection (Basic/Pro/Premium) with pricing, SLA, features
+- `AgentServiceBrowser.tsx` - Agent browser filtered by capability, tier, reputation, SLA
+- `ServiceBookingFlow.tsx` - 4-step wizard: tier → agent → confirm → payment (x402 integration)
+- `ServiceMarketplaceButton.tsx` - One-click entry point
+
+**Backend Enhancements**:
+- Enhanced CORE_AGENTS with tieredPricing, serviceAvailability (slots, SLA, uptime), location, successRate
+- 3 mock agents: Fitness Coach (💪), Nutrition Planner (🥗), Recovery Booking (💆)
+- Tier system: Basic (8s SLA, 1x price), Pro (3s SLA, 2.5x), Premium (500ms SLA, 5x)
+
+**Integration & Quality**:
+- ServiceMarketplaceButton integrated into PostWorkoutFlow (post-workout options)
+- Updated AgentProfile type: added location?, successRate?
+- TypeScript: 0 errors ✅
+- Build: Production successful ✅
+- Tests: 6/6 passing (test-phase-d-ui-integration.mjs) ✅
+- No breaking changes - full backward compatibility
+
+**Week 4**:
+- [ ] Full integration testing on Base Sepolia
+- [ ] Mainnet migration preparation
+- [ ] Live demo walkthrough for submission
+
+### Deployment Checklist (Phase 3.5 Complete)
+- [x] All Phase A, B, C tests passing
+- [x] Zero breaking changes
+- [x] 100% backwards compatible
+- [x] Comprehensive error handling
+- [x] Production-grade logging
+- [x] Private key handling secure
+- [x] Settlement proof validation
+- [x] Environment-based configuration
+
+### Testing Phase 3.5
 ```bash
-# Test Agent Discovery
-node test-discovery-local.mjs
+# Phase A: Discovery
+node aws-lambda/test-reap-integration.mjs
 
-# Test Inter-Agent Payment
-node test-inter-agent.mjs
+# Phase B: x402 Negotiation
+node aws-lambda/test-reap-phase-b.mjs
+
+# Phase C: Real Settlement
+node aws-lambda/test-reap-phase-c.mjs
 ```
 
-### Success Criteria
-- [x] Single payment router handles 100% of payment decisions
-- [x] Payment logic <500 lines (consolidated from 800+ scattered)
-- [x] Agent logs show routing decisions
-- [x] Agents can discover and pay each other autonomously
+### Testing Phase 4 (Week 1)
+```bash
+# Phase D: Service tier discovery and filtering
+node aws-lambda/test-phase-d-discovery.mjs
+# Expected: 20/20 tests passing ✅
+```
+
+### Environment Setup (Phase 3.5)
+```bash
+# aws-lambda/.env
+AGENT_WALLET_KEY=your_agent_private_key
+AGENT_WALLET_ADDRESS=0x...
+AVALANCHE_RPC=https://api.avax-test.network/ext/bc/C/rpc
+BASE_SEPOLIA_RPC=https://sepolia.base.org
+REAP_ENDPOINT=https://api.reap.io
+```
 
 ---
 

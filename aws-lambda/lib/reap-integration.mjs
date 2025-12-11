@@ -156,45 +156,96 @@ const CORE_AGENTS = [
     {
         id: "agent-fitness-core-01",
         name: "Imperfect Coach Core",
+        emoji: "💪",
+        role: "coordinator",
         description: "Primary fitness analysis agent using Bedrock Nova Lite.",
+        location: "EU-North-1",
         capabilities: ["fitness_analysis", "benchmark_analysis"],
         pricing: {
             fitness_analysis: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" },
             benchmark_analysis: { baseFee: "0.02", asset: "USDC", chain: "base-sepolia" }
         },
+        tieredPricing: {
+            fitness_analysis: {
+                basic: { baseFee: "0.02", asset: "USDC", chain: "base-sepolia" },
+                pro: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" },
+                premium: { baseFee: "0.10", asset: "USDC", chain: "base-sepolia" }
+            }
+        },
         endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
         status: "active",
         reputationScore: 98,
+        successRate: 0.98,
         tags: ["official", "bedrock", "core"],
         protocol: "x402",
+        lastHeartbeat: Date.now(),
+        serviceAvailability: {
+            basic: { tier: "basic", slots: 100, slotsFilled: 23, nextAvailable: Date.now(), responseSLA: 8000, uptime: 99.5 },
+            pro: { tier: "pro", slots: 50, slotsFilled: 15, nextAvailable: Date.now(), responseSLA: 3000, uptime: 99.8 },
+            premium: { tier: "premium", slots: 20, slotsFilled: 5, nextAvailable: Date.now(), responseSLA: 500, uptime: 99.9 }
+        }
     },
     {
         id: "agent-nutrition-planner-01",
         name: "Nutrition Planner",
+        emoji: "🥗",
+        role: "specialist",
         description: "Specialized in post-workout nutrition plans.",
+        location: "US-West-2",
         capabilities: ["nutrition_planning"],
         pricing: {
             nutrition_planning: { baseFee: "0.03", asset: "USDC", chain: "base-sepolia" }
         },
+        tieredPricing: {
+            nutrition_planning: {
+                basic: { baseFee: "0.01", asset: "USDC", chain: "base-sepolia" },
+                pro: { baseFee: "0.025", asset: "USDC", chain: "base-sepolia" },
+                premium: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" }
+            }
+        },
         endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/nutrition-agent",
         status: "active",
         reputationScore: 95,
+        successRate: 0.95,
         tags: ["official", "nutrition", "core"],
         protocol: "x402",
+        lastHeartbeat: Date.now(),
+        serviceAvailability: {
+            basic: { tier: "basic", slots: 150, slotsFilled: 45, nextAvailable: Date.now(), responseSLA: 7000, uptime: 99.2 },
+            pro: { tier: "pro", slots: 60, slotsFilled: 20, nextAvailable: Date.now(), responseSLA: 2500, uptime: 99.6 },
+            premium: { tier: "premium", slots: 25, slotsFilled: 8, nextAvailable: Date.now(), responseSLA: 600, uptime: 99.8 }
+        }
     },
     {
         id: "agent-massage-booking-01",
         name: "Recovery Booking",
+        emoji: "💆",
+        role: "utility",
         description: "Books massage and physiotherapy sessions.",
+        location: "Asia-Pacific",
         capabilities: ["massage_booking"],
         pricing: {
             massage_booking: { baseFee: "0.50", asset: "USDC", chain: "avalanche-c-chain" }
         },
+        tieredPricing: {
+            massage_booking: {
+                basic: { baseFee: "0.25", asset: "USDC", chain: "avalanche-c-chain" },
+                pro: { baseFee: "0.50", asset: "USDC", chain: "avalanche-c-chain" },
+                premium: { baseFee: "1.00", asset: "USDC", chain: "avalanche-c-chain" }
+            }
+        },
         endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/booking-agent",
         status: "active",
         reputationScore: 92,
+        successRate: 0.92,
         tags: ["partner", "booking", "core"],
         protocol: "x402",
+        lastHeartbeat: Date.now(),
+        serviceAvailability: {
+            basic: { tier: "basic", slots: 200, slotsFilled: 67, nextAvailable: Date.now(), responseSLA: 10000, uptime: 98.8 },
+            pro: { tier: "pro", slots: 80, slotsFilled: 25, nextAvailable: Date.now(), responseSLA: 4000, uptime: 99.4 },
+            premium: { tier: "premium", slots: 30, slotsFilled: 10, nextAvailable: Date.now(), responseSLA: 1000, uptime: 99.7 }
+        }
     }
 ];
 

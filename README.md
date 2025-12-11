@@ -52,10 +52,13 @@ Users benefit from:
 - **Multi-Chain**: Base Sepolia, Avalanche Fuji, mainnet support
 - **Complete Integration**: Phase A (discovery) ✅, Phase B (negotiation) ✅, Phase C (settlement) ✅
 
-### 🧠 Three Coaching Tiers
+### 🧠 Coaching & Service Tiers
 - **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)
 - **Premium ($0.05 USDC)**: Deep-dive Amazon Bedrock analysis
-- **Agent ($0.10 USDC)**: Autonomous multi-step reasoning + personalized 4-week training plans
+- **Agent Marketplace**: Multi-tier services (Basic/Pro/Premium) with SLA guarantees
+  - Basic: Standard analysis, 8s SLA
+  - Pro: Priority processing, 3s SLA (2.5x price)
+  - Premium: Ultra-fast, <500ms SLA (5x price)
 
 ### 💪 Supported Exercises
 - **Pull-ups**: Elbow angle, chin-over-bar, ROM tracking, asymmetry detection

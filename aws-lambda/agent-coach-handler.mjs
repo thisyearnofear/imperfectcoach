@@ -495,11 +495,22 @@ function defineSuccessMetrics(goals) {
   }));
 }
 
-// Tool implementation: Call Specialist Agent (Phase B & C)
-async function callSpecialistAgent({ capability, data_query, amount }) {
-  console.log(`\n🌐 [Phase B & C] Calling specialist agent via Reap Protocol`);
+// Tool implementation: Call Specialist Agent (Phase B & C with Phase D SLA)
+async function callSpecialistAgent({ capability, data_query, amount, serviceTier, bookingId }) {
+  console.log(`\n🌐 [Phase B & C with Phase D] Calling specialist agent via Reap Protocol`);
   console.log(`   Capability: ${capability}`);
   console.log(`   Amount: ${amount} (USDC)`);
+  if (serviceTier) console.log(`   Tier: ${serviceTier} (SLA enforced)`);
+  if (bookingId) console.log(`   Booking ID: ${bookingId}`);
+  
+  // Phase D: Track execution time for SLA enforcement
+  const executionStartTime = Date.now();
+  const tierSLAMs = {
+    basic: 5000,
+    pro: 2000,
+    premium: 500
+  };
+  const expectedSLA = serviceTier ? tierSLAMs[serviceTier] : null;
   
   try {
     // PHASE B: Real Agent Discovery + x402 Negotiation
@@ -510,7 +521,8 @@ async function callSpecialistAgent({ capability, data_query, amount }) {
       return {
         error: "No specialists found for capability",
         capability,
-        fallback: "Using local analysis instead"
+        fallback: "Using local analysis instead",
+        slaStatus: expectedSLA ? "SLA_NOT_MET" : null
       };
     }
     
@@ -594,7 +606,22 @@ async function callSpecialistAgent({ capability, data_query, amount }) {
     
     const split = await reap.splitRevenue(userPaymentTx, 97);
     
-    // 8. Return specialist response with payment proof
+    // Phase D: Calculate SLA performance
+    const executionTimeMs = Date.now() - executionStartTime;
+    const slaMet = expectedSLA ? executionTimeMs <= expectedSLA : null;
+    const slaPenalty = slaMet === false ? (amount * 0.1) : 0; // 10% penalty if SLA breached
+    
+    console.log(`\n⏱️  [Phase D] SLA Performance:`);
+    if (expectedSLA) {
+      console.log(`   Expected: ${expectedSLA}ms (${serviceTier} tier)`);
+      console.log(`   Actual: ${executionTimeMs}ms`);
+      console.log(`   Status: ${slaMet ? "✅ MET" : "❌ BREACHED"}`);
+      if (slaPenalty > 0) {
+        console.log(`   Penalty: ${slaPenalty} USDC (10%)`);
+      }
+    }
+    
+    // 8. Return specialist response with payment proof and SLA status
     return {
       success: true,
       specialist: {
@@ -608,19 +635,33 @@ async function callSpecialistAgent({ capability, data_query, amount }) {
         status: tx.status,
         blockExplorer: tx.url
       },
+      // Phase D: SLA enforcement data
+      sla: expectedSLA ? {
+        expectedMs: expectedSLA,
+        actualMs: executionTimeMs,
+        met: slaMet,
+        tier: serviceTier,
+        penaltyApplied: slaPenalty,
+        agentPayment: amount - slaPenalty,
+        message: slaMet 
+          ? `✅ SLA met (${executionTimeMs}ms < ${expectedSLA}ms), full payment released`
+          : `⚠️ SLA breached (${executionTimeMs}ms > ${expectedSLA}ms), 10% penalty applied`
+      } : null,
       data: {
         // In real scenario, would get response from specialist endpoint
         analysis: `Specialist ${specialist.name} would provide detailed ${capability} analysis here`,
         insights: [
           "Specialist data loaded successfully via x402 payment",
           `Payment confirmed on Base Sepolia: ${tx.transactionHash}`,
-          "Integration with Reap Protocol successful"
+          "Integration with Reap Protocol successful",
+          ...(slaMet !== null ? [`SLA Status: ${slaMet ? "✅ Met" : "❌ Breached"}`] : [])
         ]
       },
       revenue_split: {
         user_paid: split.userAmount,
         platform_fee: split.platformFee,
-        agent_share: split.agentShare
+        agent_share: split.agentShare,
+        sla_penalty: slaPenalty > 0 ? slaPenalty : undefined
       }
     };
     

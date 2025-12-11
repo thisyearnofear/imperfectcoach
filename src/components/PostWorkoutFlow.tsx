@@ -41,6 +41,7 @@ import { mapPersonalityToLegacy } from "@/lib/coachPersonalities";
 import { convertHeight } from "@/lib/heightConversion";
 import { JumpRepDetails } from "@/lib/types";
 import SocialShareButton from "@/components/SocialShareButton";
+import { ServiceMarketplaceButton } from "./ServiceMarketplaceButton";
 
 interface PostWorkoutFlowProps {
   exercise: Exercise;
@@ -789,6 +790,43 @@ export const PostWorkoutFlow = ({
               }
             }}
           />
+          </FadeIn>
+
+          {/* Phase D: Service Marketplace - Book tiered agents */}
+          <FadeIn delay={0.35}>
+          <Card className="border-gradient-to-r from-purple-200 to-blue-200">
+            <CardHeader>
+              <CardTitle className="text-base">📅 Multi-Tier Agent Services</CardTitle>
+              <CardDescription>
+                Book specialized agents with guaranteed SLAs and transparent pricing
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <ServiceMarketplaceButton
+                  capability="fitness-analysis"
+                  basePrice="0.02"
+                  label="Book Fitness Coach"
+                  preferredChain="base"
+                  onBookingComplete={(booking) => {
+                    toast.success(`Booked ${booking.agentId || 'agent'} for fitness analysis`);
+                  }}
+                />
+                <ServiceMarketplaceButton
+                  capability="nutrition-planning"
+                  basePrice="0.03"
+                  label="Book Nutrition Agent"
+                  preferredChain="base"
+                  onBookingComplete={(booking) => {
+                    toast.success(`Booked ${booking.agentId || 'agent'} for nutrition planning`);
+                  }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                Choose your service tier: Basic (5-10s), Pro (2-3s), or Premium (&lt;500ms)
+              </p>
+            </CardContent>
+          </Card>
           </FadeIn>
 
           {/* Agent Coach Upsell - Most expensive option last */}

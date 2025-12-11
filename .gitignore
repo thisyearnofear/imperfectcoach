@@ -24,8 +24,6 @@ dist-ssr
 *.sw?
 
 # IDE-specific directories
-.trae/
-.qoo/
 .qoder/
 
 .env
