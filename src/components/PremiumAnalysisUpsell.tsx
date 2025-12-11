@@ -4,6 +4,7 @@ import { baseSepolia } from "wagmi/chains";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { PaymentRouter, PaymentResult } from "@/lib/payments/payment-router";
 import { useSolanaWallet } from "@/hooks/useSolanaWallet";
+import { API_ENDPOINTS } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -80,7 +81,7 @@ const PremiumAnalysisUpsell = ({
       console.log("🚀 Starting premium analysis via PaymentRouter...");
 
       const result: PaymentResult = await PaymentRouter.execute({
-        apiUrl: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
+        apiUrl: API_ENDPOINTS.PREMIUM_ANALYSIS,
         requestBody: {
           workoutData,
           // Legacy support: some endpoints might expect 'payment' object initially, 

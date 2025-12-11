@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
+import { API_ENDPOINTS } from "@/lib/config";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { usePremiumAccess } from "@/hooks/usePremiumAccess";
 import { useSolanaWallet } from "@/hooks/useSolanaWallet";
@@ -108,7 +109,7 @@ const BedrockAnalysisSection = ({
       setError("Please connect your wallet (Base or Solana) to proceed.");
       return;
     }
-    
+
     if (isConnected && !walletClient) {
       setError("Wallet client not available.");
       return;
@@ -123,7 +124,7 @@ const BedrockAnalysisSection = ({
       let address: string;
       let signMessage: (message: string) => Promise<string>;
       let walletChain: "base" | "solana";
-      
+
       if (isConnected && walletClient) {
         // Use Base wallet
         address = walletClient.account?.address || "";
@@ -133,7 +134,7 @@ const BedrockAnalysisSection = ({
         walletChain = "base";
         signMessage = async (msg: string) => {
           return await walletClient.signMessage({
-            account: address as `0x${string}`,
+            account: address as `0x${string} `,
             message: msg,
           });
         };
@@ -166,12 +167,12 @@ const BedrockAnalysisSection = ({
       };
 
       const apiUrl =
-        "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout";
+        API_ENDPOINTS.PREMIUM_ANALYSIS;
 
       // First, make a request WITHOUT payment to get the 402 challenge (x402 protocol)
       let response = await fetch(apiUrl, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "X-Chain": walletChain || "base" // Tell server which chain we're using
         },
@@ -249,14 +250,14 @@ const BedrockAnalysisSection = ({
 
       if (!response.ok) {
         let errorMessage = "Analysis request failed";
-        
+
         try {
           const errorData = await response.json();
-          
+
           // Handle 402 Payment Required specifically
           if (response.status === 402) {
             errorMessage = "Payment verification failed. Please ensure your wallet has sufficient USDC and try again.";
-            
+
             // Extract specific error if available
             if (errorData.error && typeof errorData.error === 'string') {
               // Clean up technical error messages for user display
@@ -270,13 +271,13 @@ const BedrockAnalysisSection = ({
             }
           } else {
             // Generic error message for other status codes
-            errorMessage = errorData.error || errorData.message || `Request failed (${response.status})`;
+            errorMessage = errorData.error || errorData.message || `Request failed(${response.status})`;
           }
         } catch {
           // If JSON parsing fails, use status-based message
-          errorMessage = `Analysis failed (HTTP ${response.status}). Please try again.`;
+          errorMessage = `Analysis failed(HTTP ${response.status}).Please try again.`;
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -384,7 +385,7 @@ const BedrockAnalysisSection = ({
           </div>
 
           {/* Balance Display - Shows user affordability */}
-          <WalletBalanceDisplay 
+          <WalletBalanceDisplay
             variant="detailed"
             requiredAmount="0.05"
             className="mt-4"
@@ -433,21 +434,23 @@ const BedrockAnalysisSection = ({
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-1 text-blue-700 hover:text-blue-800"
                       >
-                        View transaction <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
+                        View transaction < ExternalLink className="h-3 w-3" />
+                      </a >
+                    </div >
                   )}
-                </div>
+                </div >
               )}
-            </div>
+            </div >
           )}
 
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <span className="text-red-700 text-sm">{error}</span>
-            </div>
-          )}
+          {
+            error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <span className="text-red-700 text-sm">{error}</span>
+              </div>
+            )
+          }
 
           <AnimatedButton
             onClick={handlePremiumAnalysis}
@@ -473,8 +476,8 @@ const BedrockAnalysisSection = ({
               </>
             )}
           </AnimatedButton>
-        </CardContent>
-      </Card>
+        </CardContent >
+      </Card >
     );
   }
 

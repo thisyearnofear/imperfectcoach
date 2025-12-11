@@ -3,6 +3,7 @@ import { useAccount, useWalletClient } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { PaymentRouter, PaymentResult } from "@/lib/payments/payment-router";
+import { API_ENDPOINTS } from "@/lib/config";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -93,7 +94,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
       // The PaymentRouter handles the negotiation completely.
 
       const result: PaymentResult = await PaymentRouter.execute({
-        apiUrl: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
+        apiUrl: API_ENDPOINTS.PREMIUM_ANALYSIS,
         requestBody: {
           workoutData: {
             ...workoutData,

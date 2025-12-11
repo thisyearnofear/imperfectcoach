@@ -10,9 +10,10 @@ import {
   http,
   createPublicClient,
 } from "viem";
-import { baseSepolia } from "viem/chains";
+import { base } from "viem/chains";
 import { Agentkit } from "@0xgasless/agentkit";
 import { verify, settle } from "@payai/x402/facilitator";
+import * as db from "./lib/dynamodb-service.mjs";
 
 
 
@@ -23,7 +24,7 @@ let agentKitInstance = null;
 async function getAgentKit() {
   if (agentKitInstance) return agentKitInstance;
 
-  if (!process.env.AGENT_PRIVATE_KEY || !process.env.CX0_API_KEY) {
+  if (!process.env.CX0_API_KEY) {
     console.warn("⚠️ Agent Identity not configured (missing env vars)");
     return null;
   }
@@ -31,9 +32,9 @@ async function getAgentKit() {
   try {
     agentKitInstance = await Agentkit.configureWithWallet({
       privateKey: process.env.AGENT_PRIVATE_KEY,
-      rpcUrl: "https://sepolia.base.org",
+      rpcUrl: "https://mainnet.base.org",
       apiKey: process.env.CX0_API_KEY,
-      chainID: 84532
+      chainID: 8453
     });
     console.log("🤖 Agent Identity initialized:", await agentKitInstance.getAddress());
     return agentKitInstance;
@@ -44,28 +45,40 @@ async function getAgentKit() {
 }
 
 const publicClient = createPublicClient({
-  chain: baseSepolia,
+  chain: base,
   transport: http(),
 });
 
 // x402 Configuration per network
 const X402_CONFIG = {
+  "base-mainnet": {
+    amount: "50000",
+    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
+    chainId: 8453,
+  },
   "base-sepolia": {
-    amount: "50000", // 0.05 USDC (6 decimals)
+    amount: "50000",
     asset: "0x036CbD53842c5426634e7929541fC2318B3d053F",
     payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
     chainId: 84532,
   },
-  "avalanche-c-chain": {
+  "avalanche-mainnet": {
+    amount: "50000",
+    asset: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+    payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
+    chainId: 43114,
+  },
+  "avalanche-fuji": {
     amount: "50000",
     asset: "0x5425890298aed601595a70AB815c96711a756003",
     payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
     chainId: 43113,
   },
   "solana-devnet": {
-    amount: "50000", // 0.05 USDC (6 decimals)
-    asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC on Solana Devnet
-    payTo: "CmGgLQL36Y9ubtTsy2zmE46TAxwCBm66onZmPPhUWNqv", // Treasury
+    amount: "50000",
+    asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    payTo: "CmGgLQL36Y9ubtTsy2zmE46TAxwCBm66onZmPPhUWNqv",
   },
 };
 
@@ -81,7 +94,7 @@ const CORS_HEADERS = {
 /**
  * Generate x402 402 Payment Required challenge
  */
-function createPaymentChallenge(network = "base-sepolia") {
+function createPaymentChallenge(network = "base-mainnet") {
   const config = X402_CONFIG[network];
   if (!config) {
     throw new Error(`Unknown network: ${network}`);
@@ -198,7 +211,7 @@ async function verifyAndSettlePayment(signedPaymentHeader, network) {
 /**
  * Create HTTP 402 Payment Required response with x402 challenge
  */
-function createPaymentRequiredResponse(message, network = "base-sepolia") {
+function createPaymentRequiredResponse(message, network = "base-mainnet") {
   const challenge = createPaymentChallenge(network);
 
   return {
@@ -344,7 +357,7 @@ export const handler = async (event) => {
     const paymentHeader =
       event.headers["x-payment"] || event.headers["X-Payment"];
     const networkHeader =
-      event.headers["x-chain"] || event.headers["X-Chain"] || "base-sepolia";
+      event.headers["x-chain"] || event.headers["X-Chain"] || "base-mainnet";
 
     console.log(`REQUEST TYPE: ${type}`);
     console.log("🔗 Network:", networkHeader);
@@ -413,40 +426,211 @@ export const handler = async (event) => {
 
     console.log("✅ Signature verified - processing request");
 
-    // Step 3: Execute Service
+    // Step 3: Execute Service Based on Type
 
-    // A. DATA QUERY (Agent-to-Agent)
+    // A. SAVE WORKOUT (Free operation, no payment required)
+    if (type === "save_workout") {
+      const { userId, workoutData: workout } = requestData;
+
+      if (!userId || !workout) {
+        return createErrorResponse("Missing userId or workoutData", 400);
+      }
+
+      try {
+        const savedWorkout = await db.saveWorkout(userId, workout);
+        return createSuccessResponse({
+          success: true,
+          type: "workout_saved",
+          workout: savedWorkout,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error("Failed to save workout:", error);
+        return createErrorResponse("Failed to save workout", 500);
+      }
+    }
+
+    // B. GET WORKOUT HISTORY (Free operation)
+    if (type === "get_history") {
+      const { userId, exerciseType, daysBack, limit } = requestData;
+
+      if (!userId) {
+        return createErrorResponse("Missing userId", 400);
+      }
+
+      try {
+        const history = await db.getWorkoutHistory(userId, {
+          exerciseType,
+          daysBack: daysBack || 30,
+          limit: limit || 30,
+        });
+
+        return createSuccessResponse({
+          success: true,
+          type: "workout_history",
+          history,
+          count: history.length,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error("Failed to get workout history:", error);
+        return createErrorResponse("Failed to retrieve history", 500);
+      }
+    }
+
+    // C. GET WORKOUT STATS (Free operation)
+    if (type === "get_stats") {
+      const { userId, exerciseType } = requestData;
+
+      if (!userId) {
+        return createErrorResponse("Missing userId", 400);
+      }
+
+      try {
+        const stats = await db.getWorkoutStats(userId, exerciseType);
+        return createSuccessResponse({
+          success: true,
+          type: "workout_stats",
+          stats,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error("Failed to get workout stats:", error);
+        return createErrorResponse("Failed to retrieve stats", 500);
+      }
+    }
+
+    // D. GET USER PROFILE (Free operation)
+    if (type === "get_profile") {
+      const { userId } = requestData;
+
+      if (!userId) {
+        return createErrorResponse("Missing userId", 400);
+      }
+
+      try {
+        const profile = await db.getUserProfile(userId);
+        return createSuccessResponse({
+          success: true,
+          type: "user_profile",
+          profile,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error("Failed to get user profile:", error);
+        return createErrorResponse("Failed to retrieve profile", 500);
+      }
+    }
+
+    // E. UPDATE USER PROFILE (Free operation)
+    if (type === "update_profile") {
+      const { userId, updates } = requestData;
+
+      if (!userId || !updates) {
+        return createErrorResponse("Missing userId or updates", 400);
+      }
+
+      try {
+        const profile = await db.updateUserProfile(userId, updates);
+        return createSuccessResponse({
+          success: true,
+          type: "profile_updated",
+          profile,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error("Failed to update user profile:", error);
+        return createErrorResponse("Failed to update profile", 500);
+      }
+    }
+
+    // F. MIGRATE PREMIUM SESSIONS (Free operation)
+    if (type === "migrate_premium_sessions") {
+      const { userId, sessions } = requestData;
+
+      if (!userId || !sessions) {
+        return createErrorResponse("Missing userId or sessions", 400);
+      }
+
+      try {
+        // Save each session to DynamoDB
+        for (const session of sessions) {
+          await db.saveAgentSession({
+            userId,
+            ...session,
+            migratedFrom: "localStorage",
+          });
+        }
+
+        return createSuccessResponse({
+          success: true,
+          type: "sessions_migrated",
+          count: sessions.length,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error("Failed to migrate sessions:", error);
+        return createErrorResponse("Failed to migrate sessions", 500);
+      }
+    }
+
+    // G. DATA QUERY (Agent-to-Agent) - Requires Payment
     if (type === "data_query") {
-      // In a real app, query DynamoDB/Supabase for user history
-      const mockHistory = [
-        { date: "2025-01-01", exercise: "pullups", reps: 12, score: 85 },
-        { date: "2025-01-03", exercise: "pullups", reps: 15, score: 88 },
-        { date: "2025-01-05", exercise: "jumps", height: 45, score: 92 }
-      ];
+      const { userId, exerciseType, daysBack } = requestData;
+
+      if (!userId) {
+        return createErrorResponse("Missing userId", 400);
+      }
+
+      try {
+        const history = await db.getWorkoutHistory(userId, {
+          exerciseType,
+          daysBack: daysBack || 30,
+          limit: 50,
+        });
+
+        return createSuccessResponse({
+          success: true,
+          type: "data_query_result",
+          data: history,
+          meta: {
+            items: history.length,
+            access_cost: "0.01 USDC",
+            timestamp: new Date().toISOString(),
+          },
+        });
+      } catch (error) {
+        console.error("Failed data query:", error);
+        return createErrorResponse("Failed to query data", 500);
+      }
+    }
+
+    // H. PREMIUM ANALYSIS (User-to-Agent) - Requires Payment
+    if (type === "analysis" || !type) {
+      const analysisResult = await getBedrockAnalysis(workoutData);
+
+      // Save the workout after successful analysis
+      if (requestData.userId) {
+        try {
+          await db.saveWorkout(requestData.userId, workoutData);
+          console.log("✅ Workout saved to DynamoDB");
+        } catch (error) {
+          console.error("⚠️ Failed to save workout (non-fatal):", error);
+        }
+      }
 
       return createSuccessResponse({
         success: true,
-        type: "data_query_result",
-        data: mockHistory,
-        meta: {
-          items: 3,
-          access_cost: "0.01 USDC",
-          timestamp: new Date().toISOString()
-        }
+        analysis: analysisResult.analysis,
+        paymentVerified: true,
+        network: networkHeader,
+        payer: signedPayment.payer,
+        timestamp: new Date().toISOString(),
       });
     }
 
-    // B. PREMIUM ANALYSIS (User-to-Agent)
-    const analysisResult = await getBedrockAnalysis(workoutData);
-
-    return createSuccessResponse({
-      success: true,
-      analysis: analysisResult.analysis,
-      paymentVerified: true,
-      network: networkHeader,
-      payer: signedPayment.payer,
-      timestamp: new Date().toISOString(),
-    });
+    // Unknown type
+    return createErrorResponse(`Unknown request type: ${type}`, 400);
 
   } catch (error) {
     console.error("💥 Handler error:", error);

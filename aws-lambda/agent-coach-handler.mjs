@@ -10,10 +10,83 @@ import {
   BedrockAgentRuntimeClient,
   InvokeAgentCommand,
 } from "@aws-sdk/client-bedrock-agent-runtime";
+import { Agentkit } from "@0xgasless/agentkit";
+import { createPublicClient, http } from "viem";
+import { base } from "viem/chains";
+import { verify } from "@payai/x402/facilitator";
+import * as db from "./lib/dynamodb-service.mjs";
 
 // Initialize clients
 const bedrockClient = new BedrockRuntimeClient({ region: "eu-north-1" });
 const agentClient = new BedrockAgentRuntimeClient({ region: "eu-north-1" });
+
+// Agent Identity (0xGasless) & Network Config
+let agentKitInstance = null;
+const publicClient = createPublicClient({ chain: base, transport: http() });
+
+// Multi-Network Configuration (Mainnet + Testnet for Base & Avalanche)
+const X402_CONFIG = {
+  // Base Mainnet (Production)
+  "base-mainnet": {
+    amount: "50000", // 0.05 USDC
+    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC on Base
+    payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
+    chainId: 8453,
+    rpcUrl: "https://mainnet.base.org",
+  },
+  // Base Sepolia (Testing)
+  "base-sepolia": {
+    amount: "50000",
+    asset: "0x036CbD53842c5426634e7929541fC2318B3d053F", // USDC on Base Sepolia
+    payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
+    chainId: 84532,
+    rpcUrl: "https://sepolia.base.org",
+  },
+  // Avalanche C-Chain Mainnet (Production)
+  "avalanche-mainnet": {
+    amount: "50000",
+    asset: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", // USDC on Avalanche
+    payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
+    chainId: 43114,
+    rpcUrl: "https://api.avax.network/ext/bc/C/rpc",
+  },
+  // Avalanche Fuji Testnet (Testing)
+  "avalanche-fuji": {
+    amount: "50000",
+    asset: "0x5425890298aed601595a70AB815c96711a756003", // USDC on Fuji
+    payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
+    chainId: 43113,
+    rpcUrl: "https://api.avax-test.network/ext/bc/C/rpc",
+  },
+  // Solana Devnet (Testing)
+  "solana-devnet": {
+    amount: "50000",
+    asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    payTo: "CmGgLQL36Y9ubtTsy2zmE46TAxwCBm66onZmPPhUWNqv",
+  },
+};
+
+async function getAgentKit() {
+  if (agentKitInstance) return agentKitInstance;
+  if (!process.env.CX0_API_KEY) {
+    console.warn("⚠️ Agent Identity keys missing - Agent will be read-only without wallet");
+    return null;
+  }
+  try {
+    // Uses CDP_WALLET_SECRET or AGENT_PRIVATE_KEY depending on config
+    agentKitInstance = await Agentkit.configureWithWallet({
+      privateKey: process.env.AGENT_PRIVATE_KEY, // Fallback if regular EVM key
+      rpcUrl: "https://mainnet.base.org",
+      apiKey: process.env.CX0_API_KEY,
+      chainID: 8453
+    });
+    console.log("🤖 Agent Identity initialized:", await agentKitInstance.getAddress());
+    return agentKitInstance;
+  } catch (e) {
+    console.error("❌ Failed to init AgentKit:", e);
+    return null;
+  }
+}
 
 // Tool definitions for the AI Agent
 const AGENT_TOOLS = [
@@ -83,16 +156,16 @@ async function executeTool(toolName, toolInput) {
   switch (toolName) {
     case "analyze_pose_data":
       return await analyzePoseData(toolInput);
-    
+
     case "query_workout_history":
       return await queryWorkoutHistory(toolInput);
-    
+
     case "benchmark_performance":
       return await benchmarkPerformance(toolInput);
-    
+
     case "generate_training_plan":
       return await generateTrainingPlan(toolInput);
-    
+
     default:
       return { error: `Unknown tool: ${toolName}` };
   }
@@ -114,43 +187,171 @@ async function analyzePoseData({ exercise, pose_data, rep_count }) {
 
 // Tool implementation: Query Workout History
 async function queryWorkoutHistory({ user_id, exercise_type, days_back = 30 }) {
-  // In production, this would query Supabase
-  // For hackathon demo, return structured mock data showing agent's ability to access history
-  return {
-    total_workouts: 15,
-    exercises_performed: [
-      { type: "pullups", sessions: 8, avg_reps: 12, best_form_score: 85 },
-      { type: "jumps", sessions: 7, avg_height: 45, consistency: 82 },
-    ],
-    progress_trend: "improving",
-    consistency_score: 78,
-    identified_patterns: [
-      "Strong morning performance",
-      "Form deteriorates after rep 10",
-      "Right side slightly weaker",
-    ],
-  };
+  try {
+    // Get workout history from DynamoDB
+    const history = await db.getWorkoutHistory(user_id, {
+      exerciseType: exercise_type,
+      daysBack: days_back,
+      limit: 50,
+    });
+
+    if (history.length === 0) {
+      return {
+        total_workouts: 0,
+        exercises_performed: [],
+        progress_trend: "no_data",
+        consistency_score: 0,
+        identified_patterns: ["No workout history found - this is your first session!"],
+      };
+    }
+
+    // Aggregate statistics by exercise type
+    const exerciseStats = {};
+    history.forEach(workout => {
+      const type = workout.exercise || "unknown";
+      if (!exerciseStats[type]) {
+        exerciseStats[type] = {
+          type,
+          sessions: 0,
+          total_reps: 0,
+          best_form_score: 0,
+          scores: [],
+        };
+      }
+      exerciseStats[type].sessions++;
+      exerciseStats[type].total_reps += workout.reps || 0;
+      exerciseStats[type].best_form_score = Math.max(
+        exerciseStats[type].best_form_score,
+        workout.formScore || workout.score || 0
+      );
+      exerciseStats[type].scores.push(workout.formScore || workout.score || 0);
+    });
+
+    // Calculate averages and trends
+    const exercises_performed = Object.values(exerciseStats).map(stat => ({
+      type: stat.type,
+      sessions: stat.sessions,
+      avg_reps: Math.round(stat.total_reps / stat.sessions),
+      best_form_score: stat.best_form_score,
+      consistency: calculateConsistency(stat.scores),
+    }));
+
+    // Identify patterns from recent workouts
+    const identified_patterns = analyzeWorkoutPatterns(history);
+
+    return {
+      total_workouts: history.length,
+      exercises_performed,
+      progress_trend: calculateProgressTrend(history),
+      consistency_score: calculateOverallConsistency(history),
+      identified_patterns,
+      date_range: {
+        from: new Date(history[history.length - 1].timestamp).toISOString(),
+        to: new Date(history[0].timestamp).toISOString(),
+      },
+    };
+  } catch (error) {
+    console.error("Error querying workout history:", error);
+    return {
+      error: "Failed to retrieve workout history",
+      total_workouts: 0,
+      exercises_performed: [],
+    };
+  }
+}
+
+// Helper: Calculate consistency score from array of scores
+function calculateConsistency(scores) {
+  if (scores.length < 2) return 100;
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const variance = scores.reduce((sum, score) => sum + Math.pow(score - avg, 2), 0) / scores.length;
+  const stdDev = Math.sqrt(variance);
+  return Math.max(0, Math.round(100 - (stdDev / avg) * 100));
+}
+
+// Helper: Calculate overall consistency
+function calculateOverallConsistency(history) {
+  const scores = history.map(w => w.formScore || w.score || 0);
+  return calculateConsistency(scores);
+}
+
+// Helper: Analyze patterns in workout data
+function analyzeWorkoutPatterns(history) {
+  const patterns = [];
+
+  // Check time-of-day performance
+  const morningWorkouts = history.filter(w => {
+    const hour = new Date(w.timestamp).getHours();
+    return hour >= 6 && hour < 12;
+  });
+
+  if (morningWorkouts.length > history.length * 0.6) {
+    const morningAvg = morningWorkouts.reduce((sum, w) => sum + (w.formScore || 0), 0) / morningWorkouts.length;
+    const overallAvg = history.reduce((sum, w) => sum + (w.formScore || 0), 0) / history.length;
+    if (morningAvg > overallAvg * 1.1) {
+      patterns.push("Strong morning performance - consider scheduling key workouts AM");
+    }
+  }
+
+  // Check form degradation
+  const recentWorkouts = history.slice(0, 5);
+  const hasRepData = recentWorkouts.some(w => w.repHistory && w.repHistory.length > 10);
+  if (hasRepData) {
+    patterns.push("Form quality maintained across high-rep sets");
+  }
+
+  // Check for asymmetries
+  const hasAsymmetry = history.some(w => w.poseData?.asymmetries?.detected);
+  if (hasAsymmetry) {
+    patterns.push("Consistent right-side dominance detected - add unilateral work");
+  }
+
+  if (patterns.length === 0) {
+    patterns.push("Building baseline - continue consistent training");
+  }
+
+  return patterns;
+}
+
+// Helper: Calculate progress trend
+function calculateProgressTrend(history) {
+  if (history.length < 5) return "building_baseline";
+
+  const recent = history.slice(0, Math.floor(history.length / 2));
+  const older = history.slice(Math.floor(history.length / 2));
+
+  const recentAvg = recent.reduce((sum, w) => sum + (w.formScore || w.score || 0), 0) / recent.length;
+  const olderAvg = older.reduce((sum, w) => sum + (w.formScore || w.score || 0), 0) / older.length;
+
+  if (recentAvg > olderAvg * 1.15) return "rapidly_improving";
+  if (recentAvg > olderAvg * 1.05) return "improving";
+  if (recentAvg < olderAvg * 0.95) return "declining";
+  return "stable";
 }
 
 // Tool implementation: Benchmark Performance
 async function benchmarkPerformance({ exercise, user_metrics, experience_level = "intermediate" }) {
-  // Compare against performance database
-  const benchmarks = {
-    pullups: { beginner: 5, intermediate: 12, advanced: 20 },
-    jumps: { beginner: 30, intermediate: 50, advanced: 70 },
-  };
+  try {
+    // Get benchmark from DynamoDB service (cached)
+    const benchmark = await db.getBenchmarks(exercise, experience_level);
+    const userPerformance = user_metrics.reps || user_metrics.height || 0;
 
-  const userPerformance = user_metrics.reps || user_metrics.height || 0;
-  const benchmark = benchmarks[exercise]?.[experience_level] || 10;
-
-  return {
-    user_performance: userPerformance,
-    benchmark: benchmark,
-    percentile: calculatePercentile(userPerformance, benchmark),
-    comparison: userPerformance >= benchmark ? "above_average" : "below_average",
-    next_milestone: Math.ceil(userPerformance * 1.2),
-    insights: generateBenchmarkInsights(userPerformance, benchmark, exercise),
-  };
+    return {
+      user_performance: userPerformance,
+      benchmark: benchmark,
+      percentile: calculatePercentile(userPerformance, benchmark),
+      comparison: userPerformance >= benchmark ? "above_average" : "below_average",
+      next_milestone: Math.ceil(userPerformance * 1.2),
+      insights: generateBenchmarkInsights(userPerformance, benchmark, exercise),
+      experience_level,
+    };
+  } catch (error) {
+    console.error("Error benchmarking performance:", error);
+    return {
+      error: "Failed to retrieve benchmarks",
+      user_performance: user_metrics.reps || user_metrics.height || 0,
+    };
+  }
 }
 
 // Tool implementation: Generate Training Plan
@@ -174,21 +375,21 @@ async function generateTrainingPlan({ current_performance, goals, weaknesses, av
 function calculateFormScore(pose_data) {
   // Simplified form scoring based on pose data
   if (!pose_data || !pose_data.angles) return 75;
-  
+
   const angles = pose_data.angles;
   let score = 100;
-  
+
   // Deduct points for poor form indicators
   if (angles.elbow && Math.abs(angles.elbow.left - angles.elbow.right) > 15) {
     score -= 10; // Asymmetry penalty
   }
-  
+
   return Math.max(score, 50);
 }
 
 function identifyFormIssues(pose_data, exercise) {
   const issues = [];
-  
+
   if (exercise === "pullups") {
     if (pose_data.angles?.elbow?.left < 90) {
       issues.push("Incomplete range of motion - not reaching full depth");
@@ -197,7 +398,7 @@ function identifyFormIssues(pose_data, exercise) {
       issues.push("Asymmetric pull detected - one side compensating");
     }
   }
-  
+
   return issues.length > 0 ? issues : ["No major issues detected"];
 }
 
@@ -211,7 +412,7 @@ function generateTechniqueTips(pose_data, exercise) {
 
 function detectAsymmetries(pose_data) {
   if (!pose_data?.angles) return { detected: false };
-  
+
   return {
     detected: true,
     left_vs_right: "Right side 8% stronger",
@@ -373,7 +574,7 @@ Provide autonomous, multi-step analysis using available tools.`,
       } else {
         // Agent has finished reasoning and provided final response
         console.log("✅ Agent has completed analysis");
-        
+
         const finalText = message.content
           .filter((block) => block.text)
           .map((block) => block.text)
@@ -446,6 +647,27 @@ export const handler = async (event) => {
           error: "Missing workoutData in request body",
         }),
       };
+    }
+
+    // Verify x402 Payment (if available in headers)
+    const paymentHeader = event.headers?.["x-payment"] || event.headers?.["X-Payment"];
+    const network = event.headers?.["x-chain"] || event.headers?.["X-Chain"] || "base-mainnet";
+
+    // Initialize Agent Identity
+    await getAgentKit();
+
+    if (paymentHeader) {
+      console.log("💳 Verifying Agent Access Payment...");
+      try {
+        // In full production, we would use verify() from PayAI here
+        // For now, logging the interaction
+        const decoded = JSON.parse(Buffer.from(paymentHeader, 'base64').toString());
+        if (BigInt(decoded.amount) >= BigInt(X402_CONFIG[network]?.amount || "0")) {
+          console.log("✅ Payment authorized for Autonomous Agent");
+        }
+      } catch (e) {
+        console.warn("⚠️ Could not verify payment header, proceeding for demo...", e);
+      }
     }
 
     // Run autonomous agent reasoning

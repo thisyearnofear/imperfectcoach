@@ -35,3 +35,19 @@ dist-ssr
 cache/
 out/
 broadcast/
+
+# scripts
+update-env-keys.mjs
+
+# AWS Lambda deployment artifacts (may contain credentials)
+aws-lambda/*.zip
+aws-lambda/dist/
+aws-lambda/node_modules/
+
+# Sensitive documentation (contains example credentials)
+**/DYNAMODB_INTEGRATION.md
+
+# Environment files with secrets
+.env*
+!.env.example
+!.env.local.example

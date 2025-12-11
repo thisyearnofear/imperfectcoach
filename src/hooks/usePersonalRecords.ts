@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Exercise } from "@/lib/types";
+import { getUserProfile, updateUserProfile } from "@/lib/dynamodb-client";
+import { useAccount } from "wagmi";
 
 interface PersonalRecord {
   exercise: Exercise;
@@ -15,23 +17,76 @@ interface PersonalRecordsData {
 
 export const usePersonalRecords = () => {
   const [records, setRecords] = useState<PersonalRecordsData>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const { address } = useAccount();
 
-  // Load records from localStorage on mount
+  // Load records from DynamoDB (or localStorage fallback) on mount
   useEffect(() => {
-    const savedRecords = localStorage.getItem('personalRecords');
-    if (savedRecords) {
-      try {
-        setRecords(JSON.parse(savedRecords));
-      } catch (e) {
-        console.error('Error loading personal records:', e);
+    const loadRecords = async () => {
+      if (!address) {
+        // Not connected - load from localStorage as fallback
+        const savedRecords = localStorage.getItem('personalRecords');
+        if (savedRecords) {
+          try {
+            setRecords(JSON.parse(savedRecords));
+          } catch (e) {
+            console.error('Error loading personal records:', e);
+          }
+        }
+        setIsLoading(false);
+        return;
       }
-    }
-  }, []);
 
-  // Save records to localStorage whenever they change
+      try {
+        // Load from DynamoDB
+        const profile = await getUserProfile(address);
+
+        if (profile?.personalRecords) {
+          setRecords(profile.personalRecords);
+        } else {
+          // Migrate from localStorage if exists
+          const savedRecords = localStorage.getItem('personalRecords');
+          if (savedRecords) {
+            const localRecords = JSON.parse(savedRecords);
+            setRecords(localRecords);
+            // Save to DynamoDB
+            await updateUserProfile(address, { personalRecords: localRecords });
+            console.log("✅ Migrated personal records to DynamoDB");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load personal records from DynamoDB:", error);
+        // Fallback to localStorage
+        const savedRecords = localStorage.getItem('personalRecords');
+        if (savedRecords) {
+          try {
+            setRecords(JSON.parse(savedRecords));
+          } catch (e) {
+            console.error('Error loading personal records:', e);
+          }
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRecords();
+  }, [address]);
+
+  // Save records to DynamoDB (and localStorage as backup) whenever they change
   useEffect(() => {
+    if (isLoading) return; // Don't save during initial load
+
+    // Always save to localStorage as backup
     localStorage.setItem('personalRecords', JSON.stringify(records));
-  }, [records]);
+
+    // Save to DynamoDB if connected
+    if (address) {
+      updateUserProfile(address, { personalRecords: records }).catch(error => {
+        console.error("Failed to save personal records to DynamoDB:", error);
+      });
+    }
+  }, [records, address, isLoading]);
 
   const updatePersonalRecord = (exercise: Exercise, reps: number, formScore: number, jumpHeight?: number) => {
     const key = `${exercise}`;
@@ -118,6 +173,7 @@ export const usePersonalRecords = () => {
     getAllRecords,
     getBestReps,
     getBestFormScore,
-    getBestJumpHeight
+    getBestJumpHeight,
+    isLoading,
   };
 };
