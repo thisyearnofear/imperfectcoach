@@ -217,6 +217,68 @@ const CORE_AGENTS = [
         }
     },
     {
+        id: "agent-recovery-planner-01",
+        name: "Recovery Planner",
+        emoji: "😴",
+        role: "specialist",
+        description: "Specialized in recovery optimization, sleep, and fatigue management.",
+        location: "EU-West-1",
+        capabilities: ["recovery_planning"],
+        pricing: {
+            recovery_planning: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" }
+        },
+        tieredPricing: {
+            recovery_planning: {
+                basic: { baseFee: "0.02", asset: "USDC", chain: "base-sepolia" },
+                pro: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" },
+                premium: { baseFee: "0.10", asset: "USDC", chain: "base-sepolia" }
+            }
+        },
+        endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/recovery-agent",
+        status: "active",
+        reputationScore: 94,
+        successRate: 0.94,
+        tags: ["official", "recovery", "core"],
+        protocol: "x402",
+        lastHeartbeat: Date.now(),
+        serviceAvailability: {
+            basic: { tier: "basic", slots: 120, slotsFilled: 38, nextAvailable: Date.now(), responseSLA: 8000, uptime: 99.4 },
+            pro: { tier: "pro", slots: 50, slotsFilled: 17, nextAvailable: Date.now(), responseSLA: 3000, uptime: 99.7 },
+            premium: { tier: "premium", slots: 20, slotsFilled: 6, nextAvailable: Date.now(), responseSLA: 600, uptime: 99.9 }
+        }
+    },
+    {
+        id: "agent-biomechanics-01",
+        name: "Biomechanics Analyst",
+        emoji: "🏋️",
+        role: "specialist",
+        description: "Deep form analysis and movement quality assessment using pose data.",
+        location: "US-East-1",
+        capabilities: ["biomechanics_analysis"],
+        pricing: {
+            biomechanics_analysis: { baseFee: "0.08", asset: "USDC", chain: "base-sepolia" }
+        },
+        tieredPricing: {
+            biomechanics_analysis: {
+                basic: { baseFee: "0.04", asset: "USDC", chain: "base-sepolia" },
+                pro: { baseFee: "0.08", asset: "USDC", chain: "base-sepolia" },
+                premium: { baseFee: "0.15", asset: "USDC", chain: "base-sepolia" }
+            }
+        },
+        endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/biomechanics-agent",
+        status: "active",
+        reputationScore: 96,
+        successRate: 0.96,
+        tags: ["official", "biomechanics", "core"],
+        protocol: "x402",
+        lastHeartbeat: Date.now(),
+        serviceAvailability: {
+            basic: { tier: "basic", slots: 100, slotsFilled: 30, nextAvailable: Date.now(), responseSLA: 8500, uptime: 99.6 },
+            pro: { tier: "pro", slots: 50, slotsFilled: 18, nextAvailable: Date.now(), responseSLA: 3200, uptime: 99.8 },
+            premium: { tier: "premium", slots: 20, slotsFilled: 7, nextAvailable: Date.now(), responseSLA: 700, uptime: 99.9 }
+        }
+    },
+    {
         id: "agent-massage-booking-01",
         name: "Recovery Booking",
         emoji: "💆",

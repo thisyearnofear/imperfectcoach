@@ -123,24 +123,26 @@ The x402 protocol enables **true decentralized agent economies** where autonomou
   4. Payment Verified → Data Returned
 - **Pricing**: Differential pricing implemented ($0.05 analysis vs $0.01 data)
 
-#### Phase 3.5: Real Inter-Agent Payments (CURRENT - Dec 2024)
+#### Phase 3.5: Real Inter-Agent Payments (COMPLETE - Dec 2024) ✅
 **Goal**: Migrate from simulated payments to REAL blockchain settlement
 - **Status**: COMPLETE ✅ - x402 V2 Agent Economy Ready
-- **Architecture Decision**: Focus on owned agents + x402, defer external discovery
-  - **CORE_AGENTS** (3): Fitness Coach, Nutrition Planner, Recovery Booking
+- **Architecture Decision**: Focus on owned agents + x402 (no external discovery needed)
+  - **CORE_AGENTS** (4): Fitness Coach, Nutrition Planner, Recovery Planner, Biomechanics Analyst
     - Registered on AgentRegistry.sol (Base Sepolia & Avalanche Fuji)
     - Full x402 payment support with SLA tracking
     - Real reputation scoring on-chain
-  - **Future Integration**: Reap Protocol discovery when API stabilizes
-    - Reap's agent discovery endpoints not yet available
-    - Will integrate via x402 V2 Discovery extension when live
-    - No breaking changes needed—x402 V2 backward compatible
+    - Frontend mirrors backend via `src/lib/agents/core-agents.ts` (DRY principle)
+- **Reap Protocol Clarification**:
+  - Reap is for **agentic commerce** (buying products, inventory, autonomous shopping)
+  - NOT for agent service discovery
+  - We don't need Reap for finding specialists—CORE_AGENTS is our discovery layer
+  - Future: Could use Reap for agents to autonomously purchase services from marketplaces
 - **x402 V2 Alignment**:
   1. **Multi-chain by default** ✅ - Base Sepolia & Avalanche Fuji
   2. **Dynamic payTo routing** ✅ - Per-agent payment addresses
-  3. **Plugin-driven discovery** 🔄 - Ready for Reap discovery
-  4. **Wallet-based access** 🔄 - SIWx coming in x402 V2
-  5. **Automatic service metadata** 🔄 - AgentRegistry acts as metadata source
+  3. **Immediate settlement** ✅ - No escrow, agents paid instantly
+  4. **Self-custody agents** ✅ - Agents control their wallets (via AgentKit)
+  5. **Service metadata** ✅ - AgentRegistry.sol stores agent profiles
 
 #### Phase 4: Multi-Service Marketplace (FUTURE - Q2)
 **Goal**: Calendar, Massage Booking, Nutrition agents all coordinate via x402

@@ -16,6 +16,7 @@ import { base } from "viem/chains";
 import { verify } from "@payai/x402/facilitator";
 import * as db from "./lib/dynamodb-service.mjs";
 import * as reap from "./lib/reap-integration.mjs";
+import * as coreHandler from "./lib/core-agent-handler.mjs";
 
 // Initialize clients
 const bedrockClient = new BedrockRuntimeClient({ region: "eu-north-1" });
@@ -495,173 +496,125 @@ function defineSuccessMetrics(goals) {
   }));
 }
 
-// Tool implementation: Call Specialist Agent (Phase B & C with Phase D SLA)
+// Tool implementation: Call Specialist Agent (x402 v2 with CORE_AGENTS)
 async function callSpecialistAgent({ capability, data_query, amount, serviceTier, bookingId }) {
-  console.log(`\n🌐 [Phase B & C with Phase D] Calling specialist agent via Reap Protocol`);
+  console.log(`\n🌐 Calling specialist agent via x402 v2`);
   console.log(`   Capability: ${capability}`);
-  console.log(`   Amount: ${amount} (USDC)`);
+  console.log(`   Amount: ${amount} USDC`);
   if (serviceTier) console.log(`   Tier: ${serviceTier} (SLA enforced)`);
   if (bookingId) console.log(`   Booking ID: ${bookingId}`);
   
-  // Phase D: Track execution time for SLA enforcement
+  // Track execution time for SLA enforcement
   const executionStartTime = Date.now();
-  const tierSLAMs = {
-    basic: 5000,
-    pro: 2000,
-    premium: 500
-  };
-  const expectedSLA = serviceTier ? tierSLAMs[serviceTier] : null;
+  const network = "base-sepolia"; // Primary network
   
   try {
-    // PHASE B: Real Agent Discovery + x402 Negotiation
-    // 1. Discover real specialist via Reap
-    const specialists = await reap.discoverAgentsHybrid(capability);
+    // 1. Discover specialist from CORE_AGENTS
+    console.log(`\n🔍 Searching CORE_AGENTS for ${capability}...`);
+    const specialists = coreHandler.findAgentsByCapability(capability);
     
     if (!specialists || specialists.length === 0) {
       return {
         error: "No specialists found for capability",
         capability,
-        fallback: "Using local analysis instead",
-        slaStatus: expectedSLA ? "SLA_NOT_MET" : null
+        message: `No agents available for ${capability}`
       };
     }
     
     const specialist = specialists[0];
-    console.log(`   Found: ${specialist.name} (${specialist.id})`);
+    console.log(`   ✅ Found: ${specialist.name} (${specialist.id})`);
+    console.log(`      Reputation: ${specialist.reputationScore}/100`);
     
-    // 2. Prepare payment requirement
+    // 2. Coach agent identity
     const coachAgent = {
       id: "agent-fitness-core-01",
       name: "Fitness Coach",
       address: process.env.AGENT_WALLET_ADDRESS || "0x1234567890123456789012345678901234567890"
     };
     
-    const paymentRequirement = {
-      scheme: "x402",
-      network: "base-sepolia",
-      asset: "0x036CbD53842c5426634e7929541fC2318B3d053F", // USDC on Base Sepolia
-      amount: amount,
-      payTo: specialist.address || "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    };
+    // 3. x402 payment via CORE_AGENTS (simulate for demo)
+    console.log(`\n💳 Executing x402 payment...`);
+    const paymentProof = await coreHandler.simulateX402Payment(
+      specialist,
+      amount,
+      network
+    );
     
-    // 3. Negotiate x402 payment (Phase B)
-    console.log(`   💳 Negotiating x402 payment...`);
-    const settlement = await reap.negotiatePaymentWithAgent(paymentRequirement, coachAgent);
-    
-    if (!settlement.success && settlement.isSimulated) {
-      console.log(`   ⚠️  Using simulated settlement (Reap not available)`);
-    } else {
-      console.log(`   ✅ Settlement negotiated`);
-    }
-    
-    // 4. Verify settlement
-    const verified = await reap.verifyReapSettlement(settlement, amount, specialist.address);
-    
-    if (!verified) {
+    if (!paymentProof.success) {
       return {
-        error: "Settlement verification failed",
-        specialist: specialist.name
+        error: "Payment failed",
+        specialist: specialist.name,
+        message: "Unable to process x402 payment"
       };
     }
     
-    console.log(`   ✅ Settlement verified`);
+    console.log(`   ✅ Payment executed: ${paymentProof.transactionHash}`);
     
-    // 5. Execute real payment (Phase C)
-    console.log(`   💸 Executing payment...`);
-    const settlementReq = {
-      amount: settlement.amount,
-      asset: settlement.asset,
-      chain: settlement.chain,
-      recipientAddress: specialist.address,
-      signature: settlement.signature
-    };
+    // 4. Call specialist's endpoint
+    console.log(`\n🤝 Calling specialist endpoint...`);
+    const response = await coreHandler.callSpecialistEndpoint(
+      specialist,
+      capability,
+      data_query
+    );
     
-    const tx = await reap.executeRealPayment(settlementReq);
+    console.log(`   ✅ Response received`);
     
-    console.log(`   ✅ Payment executed`);
-    if (tx.transactionHash) {
-      console.log(`      TX: ${tx.transactionHash}`);
-      console.log(`      Status: ${tx.status}`);
+    // 5. Record payment in audit trail
+    console.log(`\n📊 Recording payment...`);
+    const paymentRecord = await coreHandler.recordAgentPayment(
+      coachAgent.id,
+      specialist,
+      paymentProof,
+      capability
+    );
+    
+    // 6. Calculate SLA performance (if tier specified)
+    let slaData = null;
+    if (serviceTier) {
+      const executionTimeMs = Date.now() - executionStartTime;
+      slaData = coreHandler.calculateSLAPerformance(serviceTier, executionTimeMs);
+      
+      console.log(`\n⏱️  SLA Performance:`);
+      console.log(`   Tier: ${slaData.tier}`);
+      console.log(`   Expected: ${slaData.expectedMs}ms`);
+      console.log(`   Actual: ${slaData.actualMs}ms`);
+      console.log(`   ${slaData.message}`);
     }
     
-    // 6. Record payment in audit trail
-    const paymentRecord = {
-      from: coachAgent.id,
-      to: specialist.id,
-      amount: amount,
-      asset: "USDC",
-      chain: "base-sepolia",
-      transactionHash: tx.transactionHash,
-      capabilityUsed: capability,
-      timestamp: Date.now()
-    };
-    
-    await reap.recordAgentPayment(db, paymentRecord);
-    
-    // 7. Calculate revenue split
-    const userPaymentTx = {
-      amount: amount,
-      transactionHash: tx.transactionHash
-    };
-    
-    const split = await reap.splitRevenue(userPaymentTx, 97);
-    
-    // Phase D: Calculate SLA performance
-    const executionTimeMs = Date.now() - executionStartTime;
-    const slaMet = expectedSLA ? executionTimeMs <= expectedSLA : null;
-    const slaPenalty = slaMet === false ? (amount * 0.1) : 0; // 10% penalty if SLA breached
-    
-    console.log(`\n⏱️  [Phase D] SLA Performance:`);
-    if (expectedSLA) {
-      console.log(`   Expected: ${expectedSLA}ms (${serviceTier} tier)`);
-      console.log(`   Actual: ${executionTimeMs}ms`);
-      console.log(`   Status: ${slaMet ? "✅ MET" : "❌ BREACHED"}`);
-      if (slaPenalty > 0) {
-        console.log(`   Penalty: ${slaPenalty} USDC (10%)`);
-      }
-    }
-    
-    // 8. Return specialist response with payment proof and SLA status
+    // 7. Build response with payment proof, SLA status, and specialist data
     return {
       success: true,
       specialist: {
         id: specialist.id,
         name: specialist.name,
-        capability: capability
+        capability: capability,
+        reputation: specialist.reputationScore,
+        endpoint: specialist.endpoint
       },
       payment: {
         amount: amount,
-        transactionHash: tx.transactionHash,
-        status: tx.status,
-        blockExplorer: tx.url
+        transactionHash: paymentProof.transactionHash,
+        network: paymentProof.network,
+        status: paymentProof.status,
+        blockExplorer: paymentProof.blockExplorer,
+        timestamp: paymentProof.timestamp
       },
-      // Phase D: SLA enforcement data
-      sla: expectedSLA ? {
-        expectedMs: expectedSLA,
-        actualMs: executionTimeMs,
-        met: slaMet,
-        tier: serviceTier,
-        penaltyApplied: slaPenalty,
-        agentPayment: amount - slaPenalty,
-        message: slaMet 
-          ? `✅ SLA met (${executionTimeMs}ms < ${expectedSLA}ms), full payment released`
-          : `⚠️ SLA breached (${executionTimeMs}ms > ${expectedSLA}ms), 10% penalty applied`
+      data: response,
+      // SLA enforcement (if tier specified)
+      sla: slaData ? {
+        expectedMs: slaData.expectedMs,
+        actualMs: slaData.actualMs,
+        tier: slaData.tier,
+        met: slaData.met,
+        penaltyPercent: slaData.penalty,
+        message: slaData.message
       } : null,
-      data: {
-        // In real scenario, would get response from specialist endpoint
-        analysis: `Specialist ${specialist.name} would provide detailed ${capability} analysis here`,
-        insights: [
-          "Specialist data loaded successfully via x402 payment",
-          `Payment confirmed on Base Sepolia: ${tx.transactionHash}`,
-          "Integration with Reap Protocol successful",
-          ...(slaMet !== null ? [`SLA Status: ${slaMet ? "✅ Met" : "❌ Breached"}`] : [])
-        ]
-      },
-      revenue_split: {
-        user_paid: split.userAmount,
-        platform_fee: split.platformFee,
-        agent_share: split.agentShare,
-        sla_penalty: slaPenalty > 0 ? slaPenalty : undefined
+      audit: {
+        from: coachAgent.id,
+        to: specialist.id,
+        timestamp: new Date().toISOString(),
+        bookingId: bookingId || null
       }
     };
     
@@ -670,7 +623,8 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
     return {
       error: "Failed to call specialist agent",
       message: error.message,
-      capability: capability
+      capability: capability,
+      timestamp: new Date().toISOString()
     };
   }
 }

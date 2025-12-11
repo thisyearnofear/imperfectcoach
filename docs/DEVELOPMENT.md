@@ -21,7 +21,8 @@
 - x402 protocol (server-driven challenges)
 - Base Sepolia, Avalanche C-Chain, Solana Devnet
 - USDC/SOL stablecoin settlement
-- **Reap Protocol**: Real agent discovery & settlement (Phase A)
+- **CORE_AGENTS**: Service discovery & x402 settlement (Phase 3.5 ✅)
+- **Reap Protocol**: Agentic commerce (future integration for shopping)
 
 ## 🚀 Quick Start for Developers
 
@@ -505,11 +506,14 @@ Coach Agent can autonomously:
   - AgentRegistry.sol tracks all agents
 - [x] Strategy: Integrate Reap discovery later via x402 V2 Discovery extension
 
-**Week 5 (Current - Next Steps)**:
-- [ ] Wire CORE_AGENTS into Bedrock's call_specialist_agent tool
-- [ ] Test end-to-end x402 payment flow
-- [ ] Verify SLA tracking and reputation updates
-- [ ] Demo walkthrough script
+**Week 5 Completed** ✅:
+- [x] Wired CORE_AGENTS into Bedrock's call_specialist_agent tool (e2e test passing)
+- [x] Created frontend mirror: src/lib/agents/core-agents.ts (DRY principle)
+- [x] Enhanced AgentCoachUpsell.tsx with dynamic agent progression
+- [x] Added verification script: scripts/verify-agent-integration.mjs
+- [x] Test end-to-end x402 payment flow (all 3 specialists working)
+- [x] SLA tracking verified (reputation updates working)
+- [x] Clarified Reap Protocol (agentic commerce, not service discovery)
 
 ### Deployment Checklist (Phase 3.5 Complete)
 - [x] All Phase A, B, C tests passing

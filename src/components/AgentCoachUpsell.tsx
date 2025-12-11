@@ -31,6 +31,12 @@ import {
   AGENT_PROFILES,
   formatNetworkName
 } from "@/lib/agents/profiles";
+import {
+  getSpecialists,
+  getAgent,
+  CORE_AGENTS,
+  type CoreAgent
+} from "@/lib/agents/core-agents";
 
 interface AgentCoachUpsellProps {
   workoutData: {
@@ -91,19 +97,55 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
     setCoordination(initialCoordination);
 
     try {
-      // Agent economy progress steps - now shows which agents are being coordinated
-      const agentKeys = ['fitness_coach', 'nutrition', 'biomechanics', 'recovery', 'calendar'];
-      const progressSteps = [
-        { step: "Processing x402 payment...", progress: 10, agentIndex: -1, status: 'processing' as ContributionStatus },
-        { step: "Coach Agent initializing...", progress: 20, agentIndex: 0, status: 'processing' as ContributionStatus },
-        { step: "Discovering Nutrition Agent...", progress: 30, agentIndex: 1, status: 'discovering' as ContributionStatus },
-        { step: "Negotiating with Nutrition Agent ($0.03)...", progress: 40, agentIndex: 1, status: 'negotiating' as ContributionStatus },
-        { step: "Nutrition Agent analyzing...", progress: 50, agentIndex: 1, status: 'processing' as ContributionStatus },
-        { step: "Biomechanics Agent evaluating form...", progress: 60, agentIndex: 2, status: 'processing' as ContributionStatus },
-        { step: "Recovery Agent planning...", progress: 75, agentIndex: 3, status: 'processing' as ContributionStatus },
-        { step: "Calendar Agent scheduling...", progress: 85, agentIndex: 4, status: 'processing' as ContributionStatus },
-        { step: "Coach synthesizing insights...", progress: 95, agentIndex: 0, status: 'processing' as ContributionStatus },
+      // Generate progress steps dynamically from CORE_AGENTS
+      // PRINCIPLE: DRY - Single source of truth for agents and their sequence
+      const specialists = getSpecialists();
+      const coachAgent = getAgent('agent-fitness-core-01');
+      
+      // Build progress steps: payment → coach init → specialists → synthesis
+      const progressSteps: Array<{ step: string; progress: number; agentIndex: number; status: ContributionStatus; agent?: CoreAgent }> = [
+        { step: "Processing x402 payment...", progress: 10, agentIndex: -1, status: 'processing' },
+        { step: `${coachAgent?.emoji} Coach Agent initializing...`, progress: 20, agentIndex: 0, status: 'processing', agent: coachAgent },
       ];
+
+      // Add progress steps for each specialist agent
+      const progressPerAgent = Math.floor(70 / (specialists.length + 1)); // Distribute 70% across agents
+      specialists.forEach((specialist, idx) => {
+        const basePrice = specialist.pricing[specialist.capabilities[0]]?.baseFee || "0.00";
+        const repBadge = `${specialist.reputationScore}/100`; // Reputation badge
+        progressSteps.push(
+          { 
+            step: `🔍 Discovering ${specialist.name}... [${repBadge}]`, 
+            progress: 20 + ((idx + 1) * progressPerAgent * 0.3), 
+            agentIndex: idx + 1, 
+            status: 'discovering',
+            agent: specialist
+          },
+          { 
+            step: `💳 Negotiating with ${specialist.name} ($${basePrice})...`, 
+            progress: 20 + ((idx + 1) * progressPerAgent * 0.6), 
+            agentIndex: idx + 1, 
+            status: 'negotiating',
+            agent: specialist
+          },
+          { 
+            step: `${specialist.emoji} ${specialist.name} analyzing... [${specialist.successRate * 100 | 0}% success]`, 
+            progress: 20 + ((idx + 1) * progressPerAgent), 
+            agentIndex: idx + 1, 
+            status: 'processing',
+            agent: specialist
+          }
+        );
+      });
+
+      // Final synthesis step
+      progressSteps.push({
+        step: "💪 Coach synthesizing insights...",
+        progress: 95,
+        agentIndex: 0,
+        status: 'processing',
+        agent: coachAgent
+      });
 
       // Start progress simulation with agent coordination updates
       let stepIndex = 0;
@@ -156,15 +198,16 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
             return updated;
           });
 
-          // Legacy tool tracking for backwards compatibility
-          const toolMap: Record<number, string[]> = {
-            0: [],
-            1: ["analyze_pose_data"],
-            2: ["analyze_pose_data", "query_workout_history"],
-            3: ["analyze_pose_data", "query_workout_history", "benchmark_performance"],
-            4: ["analyze_pose_data", "query_workout_history", "benchmark_performance", "generate_training_plan"],
-          };
-          setActiveTools(toolMap[Math.min(stepIndex, 4)] || []);
+          // Tool tracking - incrementally reveal tools as agents process
+          const toolProgression = [
+            [], // Payment
+            [], // Coach init
+            ["analyze_pose_data"], // First specialist
+            ["analyze_pose_data", "query_workout_history"], // Second specialist
+            ["analyze_pose_data", "query_workout_history", "benchmark_performance"], // Third specialist
+            ["analyze_pose_data", "query_workout_history", "benchmark_performance", "generate_training_plan"], // Synthesis
+          ];
+          setActiveTools(toolProgression[Math.min(stepIndex, toolProgression.length - 1)] || []);
 
           stepIndex++;
         }
@@ -468,21 +511,21 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   return (
     <Card className="border-purple-500/50 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/30 backdrop-blur-sm">
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-indigo-500/20">
-              <Brain className="h-6 w-6 text-purple-400" />
-            </div>
-            <div>
-              <CardTitle>AI Coach Agent</CardTitle>
-              <p className="text-sm text-muted-foreground">Powered by x402 Agent Economy</p>
-            </div>
-          </div>
-          <Badge variant="outline" className="bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border-purple-400 text-purple-200">
-            <Sparkles className="h-3 w-3 mr-1" />
-            5 Specialists
-          </Badge>
-        </div>
+       <div className="flex items-center justify-between">
+         <div className="flex items-center gap-2">
+           <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-indigo-500/20">
+             <Brain className="h-6 w-6 text-purple-400" />
+           </div>
+           <div>
+             <CardTitle>AI Coach Agent</CardTitle>
+             <p className="text-sm text-muted-foreground">Powered by x402 Agent Economy</p>
+           </div>
+         </div>
+         <Badge variant="outline" className="bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border-purple-400 text-purple-200">
+           <Sparkles className="h-3 w-3 mr-1" />
+           {getSpecialists().length} Specialists
+         </Badge>
+       </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Agent Value Proposition - Shows what user gets */}
@@ -523,7 +566,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
           ) : (
             <>
               <Brain className="mr-2 h-4 w-4" />
-              Unlock 5 Specialists • $0.10
+              Unlock {getSpecialists().length + 1} Agents • $0.10
             </>
           )}
         </AnimatedButton>
