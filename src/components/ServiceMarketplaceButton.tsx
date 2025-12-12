@@ -24,7 +24,7 @@ interface ServiceMarketplaceButtonProps {
  * 
  * Usage:
  * <ServiceMarketplaceButton 
- *   capability="fitness-analysis"
+ *   capability="fitness_analysis"
  *   basePrice="0.05"
  *   label="Book Agent Analysis"
  *   onBookingComplete={(booking) => console.log(booking)}

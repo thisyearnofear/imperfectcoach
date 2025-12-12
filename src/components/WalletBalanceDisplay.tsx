@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { Connection } from "@solana/web3.js";
 import { Card } from "@/components/ui/card";
@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Wallet, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PublicKey } from "@solana/web3.js";
-import { createPublicClient, http, formatUnits, getAddress } from "viem";
-import { baseSepolia } from "viem/chains";
+import { createPublicClient, http, formatUnits, getAddress, Chain } from "viem";
+import { baseSepolia, avalancheFuji } from "viem/chains";
 
 interface WalletBalanceDisplayProps {
   requiredAmount?: string; // e.g. "0.05"
@@ -27,9 +27,19 @@ interface ChainBalance {
   error?: string;
 }
 
-// Base Sepolia USDC contract address - use getAddress to ensure proper checksum
+// USDC contract addresses for supported chains
 const USDC_ADDRESS_BASE = getAddress("0x036CbD53842c5426634e7929541eC2318f3dCF7e");
+const USDC_ADDRESS_AVALANCHE = getAddress("0x5425890298aed601595a70AB815c96711a756003");
 const USDC_MINT_SOLANA = "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr";
+
+// Helper to get chain config based on chainId
+const getChainConfig = (chainId: number | undefined): { chain: Chain; usdcAddress: `0x${string}`; name: string } => {
+  if (chainId === avalancheFuji.id) {
+    return { chain: avalancheFuji, usdcAddress: USDC_ADDRESS_AVALANCHE, name: "Avalanche Fuji" };
+  }
+  // Default to Base Sepolia
+  return { chain: baseSepolia, usdcAddress: USDC_ADDRESS_BASE, name: "Base Sepolia" };
+};
 
 export function WalletBalanceDisplay({
   requiredAmount = "0.05",
@@ -39,8 +49,12 @@ export function WalletBalanceDisplay({
   onInsufficientFunds,
 }: WalletBalanceDisplayProps) {
   const { address: baseAddress, isConnected: isBaseConnected } = useAccount();
+  const chainId = useChainId();
   const { isSolanaConnected, solanaAddress } = useWalletConnection();
   const solanaConnection = new Connection('https://api.devnet.solana.com');
+
+  // Get the current chain config based on connected chain
+  const { chain: currentChain, usdcAddress: currentUsdcAddress, name: currentChainName } = getChainConfig(chainId);
 
   const [baseBalance, setBaseBalance] = useState<ChainBalance>({
     chain: "base",
@@ -60,27 +74,27 @@ export function WalletBalanceDisplay({
 
   const required = parseFloat(requiredAmount);
 
-  // Fetch Base balances
+  // Fetch EVM chain balances (Base Sepolia or Avalanche Fuji)
   useEffect(() => {
     if (!isBaseConnected || !baseAddress) {
       setBaseBalance(prev => ({ ...prev, isLoading: false }));
       return;
     }
 
-    const fetchBaseBalances = async () => {
+    const fetchEVMBalances = async () => {
       try {
         const publicClient = createPublicClient({
-          chain: baseSepolia,
+          chain: currentChain,
           transport: http(),
         });
 
-        // Get ETH balance
-        const ethBalance = await publicClient.getBalance({ address: baseAddress });
-        const ethAmount = parseFloat(formatUnits(ethBalance, 18));
+        // Get native token balance (ETH for Base, AVAX for Avalanche)
+        const nativeBalance = await publicClient.getBalance({ address: baseAddress });
+        const nativeAmount = parseFloat(formatUnits(nativeBalance, 18));
 
         // Get USDC balance
         const usdcBalance = await publicClient.readContract({
-          address: USDC_ADDRESS_BASE,
+          address: currentUsdcAddress,
           abi: [
             {
               name: "balanceOf",
@@ -89,17 +103,17 @@ export function WalletBalanceDisplay({
               inputs: [{ type: "address" }],
               outputs: [{ type: "uint256" }],
             },
-          ],
+          ] as const,
           functionName: "balanceOf",
           args: [baseAddress],
-        });
+        } as any);
 
         const usdcAmount = parseFloat(formatUnits(usdcBalance as bigint, 6));
 
         setBaseBalance({
           chain: "base",
           usdc: usdcAmount,
-          native: ethAmount,
+          native: nativeAmount,
           hasEnough: usdcAmount >= required,
           isLoading: false,
         });
@@ -108,11 +122,11 @@ export function WalletBalanceDisplay({
           onInsufficientFunds();
         }
       } catch (error) {
-        console.error("Failed to fetch Base balances:", error);
-        console.error("Base address:", baseAddress);
-        console.error("USDC contract address:", USDC_ADDRESS_BASE);
-        console.error("Chain:", baseSepolia.id, baseSepolia.name);
-        
+        console.error(`Failed to fetch ${currentChainName} balances:`, error);
+        console.error("Address:", baseAddress);
+        console.error("USDC contract address:", currentUsdcAddress);
+        console.error("Chain:", currentChain.id, currentChainName);
+
         setBaseBalance(prev => ({
           ...prev,
           isLoading: false,
@@ -121,8 +135,8 @@ export function WalletBalanceDisplay({
       }
     };
 
-    fetchBaseBalances();
-  }, [isBaseConnected, baseAddress, required, onInsufficientFunds]);
+    fetchEVMBalances();
+  }, [isBaseConnected, baseAddress, required, onInsufficientFunds, chainId, currentChain, currentUsdcAddress, currentChainName]);
 
   // Fetch Solana balances
   useEffect(() => {
@@ -187,10 +201,11 @@ export function WalletBalanceDisplay({
   // Compact variant - inline badge style
   if (variant === "compact") {
     const activeBalance = isSolanaConnected ? solanaBalance : baseBalance;
-    const chainName = activeBalance.chain === "base" ? "Base" : "Solana";
+    // For EVM, use the dynamically detected chain name; for Solana, show "Solana"
+    const displayChainName = isSolanaConnected ? "Solana" : (chainId === avalancheFuji.id ? "Avalanche" : "Base");
     const showCurrency = activeBalance.chain === "solana" ? "SOL" : "USDC";
     const displayAmount = activeBalance.chain === "solana" ? activeBalance.native : activeBalance.usdc;
-    
+
     return (
       <div className={cn("inline-flex items-center gap-2 text-xs", className)}>
         <Wallet className="h-3 w-3 text-purple-600" />
@@ -203,15 +218,15 @@ export function WalletBalanceDisplay({
               variant="outline"
               className={cn(
                 "font-mono",
-                (activeBalance.chain === "solana" && activeBalance.native > 0.001) || 
-                (activeBalance.chain === "base" && activeBalance.hasEnough)
+                (activeBalance.chain === "solana" && activeBalance.native > 0.001) ||
+                  (activeBalance.chain === "base" && activeBalance.hasEnough)
                   ? "bg-green-50 text-green-700 border-green-200"
                   : "bg-orange-50 text-orange-700 border-orange-200"
               )}
             >
               {displayAmount.toFixed(activeBalance.chain === "solana" ? 3 : 2)} {showCurrency}
             </Badge>
-            <span className="text-gray-400">on {chainName}</span>
+            <span className="text-gray-400">on {displayChainName}</span>
           </>
         )}
       </div>
@@ -240,15 +255,23 @@ export function WalletBalanceDisplay({
           </button>
         </div>
 
-        {/* Base Chain Balance */}
+        {/* EVM Chain Balance (Base Sepolia or Avalanche Fuji) */}
         {isBaseConnected && (
           <div className="flex items-center justify-between p-2 bg-white/50 rounded">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-xs font-bold text-blue-600">B</span>
+              <div className={cn(
+                "w-6 h-6 rounded-full flex items-center justify-center",
+                chainId === avalancheFuji.id ? "bg-red-100" : "bg-blue-100"
+              )}>
+                <span className={cn(
+                  "text-xs font-bold",
+                  chainId === avalancheFuji.id ? "text-red-600" : "text-blue-600"
+                )}>
+                  {chainId === avalancheFuji.id ? "A" : "B"}
+                </span>
               </div>
               <div>
-                <div className="text-xs font-medium text-gray-700">Base Sepolia</div>
+                <div className="text-xs font-medium text-gray-700">{currentChainName}</div>
                 <div className="text-[10px] text-gray-500">{baseAddress?.slice(0, 6)}...{baseAddress?.slice(-4)}</div>
               </div>
             </div>
@@ -266,7 +289,7 @@ export function WalletBalanceDisplay({
                     {baseBalance.usdc.toFixed(2)} USDC
                   </div>
                   <div className="text-[10px] text-gray-500">
-                    {baseBalance.native.toFixed(4)} ETH
+                    {baseBalance.native.toFixed(4)} {chainId === avalancheFuji.id ? "AVAX" : "ETH"}
                   </div>
                 </>
               )}
@@ -318,9 +341,9 @@ export function WalletBalanceDisplay({
             const solanaCanAfford = isSolanaConnected && solanaBalance.native >= (required * 0.002); // ~$0.05 = 0.0001 SOL
             const baseCanAfford = isBaseConnected && baseBalance.hasEnough;
             const hasAnyEnough = solanaCanAfford || baseCanAfford;
-            
-            const bothLoading = (isBaseConnected && baseBalance.isLoading) || 
-                               (isSolanaConnected && solanaBalance.isLoading);
+
+            const bothLoading = (isBaseConnected && baseBalance.isLoading) ||
+              (isSolanaConnected && solanaBalance.isLoading);
 
             if (bothLoading) {
               return (
