@@ -72,70 +72,86 @@ export const usePoseDetection = ({
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
+      // Only process if detector exists, video is ready, and canvas is available
       if (detector && video && video.readyState === 4 && canvas) {
-        // Performance optimization: skip frames to reduce CPU usage
-        frameSkipCounter.current = (frameSkipCounter.current + 1) % (FRAME_SKIP + 1);
-        if (frameSkipCounter.current !== FRAME_SKIP) {
-          // Skip this frame, just request the next animation frame
-          animationFrameId.current = requestAnimationFrame(detect);
-          return;
-        }
+        try {
+          // Performance optimization: skip frames to reduce CPU usage
+          frameSkipCounter.current = (frameSkipCounter.current + 1) % (FRAME_SKIP + 1);
+          if (frameSkipCounter.current !== FRAME_SKIP) {
+            // Skip this frame, just request the next animation frame
+            animationFrameId.current = requestAnimationFrame(detect);
+            return;
+          }
 
-        const videoDimensions = { width: video.videoWidth, height: video.videoHeight };
-        const poses = await detector.estimatePoses(video);
-        const pose = poses && poses.length > 0 ? poses[0] : null;
+          const videoDimensions = { width: video.videoWidth, height: video.videoHeight };
+          const poses = await detector.estimatePoses(video);
+          const pose = poses && poses.length > 0 ? poses[0] : null;
 
-        if (pose) {
-          processPose(pose, videoDimensions);
+          if (pose) {
+            processPose(pose, videoDimensions);
 
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (isDebugMode) {
-              keypointHistoryRef.current.push(pose.keypoints);
-              // Limit keypoint history to prevent memory bloat
-              if (keypointHistoryRef.current.length > 20) {
-                keypointHistoryRef.current = keypointHistoryRef.current.slice(-20);
+              if (isDebugMode) {
+                keypointHistoryRef.current.push(pose.keypoints);
+                // Limit keypoint history to prevent memory bloat
+                if (keypointHistoryRef.current.length > 20) {
+                  keypointHistoryRef.current = keypointHistoryRef.current.slice(-20);
+                }
               }
+              
+              // Enhanced drawing with jump-specific features
+              drawPose(
+                ctx, 
+                pose, 
+                exercise, 
+                avgScore, 
+                isDebugMode ? keypointHistoryRef.current : [], 
+                formIssuePulse,
+                jumpGroundLevel,
+                currentJumpHeight,
+                undefined, // renderParticleEffects
+                jumpCalibrationData
+              );
             }
+          } else {
+            // Clear keypoint history when no pose is detected
+            keypointHistoryRef.current = [];
             
-            // Enhanced drawing with jump-specific features
-            drawPose(
-              ctx, 
-              pose, 
-              exercise, 
-              avgScore, 
-              isDebugMode ? keypointHistoryRef.current : [], 
-              formIssuePulse,
-              jumpGroundLevel,
-              currentJumpHeight,
-              undefined, // renderParticleEffects
-              jumpCalibrationData
-            );
+            // Provide feedback when no pose is detected but workout is active
+            if (isWorkoutActive) {
+              onFormFeedback("I can't see you. Please step back into view!");
+            }
           }
-        } else {
-          // Clear keypoint history when no pose is detected
-          keypointHistoryRef.current = [];
-          
-          // Provide feedback when no pose is detected but workout is active
-          if (isWorkoutActive) {
-            onFormFeedback("I can't see you. Please step back into view!");
+        } catch (error) {
+          // Detector may be disposed during stop - gracefully handle
+          if (error instanceof Error && !error.message.includes('disposed')) {
+            console.error('Pose detection error:', error);
           }
+          return; // Stop animation frame loop if detector is bad
         }
       }
-      animationFrameId.current = requestAnimationFrame(detect);
+      
+      // Only continue if detector still exists and model is ready
+      if (detector && modelStatus === 'ready') {
+        animationFrameId.current = requestAnimationFrame(detect);
+      }
     };
 
-    if (modelStatus === 'ready') {
+    // Start animation frame loop only when model is ready and detector exists
+    if (modelStatus === 'ready' && detector) {
       animationFrameId.current = requestAnimationFrame(detect);
     }
 
     return () => {
+      // Clean up animation frame on unmount or when dependencies change
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
+        animationFrameId.current = null;
       }
     };
   }, [modelStatus, detector, videoRef, canvasRef, isDebugMode, exercise, avgScore, formIssuePulse, processPose, jumpGroundLevel, currentJumpHeight, jumpCalibrationData, isWorkoutActive, onFormFeedback]);

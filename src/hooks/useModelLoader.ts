@@ -19,7 +19,11 @@ export const useModelLoader = (enabled: boolean) => {
 
     useEffect(() => {
         const loadModel = async () => {
-            if (!enabled || detectorRef.current || modelStatus === 'loading' || modelStatus === 'ready') return;
+            // Only load if enabled and not already loading/ready
+            if (!enabled || modelStatus === 'loading' || modelStatus === 'ready') return;
+            
+            // Don't reload if detector already exists
+            if (detectorRef.current) return;
             
             setModelStatus('loading');
             try {
@@ -47,15 +51,25 @@ export const useModelLoader = (enabled: boolean) => {
             }
         };
 
-        loadModel();
+        if (enabled) {
+            loadModel();
+        } else {
+            // Cleanup: dispose model and reset state when disabled
+            if (detectorRef.current) {
+                detectorRef.current.dispose();
+                detectorRef.current = null;
+            }
+            setModelStatus('idle');
+        }
         
         return () => {
+            // Cleanup on unmount
             if (detectorRef.current) {
                 detectorRef.current.dispose();
                 detectorRef.current = null;
             }
         }
-    }, [enabled]);
+    }, [enabled, modelStatus]);
 
     return { detector: detectorRef.current, modelStatus };
 }

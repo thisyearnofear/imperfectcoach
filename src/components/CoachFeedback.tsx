@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CoachPersonality, WorkoutMode } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
@@ -44,6 +44,27 @@ const CoachFeedback = ({
   const [lastRepCount, setLastRepCount] = useState(0);
   const [showRepCelebration, setShowRepCelebration] = useState(false);
   const [showFormBreakdown, setShowFormBreakdown] = useState(false);
+
+  // FIX: Debounced feedback to prevent UI flickering during rapid updates
+  // Only updates when feedback changes meaningfully (not just reordering same words)
+  const [stableFeedback, setStableFeedback] = useState(formFeedback);
+  const lastFeedbackUpdateTime = useRef(Date.now());
+  const feedbackDebounceMs = 300; // Minimum time between feedback updates
+
+  useEffect(() => {
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastFeedbackUpdateTime.current;
+
+    // Only update if:
+    // 1. Enough time has passed (debounce)
+    // 2. The feedback is meaningfully different
+    const isMeaningfullyDifferent = formFeedback.toLowerCase().trim() !== stableFeedback.toLowerCase().trim();
+
+    if (isMeaningfullyDifferent && timeSinceLastUpdate >= feedbackDebounceMs) {
+      setStableFeedback(formFeedback);
+      lastFeedbackUpdateTime.current = now;
+    }
+  }, [formFeedback, stableFeedback]);
 
   // ENHANCEMENT: Detect rep completion and trigger celebration
   useEffect(() => {
@@ -382,7 +403,7 @@ const CoachFeedback = ({
         ) : (
           // Show active feedback when working out
           <motion.div
-            key={formFeedback}
+            key={stableFeedback}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -391,7 +412,7 @@ const CoachFeedback = ({
             <p
               className={`text-center break-words transition-all duration-300 max-w-full ${getFeedbackStyle()}`}
             >
-              {formFeedback}
+              {stableFeedback}
             </p>
           </motion.div>
         )}
