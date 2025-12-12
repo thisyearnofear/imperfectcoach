@@ -72,12 +72,13 @@ export const BlockchainScoreSubmission = ({
 
   const [error, setError] = useState<string>();
 
-  const isOnCorrectNetwork = chain?.id === 84532; // Base Sepolia
+  const isOnCorrectEVMNetwork = chain?.id === 84532 || chain?.id === 43113; // Base Sepolia or Avalanche Fuji
   const availableChains = getAvailableChains({
     baseAddress: isConnected ? "0x..." : undefined,
     solanaAddress,
     isBaseConnected: isConnected && isAuthenticated,
     isSolanaConnected,
+    chainId: chain?.id,
   });
 
   const formatTime = (seconds: number) => {
@@ -101,14 +102,15 @@ export const BlockchainScoreSubmission = ({
       setError(undefined);
       setHasSubmitted(false); // Reset submission state
 
-      if (chain === "base") {
+      if (chain === "base" || chain === "avalanche") {
+        // Both EVM chains use the same submitScore function (which detects chain via chainId)
         await submitScore(pullups, jumps);
       } else if (chain === "solana") {
         // Validate Solana contracts are deployed
         const { getLeaderboardAddress, areAddressesConfigured } = await import("@/lib/solana/config");
         
         if (!areAddressesConfigured()) {
-          throw new Error("Solana contracts not yet deployed. Try Base Sepolia instead.");
+          throw new Error("Solana contracts not yet deployed. Try Base Sepolia or Avalanche Fuji instead.");
         }
 
         const exerciseType = getExerciseType(exercise);
@@ -259,7 +261,7 @@ export const BlockchainScoreSubmission = ({
               )}
             </AlertDescription>
           </Alert>
-        ) : (isConnected && !isSolanaConnected && !isOnCorrectNetwork) ? (
+        ) : (isConnected && !isSolanaConnected && !isOnCorrectEVMNetwork) ? (
           <div className="space-y-3">
             <NetworkStatus variant="alert" showSwitchButton={true} />
           </div>
@@ -287,7 +289,9 @@ export const BlockchainScoreSubmission = ({
                   ? "🚀 Both wallets connected! Choose your chain when submitting."
                   : isSolanaConnected
                     ? "🚀 Solana connected! Ready to submit your score to Solana Devnet."
-                    : "🚀 Base connected! Ready to submit your score to Base Sepolia."
+                    : chain?.id === 43113
+                      ? "🚀 Avalanche Fuji connected! Ready to submit your score."
+                      : "🚀 Base Sepolia connected! Ready to submit your score."
                 }
               </AlertDescription>
             </Alert>
@@ -297,7 +301,7 @@ export const BlockchainScoreSubmission = ({
               disabled={
                 (isSubmitting || isSolanaLoading) ||
                 (!isConnected && !isSolanaConnected) ||
-                (isConnected && !isOnCorrectNetwork && !isSolanaConnected) ||
+                (isConnected && !isOnCorrectEVMNetwork && !isSolanaConnected) ||
                 reps === 0
               }
               className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 animate-pulse hover:animate-none transition-all shadow-lg hover:shadow-xl"
@@ -321,7 +325,8 @@ export const BlockchainScoreSubmission = ({
                 <>
                   <Badge variant="outline" className="text-xs">
                     {availableChains.includes("base") && "⛓️ Base"}
-                    {availableChains.includes("solana") && availableChains.includes("base") && " + "}
+                    {availableChains.includes("avalanche") && "🏔️ Avalanche"}
+                    {((availableChains.includes("base") || availableChains.includes("avalanche")) && availableChains.includes("solana")) && " + "}
                     {availableChains.includes("solana") && "◎ Solana"}
                   </Badge>
                   <span>•</span>
@@ -330,7 +335,7 @@ export const BlockchainScoreSubmission = ({
               <span>
                 {isSolanaConnected
                   ? "Solana transaction fees ~0.00025 SOL"
-                  : "Gas fees covered by smart wallet"}
+                  : "Gas fees covered"}
               </span>
             </div>
           </div>

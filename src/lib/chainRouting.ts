@@ -1,10 +1,11 @@
-export type ChainType = "base" | "solana";
+export type ChainType = "base" | "avalanche" | "solana";
 
 export interface ChainRoutingState {
   baseAddress?: string;
   solanaAddress?: string;
   isBaseConnected: boolean;
   isSolanaConnected: boolean;
+  chainId?: number; // Current EVM chain ID to detect Avalanche vs Base
 }
 
 /**
@@ -12,7 +13,14 @@ export interface ChainRoutingState {
  */
 export function getAvailableChains(state: ChainRoutingState): ChainType[] {
   const chains: ChainType[] = [];
-  if (state.isBaseConnected && state.baseAddress) chains.push("base");
+  if (state.isBaseConnected && state.baseAddress) {
+    // Detect if on Avalanche Fuji (43113) or Base Sepolia (84532)
+    if (state.chainId === 43113) {
+      chains.push("avalanche");
+    } else {
+      chains.push("base");
+    }
+  }
   if (state.isSolanaConnected && state.solanaAddress) chains.push("solana");
   return chains;
 }
@@ -42,5 +50,14 @@ export function getDefaultChain(state: ChainRoutingState): ChainType | "none" | 
  * Get human-readable chain name
  */
 export function getChainDisplayName(chain: ChainType): string {
-  return chain === "base" ? "Base Sepolia" : "Solana Devnet";
+  switch (chain) {
+    case "base":
+      return "Base Sepolia";
+    case "avalanche":
+      return "Avalanche Fuji";
+    case "solana":
+      return "Solana Devnet";
+    default:
+      return "Unknown";
+  }
 }
