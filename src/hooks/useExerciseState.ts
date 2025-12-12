@@ -19,10 +19,13 @@ export const useExerciseState = ({ exercise, onRepCount }: UseExerciseStateProps
     const calibrationFrames = useRef<number>(0);
     // ENHANCEMENT: Track streak of reps with good form (60+ score)
     const formStreak = useRef<number>(0);
+    // Track if reps have started to differentiate first session from restart
+    const sessionStarted = useRef<boolean>(false);
 
     const { playBeep } = useAudioFeedback();
 
-    useEffect(() => {
+    // Reset function to clear state for a new session
+    const resetExerciseState = useCallback(() => {
         setInternalReps(0);
         repScores.current = [];
         lastRepIssues.current = [];
@@ -31,6 +34,7 @@ export const useExerciseState = ({ exercise, onRepCount }: UseExerciseStateProps
         currentRepAngles.current = { left: [], right: [] };
         calibrationFrames.current = 0;
         formStreak.current = 0;
+        sessionStarted.current = false;
 
         if (exercise === 'pull-ups') {
             repState.current = 'DOWN';
@@ -38,6 +42,11 @@ export const useExerciseState = ({ exercise, onRepCount }: UseExerciseStateProps
             repState.current = 'GROUNDED';
         }
     }, [exercise]);
+
+    // Reset when exercise changes
+    useEffect(() => {
+        resetExerciseState();
+    }, [exercise, resetExerciseState]);
 
     const incrementReps = useCallback(() => {
         onRepCount(prev => prev + 1);
@@ -65,6 +74,7 @@ export const useExerciseState = ({ exercise, onRepCount }: UseExerciseStateProps
         calibrationFrames,
         incrementReps,
         formStreak: formStreak.current,
-        updateFormStreak
+        updateFormStreak,
+        resetExerciseState
     };
 };

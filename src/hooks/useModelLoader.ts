@@ -19,11 +19,14 @@ export const useModelLoader = (enabled: boolean) => {
 
     useEffect(() => {
         const loadModel = async () => {
-            // Only load if enabled and not already loading/ready
-            if (!enabled || modelStatus === 'loading' || modelStatus === 'ready') return;
+            // Don't load if already loading or ready
+            if (modelStatus !== 'idle') return;
             
             // Don't reload if detector already exists
-            if (detectorRef.current) return;
+            if (detectorRef.current) {
+                setModelStatus('ready');
+                return;
+            }
             
             setModelStatus('loading');
             try {
@@ -69,7 +72,7 @@ export const useModelLoader = (enabled: boolean) => {
                 detectorRef.current = null;
             }
         }
-    }, [enabled, modelStatus]);
+    }, [enabled]);
 
     return { detector: detectorRef.current, modelStatus };
 }

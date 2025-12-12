@@ -33,6 +33,19 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     }
   }, []);
 
+  // Allow users to reset onboarding via keyboard shortcut (Shift+Ctrl+O)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.shiftKey && e.ctrlKey && e.key === 'O') {
+        localStorage.removeItem("hasSeenOnboarding");
+        setIsOpen(true);
+        setCurrentStep(0);
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
   const steps = [
     {
       title: "Welcome to Imperfect Coach! 🏋️",

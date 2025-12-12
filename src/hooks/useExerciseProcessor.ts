@@ -67,6 +67,7 @@ export const useExerciseProcessor = ({
     incrementReps,
     formStreak,
     updateFormStreak,
+    resetExerciseState,
   } = useExerciseState({ exercise, onRepCount });
 
   const formIssuePulse = useRef(false);
@@ -277,6 +278,7 @@ export const useExerciseProcessor = ({
     currentJumpHeight: currentJumpHeight.current,
     jumpGroundLevel: jumpState.current.groundLevel,
     formStreak,
+    resetExerciseState,
     // ENHANCEMENT: Include initialization state to suppress red overlay during onboarding
     jumpCalibrationData: jumpState.current.isCalibrated ? null : {
       calibrationProgress: 0,
