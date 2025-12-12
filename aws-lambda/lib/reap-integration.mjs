@@ -10,7 +10,7 @@
  * - Maintains local core agents as fallback
  */
 
-import { ReapClient } from "@reap-protocol/sdk";
+// import { ReapClient } from "@reap-protocol/sdk"; // Temporarily disabled to prevent import crashes if SDK missing
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Reap Protocol Configuration
@@ -19,7 +19,7 @@ import { ReapClient } from "@reap-protocol/sdk";
 const REAP_CONFIG = {
     // Reap endpoint (will be updated based on their actual API)
     endpoint: process.env.REAP_ENDPOINT || "https://api.reap.io",
-    
+
     // Supported chains that align with our stack
     chains: {
         "avalanche-fuji": "Avalanche Fuji Testnet",
@@ -27,7 +27,7 @@ const REAP_CONFIG = {
         "avalanche-mainnet": "Avalanche C-Chain",
         "base-mainnet": "Base Mainnet",
     },
-    
+
     // Default timeout for Reap API calls (5s)
     timeout: 5000,
 };
@@ -44,21 +44,21 @@ let reapClientInstance = null;
  */
 export async function getReapClient() {
     if (reapClientInstance) return reapClientInstance;
-    
+
     if (!process.env.AGENT_WALLET_KEY) {
         console.warn("⚠️ AGENT_WALLET_KEY not configured - Reap discovery unavailable");
         return null;
     }
-    
+
     try {
         // Initialize with agent's private key and RPC
-        reapClientInstance = new ReapClient(
-            process.env.AGENT_WALLET_KEY,
-            process.env.AVALANCHE_RPC || "https://api.avax-test.network/ext/bc/C/rpc"
-        );
-        
-        console.log("✅ Reap Protocol client initialized");
-        return reapClientInstance;
+        // reapClientInstance = new ReapClient(
+        //     process.env.AGENT_WALLET_KEY,
+        //     process.env.AVALANCHE_RPC || "https://api.avax-test.network/ext/bc/C/rpc"
+        // );
+
+        console.log("⚠️ Reap Protocol client disabled (missing dependency)");
+        return null; // Force fallback to core agents
     } catch (error) {
         console.error("❌ Failed to initialize Reap client:", error);
         return null;
@@ -77,15 +77,15 @@ export async function getReapClient() {
  */
 export async function discoverReapAgents(capability, paymentProtocol = "x402") {
     const client = await getReapClient();
-    
+
     if (!client) {
         console.warn("⚠️ Reap client unavailable - skipping real agent discovery");
         return [];
     }
-    
+
     try {
         console.log(`🔍 Querying Reap for ${paymentProtocol} agents with capability: ${capability}`);
-        
+
         // Map our capability names to Reap protocol terms
         const capabilityMap = {
             nutrition_planning: "nutrition",
@@ -94,9 +94,9 @@ export async function discoverReapAgents(capability, paymentProtocol = "x402") {
             massage_booking: "booking",
             fitness_analysis: "fitness",
         };
-        
+
         const reapCapability = capabilityMap[capability] || capability;
-        
+
         // Search via Reap's registry
         // x402 = Payment-per-request agents
         // a2a = Agent-to-agent settlement
@@ -106,12 +106,12 @@ export async function discoverReapAgents(capability, paymentProtocol = "x402") {
                 setTimeout(() => reject(new Error("Reap discovery timeout")), REAP_CONFIG.timeout)
             ),
         ]);
-        
+
         console.log(`✅ Reap discovered ${agents.length} agents for ${capability}`);
-        
+
         // Normalize Reap agent format to our internal format
         return agents.map(normalizeReapAgent);
-        
+
     } catch (error) {
         console.warn(`⚠️ Reap discovery failed for ${capability}:`, error.message);
         return [];
@@ -127,7 +127,7 @@ function normalizeReapAgent(reapAgent) {
         name: reapAgent.name || "Reap Agent",
         description: reapAgent.description || "Agent discovered via Reap Protocol",
         capabilities: reapAgent.capabilities || [],
-        
+
         // Pricing from Reap
         pricing: reapAgent.pricing || {
             default: {
@@ -136,12 +136,12 @@ function normalizeReapAgent(reapAgent) {
                 chain: "avalanche-fuji"
             }
         },
-        
+
         endpoint: reapAgent.endpoint,
         status: "active",
         reputationScore: reapAgent.reputationScore || 80,
         tags: [...(reapAgent.tags || []), "reap-discovered"],
-        
+
         // Reap-specific metadata
         protocol: reapAgent.protocol || "x402", // x402 or a2a
         discoveredAt: Date.now(),
@@ -319,21 +319,21 @@ const CORE_AGENTS = [
  */
 export async function discoverAgentsHybrid(capability, prioritizeReap = true) {
     let agents = [];
-    
+
     // Phase A: Query real Reap agents first
     if (prioritizeReap) {
         console.log("🌐 Attempting real agent discovery via Reap Protocol...");
         const reapAgents = await discoverReapAgents(capability, "x402");
         agents = agents.concat(reapAgents);
-        
+
         if (reapAgents.length > 0) {
             console.log(`✅ Using ${reapAgents.length} Reap-discovered agents`);
         }
     }
-    
+
     // Fallback: Add core agents if no Reap agents found
     const coreMatches = CORE_AGENTS.filter(a => a.capabilities.includes(capability));
-    
+
     if (agents.length === 0 && coreMatches.length > 0) {
         console.log(`📦 Falling back to ${coreMatches.length} core agents`);
         agents = agents.concat(coreMatches);
@@ -341,7 +341,7 @@ export async function discoverAgentsHybrid(capability, prioritizeReap = true) {
         // Also include core agents as backup options (sorted by reputation)
         agents = agents.concat(coreMatches);
     }
-    
+
     // Deduplicate and sort by reputation
     const deduped = new Map();
     agents.forEach(agent => {
@@ -349,7 +349,7 @@ export async function discoverAgentsHybrid(capability, prioritizeReap = true) {
             deduped.set(agent.id, agent);
         }
     });
-    
+
     return Array.from(deduped.values())
         .sort((a, b) => b.reputationScore - a.reputationScore);
 }
@@ -369,30 +369,30 @@ export async function discoverAgentsHybrid(capability, prioritizeReap = true) {
  */
 export async function negotiatePaymentWithAgent(paymentRequirement, agentIdentity) {
     const client = await getReapClient();
-    
+
     if (!client) {
         console.warn("⚠️ Reap client unavailable - returning mock settlement");
         return createMockSettlement(paymentRequirement);
     }
-    
+
     try {
         console.log(`💳 Negotiating x402 payment with specialist...`);
         console.log(`   Amount: ${paymentRequirement.amount} ${paymentRequirement.asset}`);
         console.log(`   Network: ${paymentRequirement.network}`);
-        
+
         // Reap's negotiation flow:
         // 1. Challenge generation
         // 2. Signature creation (EIP-191)
         // 3. Settlement coordination
-        
+
         const settlement = await client.negotiatePayment({
             from: agentIdentity.address || agentIdentity,
             requirement: paymentRequirement,
             protocol: "x402"
         });
-        
+
         console.log(`✅ Settlement negotiated - signature valid`);
-        
+
         return {
             success: true,
             signature: settlement.signature,
@@ -404,7 +404,7 @@ export async function negotiatePaymentWithAgent(paymentRequirement, agentIdentit
             protocol: "x402",
             timestamp: Date.now()
         };
-        
+
     } catch (error) {
         console.error(`❌ Negotiation failed: ${error.message}`);
         // Fallback to mock for demo
@@ -422,10 +422,10 @@ export async function signPaymentChallenge(challenge, agentPrivateKey) {
         console.warn("⚠️ Agent private key not available");
         return null;
     }
-    
+
     try {
         console.log(`🔐 Signing payment challenge from specialist...`);
-        
+
         // Message format for signing
         const message = `x402 Payment Authorization
 Scheme: ${challenge.scheme}
@@ -435,21 +435,21 @@ Amount: ${challenge.amount}
 PayTo: ${challenge.payTo}
 Timestamp: ${challenge.timestamp}
 Nonce: ${challenge.nonce}`;
-        
+
         // In production, use ethers.js or web3.js to sign
         // For now, we'll use a basic signing approach
         const crypto = await import('crypto');
         const messageHash = crypto.createHash('sha256').update(message).digest('hex');
-        
+
         console.log(`✅ Challenge signed with agent identity`);
-        
+
         return {
             signature: messageHash,
             message: message,
             signer: "coach-agent",
             timestamp: Date.now()
         };
-        
+
     } catch (error) {
         console.error(`❌ Signing failed: ${error.message}`);
         return null;
@@ -466,25 +466,25 @@ export async function verifyReapSettlement(proof, expectedAmount, expectedRecipi
         console.warn("⚠️ Invalid proof - missing signature");
         return false;
     }
-    
+
     try {
         console.log(`✓ Verifying settlement proof...`);
-        
+
         // In Phase B, this is signature verification
         // In Phase C, this will check on-chain transaction
-        
-        const isValid = proof.signature && 
-                       proof.amount === expectedAmount &&
-                       proof.chain;
-        
+
+        const isValid = proof.signature &&
+            proof.amount === expectedAmount &&
+            proof.chain;
+
         if (isValid) {
             console.log(`✅ Settlement verified`);
             return true;
         }
-        
+
         console.warn(`⚠️ Settlement verification failed`);
         return false;
-        
+
     } catch (error) {
         console.error(`❌ Verification error: ${error.message}`);
         return false;
@@ -502,25 +502,25 @@ export async function verifyReapSettlement(proof, expectedAmount, expectedRecipi
  */
 export async function executeRealPayment(settlement) {
     const client = await getReapClient();
-    
+
     if (!client || !process.env.AGENT_WALLET_KEY) {
         console.warn("⚠️ Cannot execute real payment - wallet not configured");
         return createMockTransaction(settlement);
     }
-    
+
     try {
         console.log(`💸 Executing real USDC transfer...`);
         console.log(`   To: ${settlement.recipientAddress}`);
         console.log(`   Amount: ${settlement.amount} ${settlement.asset}`);
         console.log(`   Network: ${settlement.chain}`);
-        
+
         // Reap's settlement execution:
         // 1. Check agent wallet balance
         // 2. Approve USDC spending (if needed)
         // 3. Execute transfer
         // 4. Wait for confirmation
         // 5. Return transaction hash
-        
+
         const tx = await client.executeSettlement({
             from: process.env.AGENT_WALLET_ADDRESS,
             to: settlement.recipientAddress,
@@ -529,10 +529,10 @@ export async function executeRealPayment(settlement) {
             chain: settlement.chain,
             proof: settlement.signature
         });
-        
+
         console.log(`✅ Transfer confirmed on-chain`);
         console.log(`   TX Hash: ${tx.hash}`);
-        
+
         return {
             success: true,
             transactionHash: tx.hash,
@@ -546,7 +546,7 @@ export async function executeRealPayment(settlement) {
             timestamp: Date.now(),
             url: getBlockExplorerUrl(settlement.chain, tx.hash)
         };
-        
+
     } catch (error) {
         console.error(`❌ Settlement execution failed: ${error.message}`);
         return createMockTransaction(settlement);
@@ -561,22 +561,22 @@ export async function executeRealPayment(settlement) {
 export async function recordAgentPayment(db, paymentRecord) {
     try {
         console.log(`📊 Recording agent payment...`);
-        
+
         const record = {
             ...paymentRecord,
             recordedAt: Date.now(),
             status: paymentRecord.transactionHash ? "confirmed" : "simulated"
         };
-        
+
         // In production, this would write to DynamoDB
         if (db && db.recordPayment) {
             await db.recordPayment(record);
         } else {
             console.log(`   (Payment record would be stored in DB)`, record);
         }
-        
+
         return record;
-        
+
     } catch (error) {
         console.error(`❌ Failed to record payment: ${error.message}`);
         return null;
@@ -591,18 +591,18 @@ export async function recordAgentPayment(db, paymentRecord) {
 export async function splitRevenue(settlementTx, platformFeePercent = 97) {
     try {
         console.log(`💰 Executing revenue split...`);
-        
+
         const userAmount = settlementTx.amount;
         const platformFee = (userAmount * platformFeePercent) / 100;
         const agentShare = userAmount - platformFee;
-        
+
         console.log(`   User Paid: ${userAmount}`);
         console.log(`   Platform Fee (${platformFeePercent}%): ${platformFee}`);
         console.log(`   Agent Share: ${agentShare}`);
-        
+
         // In Phase C, this would call RevenueSplitter contract
         // For now, we just calculate
-        
+
         return {
             userAmount,
             platformFee,
@@ -610,7 +610,7 @@ export async function splitRevenue(settlementTx, platformFeePercent = 97) {
             transactionHash: settlementTx.transactionHash,
             splitAt: Date.now()
         };
-        
+
     } catch (error) {
         console.error(`❌ Revenue split failed: ${error.message}`);
         return null;

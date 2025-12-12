@@ -54,6 +54,7 @@ export function handleProcessorResult(params: HandleProcessorResultParams) {
     currentRepAngles,
     exercise,
     peakAirborneY,
+    updateFormStreak,
   } = params;
 
   if (isDebugMode) onPoseData(result.poseData);

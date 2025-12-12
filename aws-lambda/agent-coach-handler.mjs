@@ -13,7 +13,7 @@ import {
 import { Agentkit } from "@0xgasless/agentkit";
 import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
-import { verify } from "@payai/x402/facilitator";
+// import { verify } from "@payai/x402/facilitator";
 import * as db from "./lib/dynamodb-service.mjs";
 import * as reap from "./lib/reap-integration.mjs";
 import * as coreHandler from "./lib/core-agent-handler.mjs";
@@ -822,17 +822,51 @@ export const handler = async (event) => {
     // Initialize Agent Identity
     await getAgentKit();
 
+    if (!paymentHeader) {
+      console.log("💰 No payment header - returning 402 Challenge");
+
+      const challenge = {
+        amount: X402_CONFIG[network]?.amount || "50000",
+        asset: X402_CONFIG[network]?.asset || "USDC",
+        network: network,
+        payTo: X402_CONFIG[network]?.payTo,
+        scheme: network.includes("solana") ? "ed25519" : "eip-191",
+        timestamp: Math.floor(Date.now() / 1000),
+        nonce: Math.random().toString(36).substring(2, 15),
+      };
+
+      return {
+        statusCode: 402,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type, X-Payment, X-Chain, X-Signature",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+        },
+        body: JSON.stringify({
+          error: "Payment Required",
+          message: "Please sign the challenge to access Agent Coach",
+          challenge: challenge,
+          accepts: [challenge]
+        }),
+      };
+    }
+
     if (paymentHeader) {
       console.log("💳 Verifying Agent Access Payment...");
       try {
-        // In full production, we would use verify() from PayAI here
-        // For now, logging the interaction
+        // Basic verification of presence and amount
         const decoded = JSON.parse(Buffer.from(paymentHeader, 'base64').toString());
-        if (BigInt(decoded.amount) >= BigInt(X402_CONFIG[network]?.amount || "0")) {
-          console.log("✅ Payment authorized for Autonomous Agent");
+        console.log("   Payment payload:", JSON.stringify(decoded).substring(0, 100) + "...");
+
+        // Check amount if configured
+        const config = X402_CONFIG[network];
+        if (config && decoded.amount && BigInt(decoded.amount) < BigInt(config.amount)) {
+          console.warn(`⚠️ Insufficient amount. Got ${decoded.amount}, needed ${config.amount}`);
+          // In strict mode, we would return 402 here too, but for demo we proceed with warning
         }
       } catch (e) {
-        console.warn("⚠️ Could not verify payment header, proceeding for demo...", e);
+        console.warn("⚠️ Could not verify payment header structure:", e.message);
       }
     }
 
