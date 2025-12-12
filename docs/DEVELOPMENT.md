@@ -44,6 +44,45 @@ npm run dev
 - **PERFORMANT**: Adaptive loading, caching, and resource optimization
 - **ORGANIZED**: Predictable file structure with domain-driven design
 
+## 🎮 Jump Detection UX Improvements (Dec 2024)
+
+### Problem
+Users saw a red pulsing overlay with "improper form" message on startup, creating a harsh/judgmental first experience before they could attempt their first jump.
+
+### Solution
+Implemented three-phase onboarding:
+1. **Initialization (0-3 sec)**: Yellow "Getting ready..." message, no red overlay, blue score display
+2. **Calibration (3-5 sec)**: Green "Perfect!" message, system ready
+3. **Active Jumping**:
+   - **Learning (Reps 1-2)**: Celebratory feedback, blue scores
+   - **Performance (Reps 3+)**: Color-coded feedback (green/yellow/red)
+
+### Files Modified (72 insertions, 18 deletions)
+- `src/lib/exercise-processors/enhancedJumpProcessor.ts` - 3-second initialization timer, rep tracking, first-rep celebration
+- `src/lib/drawing.ts` - Suppress red overlay during setup phases
+- `src/components/CoachFeedback.tsx` - Blue score display for learning phase (reps 1-2)
+- `src/hooks/useExerciseProcessor.ts` - Pass initialization state to UI
+
+### Key Changes
+- Extended `JumpState` with: `initializationStartTime`, `isInitializing`, `repsCompleted`
+- 3-second grace period before form evaluation begins
+- First rep gets "Great first jump! Keep it up!" regardless of score
+- Reps 1-2 display blue score (neutral, learning phase)
+- Reps 3+ switch to color-coded scoring (performance mode)
+- Red overlay suppressed during initialization and calibration
+
+### Testing
+```bash
+# Fresh start flow:
+1. Open app → See "Getting ready..." in YELLOW (not red)
+2. After 3 seconds → See "Perfect!" in GREEN
+3. First jump → "Great first jump!" in GREEN with BLUE score
+4. Second jump → GREEN feedback with BLUE score
+5. Third jump → Color-coded score (red/yellow/green based on form)
+```
+
+All changes follow Core Principles: no new types, extended existing systems, no deprecation.
+
 ## 📁 Project Structure
 
 ```

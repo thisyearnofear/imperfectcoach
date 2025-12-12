@@ -114,7 +114,10 @@ function drawFormZone(ctx: CanvasRenderingContext2D, keypoints: Keypoint[], exer
   // TODO: Add form zones for jumps
 }
 
-function drawFormQualityOverlay(ctx: CanvasRenderingContext2D, score: number, pulse: boolean) {
+function drawFormQualityOverlay(ctx: CanvasRenderingContext2D, score: number, pulse: boolean, isCalibrating: boolean = false) {
+  // CLEAN: Skip overlay entirely during calibration phase
+  if (isCalibrating) return;
+  
   if (score >= 95 && !pulse) return; // No overlay for near-perfect score
   const quality = Math.max(0, Math.min(1, score / 100));
   
@@ -122,7 +125,7 @@ function drawFormQualityOverlay(ctx: CanvasRenderingContext2D, score: number, pu
   const green = Math.round(255 * quality);
   const baseAlpha = 0.1 + (0.2 * (1 - quality));
 
-  // Pulse effect for warnings
+  // Pulse effect only for mid-rep form issues
   if (pulse) {
     const pulseIntensity = Math.abs(Math.sin(Date.now() / 150)); // Fast pulse
     const pulseAlpha = Math.max(baseAlpha, 0.3 + pulseIntensity * 0.3);
@@ -445,6 +448,7 @@ export const drawPose = (
     kneeAngle: number;
     minKneeAngle: number;
     isCalibrating: boolean;
+    isInitializing?: boolean;
   }
 ) => {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -457,7 +461,10 @@ export const drawPose = (
     renderParticleEffects(ctx);
   }
 
-  drawFormQualityOverlay(ctx, formScore, pulseWarning);
+  // ENHANCEMENT FIRST: Only show form quality feedback during active jumping, not calibration/initialization
+  const isCalibrating = jumpCalibrationData?.isCalibrating ?? false;
+  const isInitializing = jumpCalibrationData?.isInitializing ?? false;
+  drawFormQualityOverlay(ctx, formScore, pulseWarning && !isCalibrating && !isInitializing, isCalibrating || isInitializing);
   drawFormZone(ctx, keypoints, exercise);
   
   // Draw jump-specific indicators

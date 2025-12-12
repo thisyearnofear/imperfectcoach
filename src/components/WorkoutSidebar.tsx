@@ -24,6 +24,7 @@ interface WorkoutSidebarProps {
   reps: number;
   formScore: number;
   formFeedback: string;
+  formStreak?: number;
   isFocusMode?: boolean;
   onFocusModeChange?: (enabled: boolean) => void;
 }
@@ -75,6 +76,7 @@ const WorkoutSidebar = forwardRef<
           reps={props.reps}
           formFeedback={props.formFeedback}
           formScore={props.formScore}
+          formStreak={props.formStreak}
           coachPersonality={props.coachPersonality}
           workoutMode={props.workoutMode}
           showModeExplanation={showModeExplanation}

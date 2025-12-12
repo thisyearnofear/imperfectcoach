@@ -103,6 +103,7 @@ const Index = () => {
               isDebugMode={page.isDebugMode}
               onPoseData={page.setPoseData}
               onFormScoreUpdate={page.setFormScore}
+              onFormStreakUpdate={page.setFormStreak}
               onNewRepData={page.handleNewRepData}
               coachPersonality={page.coachPersonality}
               isRecordingEnabled={page.isRecordingEnabled}
@@ -116,6 +117,7 @@ const Index = () => {
               reps={page.reps}
               formScore={page.formScore}
               formFeedback={page.formFeedback}
+              formStreak={page.formStreak}
               onWorkoutModeChange={page.handleWorkoutModeChange}
               onExerciseChange={page.handleExerciseChange}
               onCoachPersonalityChange={page.setCoachPersonality}

@@ -35,60 +35,85 @@ const AILoadingOverlay = ({ exercise, coachPersonality }: AILoadingOverlayProps)
     }
   };
 
-  const getPersonalityTone = (baseMessage: string): string => {
+  // ENHANCEMENT: Personality-specific messages for more engaging onboarding
+  const getPersonalityMessages = () => {
     switch (coachPersonality) {
       case "competitive":
-        return baseMessage.replace("Let's", "Let's dominate this!").replace("Ready", "Ready to crush it");
+        return {
+          setup: "Ready to dominate? Let's dial in your form!",
+          position: "Lock in your position. Precision wins.",
+          lighting: "Light it up—can't coach what I can't see!",
+          ready: "Alright, you're locked and loaded. Let's go!"
+        };
       case "supportive":
-        return baseMessage.replace("crush", "enjoy").replace("dominate", "do our best");
+        return {
+          setup: "You've got this! Let's set up your perfect space.",
+          position: "Find your comfortable position. Take your time.",
+          lighting: "Good lighting helps me see your amazing form!",
+          ready: "Looking great! Whenever you're ready, let's begin."
+        };
       case "zen":
-        return baseMessage.replace("Let's", "Let's mindfully").replace("crush", "flow through");
+        return {
+          setup: "Find your center. Let's begin with presence.",
+          position: "Center yourself, ground your feet.",
+          lighting: "Breathe. Let the light guide us.",
+          ready: "Peace and readiness. You're aligned. Begin when ready."
+        };
       default:
-        return baseMessage;
+        return {
+          setup: "Let's get you set up!",
+          position: "Position yourself properly.",
+          lighting: "Check your lighting.",
+          ready: "You're ready to start!"
+        };
     }
   };
 
+  const personalityMessages = getPersonalityMessages();
+  
   const phases: LoadingPhase[] = [
     {
-      duration: 15000, // 15 seconds
+      duration: 12000, // 12 seconds - quick load
       messages: [
-        "Initializing AI Coach...",
-        "Loading pose detection models...",
-        "Calibrating movement sensors..."
+        "🤖 Loading AI Coach...",
+        "📡 Calibrating sensors...",
+        "✨ Almost there..."
       ],
       icon: <Loader2 className="animate-spin h-6 w-6" />,
       color: "text-blue-500"
     },
     {
-      duration: 15000, // 15 seconds
+      duration: 16000, // 16 seconds
       messages: exercise === "pull-ups" ? [
-        "Get ready for pull-ups! Position yourself under the bar",
-        "Make sure the bar is visible in your camera view",
-        "Stand with your arms relaxed at your sides to start"
+        personalityMessages.setup,
+        "Position yourself under the bar",
+        "Make sure the bar is visible"
       ] : [
-        "Get ready for jumps! Find a clear space",
-        "Make sure you have room to jump safely",
-        "Stand with your feet shoulder-width apart"
+        personalityMessages.setup,
+        "Find a clear space to move",
+        "Make sure you have room"
       ],
       icon: getCoachIcon(),
-      color: "text-green-500"
+      color: "text-emerald-500"
     },
     {
-      duration: 15000, // 15 seconds
+      duration: 14000, // 14 seconds
       messages: [
-        "Ensure you have good lighting so I can see you clearly!",
-        "Position yourself 3-6 feet from the camera",
-        "Make sure your full body is visible in the frame"
+        personalityMessages.position,
+        personalityMessages.lighting,
+        "Full body visible in frame"
       ],
       icon: <Eye className="h-6 w-6" />,
-      color: "text-yellow-500"
+      color: "text-amber-500"
     },
     {
-      duration: 15000, // 15 seconds
+      duration: 12000, // 12 seconds - final push
       messages: [
-        getPersonalityTone("Almost ready! Let's crush this workout!"),
-        getPersonalityTone("I'll track your form and count your reps"),
-        getPersonalityTone("Ready to see what you've got!")
+        personalityMessages.ready,
+        exercise === "pull-ups" 
+          ? "Hang from the bar when ready"
+          : "Stand in position when ready",
+        "Let's begin!"
       ],
       icon: <Lightbulb className="h-6 w-6" />,
       color: "text-purple-500"
@@ -138,37 +163,29 @@ const AILoadingOverlay = ({ exercise, coachPersonality }: AILoadingOverlayProps)
   const currentMessage = currentPhaseData?.messages[currentMessageIndex] || "Loading AI Coach...";
 
   return (
-    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center text-white rounded-md z-10">
-      <div className="max-w-md mx-auto p-6 text-center space-y-6">
-        {/* Icon and Phase Indicator */}
-        <div className="flex flex-col items-center space-y-4">
-          <div className={`${currentPhaseData?.color || 'text-blue-500'} animate-pulse`}>
-            {currentPhaseData?.icon}
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="w-full max-w-xs">
-            <Progress value={progress} className="h-2" />
-            <p className="text-xs text-gray-300 mt-1">
-              Phase {currentPhase + 1} of {phases.length}
-            </p>
+    <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/75 to-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-white rounded-md z-10">
+      <div className="max-w-md mx-auto p-8 text-center space-y-6">
+        {/* Phase Icon - Larger and more prominent */}
+        <div className={`${currentPhaseData?.color || 'text-blue-500'} transition-all duration-300`}>
+          <div className={`${currentPhase === phases.length - 1 ? 'animate-bounce' : 'animate-pulse'}`}>
+            {currentPhaseData?.icon && <div className="h-12 w-12 mx-auto">{currentPhaseData.icon}</div>}
           </div>
         </div>
 
-        {/* Main Message */}
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold animate-fade-in">
+        {/* Main Message - Larger, clearer */}
+        <div className="space-y-3">
+          <h2 className="text-2xl font-bold animate-fade-in leading-snug">
             {currentMessage}
-          </h3>
+          </h2>
           
-          {/* Message dots indicator */}
+          {/* Message progression dots */}
           {phases[currentPhase]?.messages.length > 1 && (
-            <div className="flex justify-center space-x-1">
+            <div className="flex justify-center space-x-2">
               {phases[currentPhase].messages.map((_, index) => (
                 <div
                   key={index}
-                  className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-                    index === currentMessageIndex ? 'bg-white' : 'bg-white/30'
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    index === currentMessageIndex ? 'bg-white w-6' : 'bg-white/40 w-2'
                   }`}
                 />
               ))}
@@ -176,18 +193,37 @@ const AILoadingOverlay = ({ exercise, coachPersonality }: AILoadingOverlayProps)
           )}
         </div>
 
-        {/* Exercise-specific tip */}
-        <div className="text-sm text-gray-300 bg-white/10 rounded-lg p-3">
-          <strong>Pro Tip:</strong> {exercise === "pull-ups" 
-            ? "Keep your core engaged and avoid swinging for the best form!" 
-            : "Land softly on your feet and use your arms for momentum!"
-          }
+        {/* Progress Section */}
+        <div className="space-y-2">
+          <Progress value={progress} className="h-2.5 bg-white/20" />
+          <div className="flex justify-between items-center text-xs text-gray-300">
+            <span>Checklist {currentPhase + 1}/{phases.length}</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
         </div>
 
-        {/* Coach personality indicator */}
-        <div className="flex items-center justify-center space-x-2 text-xs text-gray-400">
-          {getCoachIcon()}
-          <span>Coach {coachPersonality.charAt(0).toUpperCase() + coachPersonality.slice(1)} is getting ready</span>
+        {/* Exercise-specific guidance - More visual */}
+        <div className="mt-6 p-4 bg-gradient-to-r from-white/10 to-transparent rounded-lg border border-white/10">
+          <p className="text-sm text-gray-200">
+            <span className="font-semibold">💡 {exercise === "pull-ups" ? "Pro tip" : "Quick tip"}:</span>{" "}
+            {exercise === "pull-ups" 
+              ? "Keep your core tight and let momentum carry you. We'll catch any form issues."
+              : "Land gently and use your whole body. We're tracking everything!"
+            }
+          </p>
+        </div>
+
+        {/* Coach introduction - Welcoming */}
+        <div className="pt-2 text-sm text-gray-300">
+          <div className="flex items-center justify-center space-x-2">
+            {getCoachIcon()}
+            <span className="font-medium">
+              {coachPersonality === "competitive" && "Your coach is ready to push you"}
+              {coachPersonality === "supportive" && "Your coach is here to support you"}
+              {coachPersonality === "zen" && "Your coach is centered and ready"}
+              {!["competitive", "supportive", "zen"].includes(coachPersonality) && "Your coach is ready"}
+            </span>
+          </div>
         </div>
       </div>
     </div>

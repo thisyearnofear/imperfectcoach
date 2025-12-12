@@ -24,6 +24,7 @@ interface TopSectionProps {
   isDebugMode: boolean;
   onPoseData: (data: PoseData | null) => void;
   onFormScoreUpdate: (score: number) => void;
+  onFormStreakUpdate: (streak: number) => void;
   onNewRepData: (data: RepData) => void;
   coachPersonality: CoachPersonality;
   isRecordingEnabled: boolean;
@@ -43,6 +44,7 @@ interface TopSectionProps {
   reps: number;
   formScore: number;
   formFeedback: string;
+  formStreak: number;
 }
 
 export const TopSection = forwardRef<
@@ -88,6 +90,7 @@ export const TopSection = forwardRef<
             isDebugMode={props.isDebugMode}
             onPoseData={props.onPoseData}
             onFormScoreUpdate={props.onFormScoreUpdate}
+            onFormStreakUpdate={props.onFormStreakUpdate}
             onNewRepData={props.onNewRepData}
             coachPersonality={props.coachPersonality}
             isRecordingEnabled={props.isRecordingEnabled}
@@ -176,6 +179,7 @@ export const TopSection = forwardRef<
           reps={props.reps}
           formFeedback={props.formFeedback}
           formScore={props.formScore}
+          formStreak={props.formStreak}
           coachPersonality={props.coachPersonality}
           workoutMode={props.workoutMode}
           variant="compact"

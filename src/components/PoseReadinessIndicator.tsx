@@ -42,70 +42,88 @@ export const PoseReadinessIndicator: React.FC<PoseReadinessIndicatorProps> = ({
 
   const { overall, score, issues, feedback, canProceed } = readinessScore;
 
+  // ENHANCEMENT: Get primary issue for clearer action
+  const primaryIssue = issues.length > 0 ? issues[0] : null;
+  const getPrimaryAction = (): string => {
+    if (!primaryIssue) return "";
+    if (primaryIssue.type === "VISIBILITY") return "Step back or adjust camera";
+    if (primaryIssue.type === "POSITIONING") return "Adjust your stance";
+    if (primaryIssue.type === "STABILITY") return "Stand still for a moment";
+    if (primaryIssue.type === "POSTURE") return "Fix your posture";
+    return primaryIssue.suggestion;
+  };
+
   return (
     <div
-      className={cn("bg-white border rounded-lg p-4 space-y-3", className, {
-        "border-green-200 bg-green-50": overall === "READY",
-        "border-blue-200 bg-blue-50": overall === "EXCELLENT",
-        "border-yellow-200 bg-yellow-50": overall === "GOOD",
-        "border-orange-200 bg-orange-50": overall === "FAIR",
-        "border-red-200 bg-red-50": overall === "POOR",
+      className={cn("border rounded-lg p-4 space-y-3 transition-all", className, {
+        "border-green-300 bg-gradient-to-br from-green-50 to-emerald-50": overall === "READY",
+        "border-blue-300 bg-gradient-to-br from-blue-50 to-cyan-50": overall === "EXCELLENT",
+        "border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50": overall === "GOOD",
+        "border-orange-300 bg-gradient-to-br from-orange-50 to-amber-50": overall === "FAIR",
+        "border-red-300 bg-gradient-to-br from-red-50 to-rose-50": overall === "POOR",
       })}
     >
-      {/* Header with overall status */}
+      {/* Header with overall status and score */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <ReadinessIcon level={overall} />
+        <div className="flex items-center space-x-3">
+          <div className="text-3xl">{overall === "READY" ? "✅" : overall === "EXCELLENT" ? "🟢" : overall === "GOOD" ? "🟡" : overall === "FAIR" ? "🟠" : "🔴"}</div>
           <div>
-            <div className="font-medium text-gray-900">
-              Pose Readiness: {overall}
+            <div className="font-semibold text-gray-900">
+              {overall === "READY" ? "Perfect position!" : overall === "EXCELLENT" ? "Excellent!" : overall === "GOOD" ? "Good setup" : overall === "FAIR" ? "Almost there" : "Adjust position"}
             </div>
-            <div className="text-sm text-gray-600">Score: {score}/100</div>
+            <div className="text-xs text-gray-600">{score}/100 readiness</div>
           </div>
         </div>
 
         {canProceed && (
-          <div className="flex items-center space-x-1 text-green-600 text-sm font-medium">
-            <CheckCircle className="w-4 h-4" />
-            <span>Ready to start</span>
+          <div className="px-3 py-1 bg-green-100 rounded-full text-green-700 text-xs font-semibold animate-pulse">
+            Ready to start
           </div>
         )}
       </div>
 
       {/* Progress bar */}
-      <div className="w-full bg-gray-200 rounded-full h-2">
+      <div className="w-full bg-gray-300 rounded-full h-3 overflow-hidden">
         <div
-          className={cn("h-2 rounded-full transition-all duration-300", {
-            "bg-green-500": score >= 85,
-            "bg-blue-500": score >= 70 && score < 85,
-            "bg-yellow-500": score >= 55 && score < 70,
-            "bg-orange-500": score >= 35 && score < 55,
-            "bg-red-500": score < 35,
+          className={cn("h-3 rounded-full transition-all duration-500", {
+            "bg-gradient-to-r from-green-500 to-emerald-500": score >= 85,
+            "bg-gradient-to-r from-blue-500 to-cyan-500": score >= 70 && score < 85,
+            "bg-gradient-to-r from-yellow-500 to-amber-500": score >= 55 && score < 70,
+            "bg-gradient-to-r from-orange-500 to-rose-500": score >= 35 && score < 55,
+            "bg-gradient-to-r from-red-500 to-pink-500": score < 35,
           })}
-          style={{ width: `${Math.max(5, score)}%` }}
+          style={{ width: `${Math.max(8, score)}%` }}
         />
       </div>
 
-      {/* Main feedback */}
-      <div className="text-gray-700">{feedback}</div>
+      {/* Main feedback - encouraging tone */}
+      <div className="text-sm text-gray-700 font-medium">{feedback}</div>
 
-      {/* Issues breakdown */}
-      {issues.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm font-medium text-gray-900">
-            Areas to improve:
-          </div>
-          <div className="space-y-1">
-            {issues.slice(0, 3).map((issue, index) => (
-              <IssueItem key={index} issue={issue} />
-            ))}
-            {issues.length > 3 && (
-              <div className="text-xs text-gray-500">
-                +{issues.length - 3} more issues
-              </div>
-            )}
+      {/* Primary action item - SINGLE CLEAR ACTION */}
+      {primaryIssue && !canProceed && (
+        <div className="mt-3 p-3 bg-white/60 rounded-lg border-l-4 border-orange-400">
+          <div className="flex items-start space-x-2">
+            <div className="text-xl mt-0.5">👉</div>
+            <div>
+              <div className="text-sm font-semibold text-gray-900">{getPrimaryAction()}</div>
+              <div className="text-xs text-gray-600 mt-0.5">{primaryIssue.suggestion}</div>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Show all issues if multiple - collapsible detail */}
+      {issues.length > 1 && (
+        <details className="text-xs">
+          <summary className="cursor-pointer text-gray-600 hover:text-gray-900 font-medium">
+            {issues.length - 1} more thing{issues.length > 2 ? "s" : ""} to check
+          </summary>
+          <div className="mt-2 space-y-1 pt-2 border-t border-gray-300">
+            {issues.slice(1).map((issue, index) => (
+              <IssueItem key={index} issue={issue} />
+            ))}
+          </div>
+        </details>
       )}
     </div>
   );

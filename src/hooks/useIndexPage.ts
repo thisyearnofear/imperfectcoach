@@ -27,6 +27,8 @@ export const useIndexPage = () => {
     const saved = localStorage.getItem("heightUnit");
     return (saved as HeightUnit) || "cm";
   });
+  // ENHANCEMENT: Streak tracking for UI display
+  const [formStreak, setFormStreak] = useState(0);
 
   // Workout state managed by custom hook
   const {
@@ -171,6 +173,7 @@ export const useIndexPage = () => {
     personalBestReps,
     personalBestFormScore,
     personalBestJumpHeight,
+    formStreak,
     // Setters
     setIsDebugMode,
     setIsRecordingEnabled,
@@ -184,6 +187,7 @@ export const useIndexPage = () => {
     setReps,
     setFormFeedback,
     setFormScore,
+    setFormStreak,
     setHasNewRepRecord,
     setHasNewFormRecord,
     setHasNewJumpRecord,

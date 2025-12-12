@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import * as posedetection from "@tensorflow-models/pose-detection";
 import {
   Exercise,
@@ -9,7 +9,7 @@ import {
   ProcessorResult,
 } from "@/lib/types";
 import { useAudioFeedback } from "./useAudioFeedback";
-import { processPullups } from "@/lib/exercise-processors/pullupProcessor";
+import { processPullups, createPullupState, resetPullupState, type PullupState } from "@/lib/exercise-processors/pullupProcessor";
 import { processJumpsEnhanced, createJumpState } from "@/lib/exercise-processors/enhancedJumpProcessor";
 import { useAIFeedback } from "./useAIFeedback";
 import { useExerciseState } from "./useExerciseState";
@@ -65,6 +65,8 @@ export const useExerciseProcessor = ({
     currentRepAngles,
     calibrationFrames,
     incrementReps,
+    formStreak,
+    updateFormStreak,
   } = useExerciseState({ exercise, onRepCount });
 
   const formIssuePulse = useRef(false);
@@ -73,6 +75,16 @@ export const useExerciseProcessor = ({
   
   // AGGRESSIVE CONSOLIDATION: Single jump state replaces multiple tracking systems
   const jumpState = useRef(createJumpState());
+  
+  // ENHANCEMENT: Pull-up state for learning phase management (mirrors jump pattern)
+  const pullupState = useRef<PullupState>(createPullupState());
+  
+  // ENHANCEMENT: Reset pull-up state when exercise changes
+  useEffect(() => {
+    if (exercise === 'pull-ups') {
+      resetPullupState(pullupState.current);
+    }
+  }, [exercise]);
   
   // CLEAN: Simple pose validation without complex readiness system
   const validateBasicPose = useCallback((keypoints: posedetection.Keypoint[]) => {
@@ -154,6 +166,7 @@ export const useExerciseProcessor = ({
             repState: repState.current,
             internalReps,
             lastRepIssues: lastRepIssues.current,
+            pullupState: pullupState.current,
           });
           break;
 
@@ -183,6 +196,11 @@ export const useExerciseProcessor = ({
         // Update jump state if returned by processor
         if ('jumpState' in result && result.jumpState) {
           jumpState.current = result.jumpState;
+        }
+        
+        // Update pull-up state if returned by processor
+        if ('pullupState' in result && result.pullupState) {
+          pullupState.current = result.pullupState;
         }
 
         if (exercise === "pull-ups") {
@@ -221,6 +239,7 @@ export const useExerciseProcessor = ({
           currentRepAngles,
           exercise,
           peakAirborneY,
+          updateFormStreak,
         });
       } else if (!isWorkoutActive) {
         if (isDebugMode) onPoseData({ keypoints });
@@ -257,12 +276,15 @@ export const useExerciseProcessor = ({
       : 0,
     currentJumpHeight: currentJumpHeight.current,
     jumpGroundLevel: jumpState.current.groundLevel,
+    formStreak,
+    // ENHANCEMENT: Include initialization state to suppress red overlay during onboarding
     jumpCalibrationData: jumpState.current.isCalibrated ? null : {
       calibrationProgress: 0,
       isStable: true,
       kneeAngle: 0,
       minKneeAngle: 130,
       isCalibrating: !jumpState.current.isCalibrated,
+      isInitializing: jumpState.current.isInitializing,
     },
   };
 };

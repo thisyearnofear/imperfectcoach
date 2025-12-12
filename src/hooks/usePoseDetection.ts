@@ -54,7 +54,7 @@ export const usePoseDetection = ({
     }
   }, [modelStatus, onFormFeedback]);
 
-  const { processPose, formIssuePulse, avgScore, currentJumpHeight, jumpGroundLevel, jumpCalibrationData } = useExerciseProcessor({
+  const { processPose, formIssuePulse, avgScore, currentJumpHeight, jumpGroundLevel, jumpCalibrationData, formStreak } = useExerciseProcessor({
     exercise,
     workoutMode,
     onRepCount,
@@ -146,6 +146,7 @@ export const usePoseDetection = ({
 
   return {
     currentJumpHeight,
-    jumpGroundLevel
+    jumpGroundLevel,
+    formStreak,
   };
 };

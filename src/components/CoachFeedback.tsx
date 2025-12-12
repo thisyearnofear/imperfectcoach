@@ -18,6 +18,9 @@ interface CoachFeedbackProps {
   showFocusExplanation?: boolean;
   onFocusExplanationShown?: () => void;
   isFocusMode?: boolean;
+  // ENHANCEMENT: Streak tracking and form breakdown
+  formStreak?: number;
+  formBreakdown?: { symmetry: 'good' | 'warning' | 'poor'; romTop: 'good' | 'warning' | 'poor'; romBottom: 'good' | 'warning' | 'poor' };
 }
 
 const CoachFeedback = ({
@@ -33,9 +36,23 @@ const CoachFeedback = ({
   showFocusExplanation = false,
   onFocusExplanationShown,
   isFocusMode = false,
+  formStreak = 0,
+  formBreakdown,
 }: CoachFeedbackProps) => {
   const [currentCoachIndex, setCurrentCoachIndex] = useState(0);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [lastRepCount, setLastRepCount] = useState(0);
+  const [showRepCelebration, setShowRepCelebration] = useState(false);
+  const [showFormBreakdown, setShowFormBreakdown] = useState(false);
+
+  // ENHANCEMENT: Detect rep completion and trigger celebration
+  useEffect(() => {
+    if (reps > lastRepCount && reps > 0) {
+      setShowRepCelebration(true);
+      setTimeout(() => setShowRepCelebration(false), 1000);
+      setLastRepCount(reps);
+    }
+  }, [reps, lastRepCount]);
 
   // Debug focus explanation
   useEffect(() => {
@@ -92,12 +109,16 @@ const CoachFeedback = ({
   }, [reps, coaches.length, exercises.length]);
 
   const getScoreColor = () => {
+    // ENHANCEMENT: Show all scores as encouraging during learning phase
+    if (reps <= 2) return "text-blue-500"; // Learning phase: blue (neutral, encouraging)
     if (formScore >= 80) return "text-green-500";
     if (formScore >= 60) return "text-yellow-500";
     return "text-destructive";
   };
 
   const getProgressColor = () => {
+    // ENHANCEMENT: Learning phase gets blue progress bar
+    if (reps <= 2) return "bg-blue-500";
     if (formScore >= 80) return "bg-green-500";
     if (formScore >= 60) return "bg-yellow-500";
     return "bg-destructive";
@@ -139,6 +160,16 @@ const CoachFeedback = ({
     }
   };
 
+  const getFormBreakdownEmoji = () => {
+    if (!formBreakdown) return '';
+    const sym = formBreakdown.symmetry === 'good' ? '✓' : formBreakdown.symmetry === 'warning' ? '⚠️' : '✗';
+    const top = formBreakdown.romTop === 'good' ? '✓' : formBreakdown.romTop === 'warning' ? '⚠️' : '✗';
+    const bot = formBreakdown.romBottom === 'good' ? '✓' : formBreakdown.romBottom === 'warning' ? '⚠️' : '✗';
+    return `${sym}${top}${bot}`;
+  };
+
+  const isLearningPhase = reps <= 2;
+
   const getTitle = () => {
     if (showFocusExplanation) {
       return getFocusExplanation().title;
@@ -150,7 +181,9 @@ const CoachFeedback = ({
     if (reps === 0) {
       return `${currentCoach.emoji} ${currentCoach.name} says...`;
     }
-    return `${coach.emoji} ${coach.name} says...`;
+    // ENHANCEMENT: Show learning phase indicator during first two reps
+    const phaseIndicator = isLearningPhase ? ' (Learning Mode)' : '';
+    return `${coach.emoji} ${coach.name} says...${phaseIndicator}`;
   };
 
   const getFeedbackStyle = () => {
@@ -159,21 +192,25 @@ const CoachFeedback = ({
     // During active workout, always use larger text for better readability
     const textSize = reps > 0 ? "text-2xl" : "text-lg";
 
-    // Positive/ready states: bigger and green
+    // ENHANCEMENT FIRST: Positive/inviting states during calibration and success
     if (
       feedbackLower.includes("ready") ||
-      feedbackLower.includes("start position") ||
-      feedbackLower.includes("great") ||
-      feedbackLower.includes("nice") ||
       feedbackLower.includes("perfect") ||
+      feedbackLower.includes("start position") ||
+      feedbackLower.includes("getting ready") ||
+      feedbackLower.includes("great") ||
+      feedbackLower.includes("first jump") ||
+      feedbackLower.includes("nice") ||
       feedbackLower.includes("excellent") ||
       feedbackLower.includes("amazing") ||
-      feedbackLower.includes("awesome")
+      feedbackLower.includes("awesome") ||
+      feedbackLower.includes("whenever you're ready") ||
+      feedbackLower.includes("i see you")
     ) {
       return `text-green-500 ${textSize} font-bold`;
     }
 
-    // Error/critical states: red
+    // Error/critical states: red (only for actual problems, not setup)
     if (
       feedbackLower.includes("can't see you") ||
       feedbackLower.includes("trouble seeing") ||
@@ -185,7 +222,7 @@ const CoachFeedback = ({
       return `text-destructive ${textSize} font-bold`;
     }
 
-    // Corrective/warning states: yellow
+    // Corrective/warning states: yellow (tips, not criticisms)
     if (
       feedbackLower.includes("hang from") ||
       feedbackLower.includes("pull evenly") ||
@@ -198,7 +235,8 @@ const CoachFeedback = ({
       feedbackLower.includes("maintain") ||
       feedbackLower.includes("try") ||
       feedbackLower.includes("focus") ||
-      feedbackLower.includes("work on")
+      feedbackLower.includes("work on") ||
+      feedbackLower.includes("stand naturally")
     ) {
       return `text-yellow-500 ${textSize} font-semibold`;
     }
@@ -374,17 +412,80 @@ const CoachFeedback = ({
         </div>
       )}
 
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 space-y-3">
+        {/* ENHANCEMENT: Learning phase badge */}
+        {isLearningPhase && reps > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium mx-auto"
+          >
+            <span>🎯 Learning Mode - Full scoring at rep 3</span>
+          </motion.div>
+        )}
+
+        {/* ENHANCEMENT: Streak counter (shows when active) */}
+        {formStreak > 1 && reps > 0 && (
+          <motion.div
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            className="flex items-center justify-center gap-1 text-sm font-semibold text-orange-600"
+          >
+            <span>🔥 {formStreak}-Rep Streak</span>
+          </motion.div>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center">
             <h4 className="text-sm font-medium text-muted-foreground">Reps</h4>
-            <span className="text-primary font-bold text-xl">{reps}</span>
+            <motion.span 
+              key={reps}
+              initial={showRepCelebration ? { scale: 1 } : undefined}
+              animate={showRepCelebration ? { scale: 1.3 } : undefined}
+              transition={{ duration: 0.6, type: "spring" }}
+              className="text-primary font-bold text-2xl block"
+            >
+              {reps}
+            </motion.span>
+            {/* ENHANCEMENT: Rep celebration indicator */}
+            {showRepCelebration && (
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 5 }}
+                className="text-xs text-green-600 font-semibold mt-1"
+              >
+                ✓ Logged
+              </motion.div>
+            )}
           </div>
-          <div className="text-center">
+          <div className="text-center relative">
             <h4 className="text-sm font-medium text-muted-foreground">Form Score</h4>
-            <span className={`font-bold text-xl ${getScoreColor()}`}>
+            <motion.button
+              onClick={() => formBreakdown && setShowFormBreakdown(!showFormBreakdown)}
+              className={`font-bold text-2xl cursor-pointer hover:opacity-70 transition-opacity ${getScoreColor()}`}
+              whileHover={{ scale: formBreakdown ? 1.1 : 1 }}
+            >
               {formScore.toFixed(0)}
-            </span>
+              {/* ENHANCEMENT: Form breakdown indicator tooltip */}
+              {formBreakdown && (
+                <span className="text-xs ml-1 opacity-60">{getFormBreakdownEmoji()}</span>
+              )}
+            </motion.button>
+            {/* ENHANCEMENT: Form breakdown tooltip on click */}
+            {showFormBreakdown && formBreakdown && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="absolute top-full mt-2 right-0 bg-gray-900 text-white text-xs rounded p-2 whitespace-nowrap z-20 text-left w-48"
+              >
+                <div className="space-y-1">
+                  <div>Symmetry: {formBreakdown.symmetry === 'good' ? '✓ Good' : formBreakdown.symmetry === 'warning' ? '⚠️ Slight asymmetry' : '✗ Work on balance'}</div>
+                  <div>Top ROM: {formBreakdown.romTop === 'good' ? '✓ Full' : formBreakdown.romTop === 'warning' ? '⚠️ Partial' : '✗ Increase range'}</div>
+                  <div>Bottom ROM: {formBreakdown.romBottom === 'good' ? '✓ Full' : formBreakdown.romBottom === 'warning' ? '⚠️ Partial' : '✗ Full extension'}</div>
+                </div>
+              </motion.div>
+            )}
           </div>
         </div>
         <Progress

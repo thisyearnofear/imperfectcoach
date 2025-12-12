@@ -29,6 +29,8 @@ export interface HandleProcessorResultParams {
   currentRepAngles: React.MutableRefObject<{ left: number[]; right: number[] }>;
   exercise: Exercise;
   peakAirborneY: React.MutableRefObject<number | null>;
+  // ENHANCEMENT: Streak tracking
+  updateFormStreak?: (score: number) => void;
 }
 
 export function handleProcessorResult(params: HandleProcessorResultParams) {
@@ -79,6 +81,8 @@ export function handleProcessorResult(params: HandleProcessorResultParams) {
     const { score, issues, details: resultDetails } = result.repCompletionData;
     lastRepIssues.current = [...new Set(issues)];
     repScores.current.push(score);
+    // ENHANCEMENT: Update streak on rep completion
+    updateFormStreak?.(score);
     if (repScores.current.length > 5) repScores.current.shift();
     const avgScore =
       repScores.current.length > 0

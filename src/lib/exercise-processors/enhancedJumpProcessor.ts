@@ -11,6 +11,10 @@ interface JumpState {
   consecutiveGroundedFrames: number;
   peakHeight: number;
   jumpStartTime: number | null;
+  // ENHANCEMENT: Graceful onboarding phase
+  initializationStartTime: number | null;
+  isInitializing: boolean;
+  repsCompleted: number; // Track reps to defer feedback
   // ENHANCED: Rich analytics for AI analysis
   movementAnalytics?: {
     takeoffVelocity: number[]; // Explosiveness patterns
@@ -114,29 +118,54 @@ function extractJumpKeypoints(keypoints: posedetection.Keypoint[]) {
   } : null;
 }
 
-// ENHANCEMENT FIRST: Instant calibration eliminates user frustration
+// ENHANCEMENT FIRST: Graceful onboarding with initialization phase
 function calibrateInstantly(
   jumpState: JumpState, 
   avgAnkleY: number, 
   avgKneeAngle: number, 
   poseData: PoseData
 ) {
+  // CLEAN: Initialize timer on first call
+  if (jumpState.initializationStartTime === null) {
+    jumpState.initializationStartTime = Date.now();
+    jumpState.isInitializing = true;
+  }
+
+  // MODULAR: Separate initialization from calibration for better UX
+  const initializationDuration = 3000; // 3 second grace period
+  const timeIntoInitialization = Date.now() - jumpState.initializationStartTime;
+  const isStillInitializing = timeIntoInitialization < initializationDuration;
+
   // Only require user to be standing reasonably straight
   if (avgKneeAngle > 130) { // Very forgiving threshold
     jumpState.isCalibrated = true;
     jumpState.groundLevel = avgAnkleY;
     jumpState.lastAnkleY = avgAnkleY;
     
+    // Skip the perfect message during initialization, be more casual
+    const feedback = isStillInitializing 
+      ? "I see you! Ready to jump."
+      : "Perfect! Jump whenever you're ready.";
+    
+    jumpState.isInitializing = isStillInitializing;
+    
     return {
-      feedback: "Ready! Jump when you're ready.",
+      feedback,
       isRepCompleted: false,
       poseData,
       jumpState,
     };
   }
   
+  // CLEAN: Encouraging messages during initialization phase
+  const feedback = isStillInitializing 
+    ? "Getting ready... stand naturally with legs straight."
+    : "Stand with legs straight and I'll calibrate.";
+  
+  jumpState.isInitializing = isStillInitializing;
+  
   return {
-    feedback: "Stand up straight to start jumping.",
+    feedback,
     isRepCompleted: false,
     poseData,
     jumpState,
@@ -246,18 +275,25 @@ function processJumpMovement({
     
     // Complete rep when user lands after being airborne
     if (repState === "AIRBORNE" && jumpState.consecutiveGroundedFrames >= 2) {
+      jumpState.repsCompleted++;
       const repData = generateJumpRepData(jumpState, avgKneeAngle, internalReps, lastRepIssues);
       
       // Reset jump state for next rep
       jumpState.peakHeight = 0;
       jumpState.jumpStartTime = null;
       
+      // ENHANCEMENT: Positive first-rep feedback, normal feedback after
+      const isFirstRep = jumpState.repsCompleted === 1;
+      const feedback = isFirstRep 
+        ? "Great first jump! Keep it up!"
+        : repData.score >= 70 ? "Excellent jump!" : "Good jump! Try for more height next time.";
+      
       return {
         ...baseResult,
         newRepState: "GROUNDED" as RepState,
         isRepCompleted: true,
         repCompletionData: repData,
-        feedback: repData.score >= 70 ? "Excellent jump!" : "Good jump! Try for more height next time.",
+        feedback,
       };
     }
     
@@ -323,6 +359,9 @@ export function createJumpState(): JumpState {
     consecutiveGroundedFrames: 0,
     peakHeight: 0,
     jumpStartTime: null,
+    initializationStartTime: null,
+    isInitializing: true, // Start in initialization phase
+    repsCompleted: 0,
   };
 }
 
@@ -334,4 +373,6 @@ export function resetJumpState(jumpState: JumpState): void {
   jumpState.consecutiveGroundedFrames = 0;
   jumpState.peakHeight = 0;
   jumpState.jumpStartTime = null;
+  // Don't reset initialization timer - let it persist across sets
+  jumpState.repsCompleted = 0;
 }

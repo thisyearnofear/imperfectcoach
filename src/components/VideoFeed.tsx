@@ -23,6 +23,7 @@ interface VideoFeedProps {
   isDebugMode: boolean;
   onPoseData: (data: PoseData | null) => void;
   onFormScoreUpdate: (score: number) => void;
+  onFormStreakUpdate: (streak: number) => void;
   onNewRepData: (data: RepData) => void;
   coachPersonality: CoachPersonality;
   isRecordingEnabled: boolean;
@@ -37,7 +38,7 @@ interface VideoFeedProps {
   isFocusMode?: boolean; // Added focus mode prop
 }
 
-const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset, heightUnit, reps, formScore, isFocusMode = false }: VideoFeedProps) => {
+const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseData, onFormScoreUpdate, onFormStreakUpdate, onNewRepData, coachPersonality, isRecordingEnabled, workoutMode, isWorkoutActive, timeLeft, onSessionEnd, onSessionReset, heightUnit, reps, formScore, isFocusMode = false }: VideoFeedProps) => {
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [valuePropIndex, setValuePropIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -106,7 +107,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     onFormFeedback(message);
   }
 
-  const { currentJumpHeight, jumpGroundLevel } = usePoseDetection({
+  const { currentJumpHeight, jumpGroundLevel, formStreak } = usePoseDetection({
     videoRef,
     cameraStatus,
     exercise,
@@ -121,6 +122,11 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     workoutMode,
     isWorkoutActive,
   });
+
+  // ENHANCEMENT: Update form streak in parent when it changes
+  useEffect(() => {
+    onFormStreakUpdate(formStreak);
+  }, [formStreak, onFormStreakUpdate]);
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
