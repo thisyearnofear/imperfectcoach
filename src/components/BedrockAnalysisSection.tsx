@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useAccount, useWalletClient } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
 import { API_ENDPOINTS } from "@/lib/config";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { usePremiumAccess } from "@/hooks/usePremiumAccess";
@@ -99,9 +98,7 @@ const BedrockAnalysisSection = ({
   const [showAnalytics, setShowAnalytics] = useState(false);
 
   const { isConnected } = useAccount();
-  const { data: walletClient } = useWalletClient({
-    chainId: baseSepolia.id,
-  });
+  const { data: walletClient } = useWalletClient();
   const { isSolanaConnected, solanaAddress } = useWalletConnection();
 
   const handlePremiumAnalysis = async () => {
