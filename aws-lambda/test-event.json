@@ -1,0 +1,1 @@
+{"httpMethod": "POST", "headers": {"Content-Type": "application/json", "X-Payment": "eyJhbW91bnQiOiAiMTAwMDAwIiwgInBheWVyIjogIjB4MTIzIiwgInNpZ25hdHVyZSI6ICJ0ZXN0In0=", "X-Chain": "avalanche-fuji"}, "body": "{\"workoutData\": {\"exercise\": \"Squat\", \"reps\": 10, \"duration\": 60, \"averageFormScore\": 85}}"}
