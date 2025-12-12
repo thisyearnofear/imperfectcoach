@@ -29,6 +29,7 @@ import {
   getAvailableChains,
   ChainType,
 } from "@/lib/chainRouting";
+import { getExplorerUrl } from "@/lib/config";
 
 interface BlockchainScoreSubmissionProps {
   exercise: Exercise;
@@ -250,7 +251,7 @@ export const BlockchainScoreSubmission = ({
                     className="h-auto p-0 ml-2 text-green-700 hover:text-green-800"
                     onClick={() =>
                       window.open(
-                        `https://sepolia.basescan.org/tx/${currentTxHash}`,
+                        getExplorerUrl(currentTxHash, chain?.id),
                         "_blank"
                       )
                     }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAccount, useWalletClient } from "wagmi";
-import { API_ENDPOINTS } from "@/lib/config";
+import { API_ENDPOINTS, getExplorerUrl } from "@/lib/config";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { usePremiumAccess } from "@/hooks/usePremiumAccess";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
@@ -426,12 +426,12 @@ const BedrockAnalysisSection = ({
                   {transactionHash && (
                     <div className="mt-2 text-xs">
                       <a
-                        href={`https://sepolia.basescan.org/tx/${transactionHash}`}
+                        href={getExplorerUrl(transactionHash)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-1 text-blue-700 hover:text-blue-800"
                       >
-                        View transaction < ExternalLink className="h-3 w-3" />
+                        View transaction <ExternalLink className="h-3 w-3" />
                       </a >
                     </div >
                   )}
@@ -553,7 +553,7 @@ const BedrockAnalysisSection = ({
           {transactionHash && (
             <div className="text-xs text-muted-foreground text-center pt-2 border-t border-purple-200">
               <a
-                href={`https://sepolia.basescan.org/tx/${transactionHash}`}
+                href={getExplorerUrl(transactionHash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-1 hover:text-blue-600"

@@ -92,3 +92,23 @@ export const getAvailableSupportedNetworks = () => {
         .filter(([_, config]) => config.status === "supported")
         .map(([chainId, config]) => ({ chainId: parseInt(chainId), ...config }));
 };
+
+/**
+ * Get block explorer URL for a transaction on a given chain
+ */
+export const getExplorerUrl = (txHash: string, chainId?: number): string => {
+    const id = chainId || CHAIN_IDS.BASE_SEPOLIA;
+    
+    switch (id) {
+        case CHAIN_IDS.BASE_SEPOLIA:
+            return `https://sepolia.basescan.org/tx/${txHash}`;
+        case CHAIN_IDS.BASE_MAINNET:
+            return `https://basescan.org/tx/${txHash}`;
+        case CHAIN_IDS.AVALANCHE_FUJI:
+            return `https://testnet.snowscan.xyz/tx/${txHash}`;
+        case CHAIN_IDS.AVALANCHE_MAINNET:
+            return `https://snowscan.xyz/tx/${txHash}`;
+        default:
+            return `https://sepolia.basescan.org/tx/${txHash}`; // fallback to Base Sepolia
+    }
+};

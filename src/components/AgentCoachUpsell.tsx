@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAccount, useWalletClient } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { PaymentRouter, PaymentResult } from "@/lib/payments/payment-router";
 import { API_ENDPOINTS } from "@/lib/config";
@@ -67,7 +66,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
 
   // Wallet integration - support both EVM and Solana
   const { address, isConnected } = useAccount();
-  const { data: walletClient } = useWalletClient({ chainId: baseSepolia.id });
+  const { data: walletClient } = useWalletClient();
   const { solanaAddress, isSolanaConnected } = useWalletConnection();
 
   // Determine which wallet is connected

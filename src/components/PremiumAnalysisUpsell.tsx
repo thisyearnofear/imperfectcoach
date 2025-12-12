@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useAccount, useWalletClient } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { PaymentRouter, PaymentResult } from "@/lib/payments/payment-router";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
@@ -57,9 +56,7 @@ const PremiumAnalysisUpsell = ({
 
   // Base (EVM) wallet
   const { isConnected: isBaseConnected, address: baseAddress } = useAccount();
-  const { data: walletClient } = useWalletClient({
-    chainId: baseSepolia.id,
-  });
+  const { data: walletClient } = useWalletClient();
 
   // Solana wallet (via centralized hook)
   const { isSolanaConnected } = useWalletConnection();

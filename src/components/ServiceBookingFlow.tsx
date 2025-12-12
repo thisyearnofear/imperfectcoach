@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useAccount, useWalletClient } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,9 +56,7 @@ export const ServiceBookingFlow = ({
 
   // Wallets
   const { isConnected: isBaseConnected, address: baseAddress } = useAccount();
-  const { data: walletClient } = useWalletClient({
-    chainId: baseSepolia.id,
-  });
+  const { data: walletClient } = useWalletClient();
   const { isSolanaConnected } = useWalletConnection();
 
   const isConnected = preferredChain === "solana" ? isSolanaConnected : isBaseConnected;
