@@ -229,12 +229,13 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
       // The PaymentRouter handles the negotiation completely.
 
       const result: PaymentResult = await PaymentRouter.execute({
-        apiUrl: API_ENDPOINTS.PREMIUM_ANALYSIS,
+        apiUrl: API_ENDPOINTS.AGENT_CORE,
         requestBody: {
           workoutData: {
             ...workoutData,
             userId: workoutData.userId || walletAddress,
           },
+          type: "agent_analysis", // Specify agent analysis type
           agentMode: true, // Enable real agent functionality
           // Placeholder payment object for legacy compatibility
           payment: {
