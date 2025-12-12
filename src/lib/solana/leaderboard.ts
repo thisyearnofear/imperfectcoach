@@ -293,6 +293,67 @@ export async function submitScoreToSolana(
  * @param exercise Exercise type ("pullups" or "jumps")
  * @returns User's score data for the specific exercise
  */
+/**
+ * Deserialize a UserScore account from raw account data
+ * Account structure (from Rust program):
+ * - user: Pubkey (32 bytes)
+ * - total_score: u64 (8 bytes)
+ * - best_single_score: u64 (8 bytes)
+ * - submission_count: u64 (8 bytes)
+ * - last_submission_time: u64 (8 bytes)
+ * - first_submission_time: u64 (8 bytes)
+ */
+function deserializeUserScoreAccount(
+  data: Uint8Array,
+  userPublicKey: PublicKey,
+  exercise: ExerciseType
+): SolanaExerciseScoreEntry | null {
+  try {
+    // Skip 8-byte Anchor discriminator
+    let offset = 8;
+
+    // Verify minimum expected size for account data
+    if (data.length < offset + 80) { // Minimum expected size for UserScore account
+      console.warn(`Account for ${userPublicKey} too short: ${data.length} bytes`);
+      return null;
+    }
+
+    // Read user pubkey (32 bytes)
+    const accountUserPubkey = new PublicKey(data.slice(offset, offset + 32));
+    offset += 32;
+
+    // Use DataView for browser-compatible u64 reading (little-endian)
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+
+    const totalScore = view.getBigUint64(offset, true); // true = little-endian
+    offset += 8;
+
+    const bestSingleScore = view.getBigUint64(offset, true);
+    offset += 8;
+
+    const submissionCount = view.getBigUint64(offset, true);
+    offset += 8;
+
+    const lastSubmissionTime = view.getBigUint64(offset, true);
+    offset += 8;
+
+    const firstSubmissionTime = view.getBigUint64(offset, true);
+
+    return {
+      user: accountUserPubkey.toString(),
+      exercise,
+      totalScore,
+      bestSingleScore,
+      submissionCount,
+      lastSubmissionTime,
+      firstSubmissionTime,
+    };
+  } catch (error) {
+    console.error(`Failed to deserialize ${exercise} UserScore account for ${userPublicKey}:`, error);
+    return null;
+  }
+}
+
 export async function getUserScoreFromSolana(
   connection: Connection,
   userPublicKey: PublicKey,
@@ -306,10 +367,8 @@ export async function getUserScoreFromSolana(
     const accountInfo = await connection.getAccountInfo(userScorePda);
     if (!accountInfo) return null;
 
-    // Parse account data (this would need proper anchor deserialization)
-    // For now, return null - will be enhanced with proper IDL parsing
-    // TODO: Implement proper account deserialization based on UserScore struct
-    return null;
+    // Parse account data using proper deserialization
+    return deserializeUserScoreAccount(accountInfo.data, userPublicKey, exercise);
   } catch (error) {
     console.error(`Error fetching user ${exercise} score from Solana:`, error);
     return null;
@@ -339,6 +398,58 @@ export async function getUserCombinedScores(
 }
 
 /**
+ * Deserialize a Leaderboard account from raw account data
+ * Account structure (from Rust program):
+ * - exercise_name: string (variable length, with length prefix)
+ * - total_participants: u64 (8 bytes)
+ * - total_submissions: u64 (8 bytes)
+ */
+function deserializeLeaderboardAccount(
+  data: Uint8Array
+): { exerciseName: string; totalParticipants: bigint; totalSubmissions: bigint } | null {
+  try {
+    // Skip 8-byte Anchor discriminator
+    let offset = 8;
+
+    // Verify minimum expected size for account data
+    if (data.length < offset + 16) { // Minimum expected size for Leaderboard account
+      console.warn(`Leaderboard account data too short: ${data.length} bytes`);
+      return null;
+    }
+
+    // Read string length (u32, 4 bytes, little-endian)
+    const stringLength = new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(offset, true);
+    offset += 4;
+
+    // Read string data
+    if (offset + stringLength > data.length) {
+      console.warn(`Leaderboard account string data exceeds buffer bounds`);
+      return null;
+    }
+    const stringBuffer = data.slice(offset, offset + stringLength);
+    const exerciseName = new TextDecoder().decode(stringBuffer);
+    offset += stringLength;
+
+    // Use DataView for browser-compatible u64 reading (little-endian)
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+
+    const totalParticipants = view.getBigUint64(offset, true); // true = little-endian
+    offset += 8;
+
+    const totalSubmissions = view.getBigUint64(offset, true);
+
+    return {
+      exerciseName,
+      totalParticipants,
+      totalSubmissions,
+    };
+  } catch (error) {
+    console.error(`Failed to deserialize Leaderboard account:`, error);
+    return null;
+  }
+}
+
+/**
  * Get leaderboard stats from Solana exercise-specific program
  * @param connection Solana RPC connection
  * @param leaderboardAddress Public key of leaderboard account
@@ -353,10 +464,8 @@ export async function getSolanaLeaderboardStats(
     const accountInfo = await connection.getAccountInfo(leaderboardAddress);
     if (!accountInfo) return null;
 
-    // Parse account data
-    // For now, return null - will be enhanced with proper IDL parsing
-    // TODO: Implement proper account deserialization based on Leaderboard struct
-    return null;
+    // Parse account data using proper deserialization
+    return deserializeLeaderboardAccount(accountInfo.data);
   } catch (error) {
     console.error(`Error fetching Solana ${exercise} leaderboard stats:`, error);
     return null;

@@ -60,7 +60,7 @@ function drawFormZone(ctx: CanvasRenderingContext2D, keypoints: Keypoint[], exer
       const avgWristY = (leftWrist.y + rightWrist.y) / 2;
       const avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
       const isHanging = avgWristY < avgShoulderY;
-      
+
       if (isHanging) {
         // Top of range (chin over bar) - Green line at wrist level
         const topY = avgWristY;
@@ -71,7 +71,7 @@ function drawFormZone(ctx: CanvasRenderingContext2D, keypoints: Keypoint[], exer
         ctx.moveTo(0, topY);
         ctx.lineTo(ctx.canvas.width, topY);
         ctx.stroke();
-        
+
         // Add subtle label
         ctx.fillStyle = 'rgba(0, 255, 0, 0.9)';
         ctx.font = 'bold 12px sans-serif';
@@ -84,21 +84,21 @@ function drawFormZone(ctx: CanvasRenderingContext2D, keypoints: Keypoint[], exer
           const avgElbowY = (leftElbow.y + rightElbow.y) / 2;
           const armLength = avgElbowY - avgWristY;
           const bottomY = avgShoulderY + armLength * 0.95; // 95% extension estimate
-          
+
           ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.moveTo(0, bottomY);
           ctx.lineTo(ctx.canvas.width, bottomY);
           ctx.stroke();
-          
+
           // Add subtle label
           ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
           ctx.fillText('Full extension', 10, bottomY + 18);
         }
-        
+
         ctx.setLineDash([]); // Reset line dash
-        
+
         // Visual feedback if chin is over bar
         if (nose && nose.score > MIN_CONFIDENCE_TO_DRAW && nose.y < topY) {
           // Draw success indicator around nose
@@ -110,8 +110,83 @@ function drawFormZone(ctx: CanvasRenderingContext2D, keypoints: Keypoint[], exer
         }
       }
     }
+  } else if (exercise === 'jumps') {
+    // Jump form zones for ground level and optimal jump height
+    const leftAnkle = getKeypoint(keypoints, 'left_ankle');
+    const rightAnkle = getKeypoint(keypoints, 'right_ankle');
+    const leftKnee = getKeypoint(keypoints, 'left_knee');
+    const rightKnee = getKeypoint(keypoints, 'right_knee');
+    const leftHip = getKeypoint(keypoints, 'left_hip');
+    const rightHip = getKeypoint(keypoints, 'right_hip');
+
+    if (leftAnkle && rightAnkle && leftAnkle.score > MIN_CONFIDENCE_TO_DRAW && rightAnkle.score > MIN_CONFIDENCE_TO_DRAW) {
+      // Ground level - where feet should be before jump
+      const avgAnkleY = Math.min(leftAnkle.y, rightAnkle.y); // Use minimum Y (highest point)
+      ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)'; // Red for ground level
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 5]);
+      ctx.beginPath();
+      ctx.moveTo(0, avgAnkleY);
+      ctx.lineTo(ctx.canvas.width, avgAnkleY);
+      ctx.stroke();
+
+      // Add label for ground level
+      ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Ground level', 10, avgAnkleY - 8);
+
+      // Optimal takeoff height - slightly above ground (for form check)
+      const takeoffLineY = avgAnkleY - 30;
+      if (takeoffLineY > 0) { // Ensure it's on the canvas
+        ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)'; // Yellow for takeoff zone
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, takeoffLineY);
+        ctx.lineTo(ctx.canvas.width, takeoffLineY);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+        ctx.fillText('Takeoff zone', 10, takeoffLineY - 8);
+      }
+
+      // Landing zone - where feet should be after landing
+      const landingLineY = avgAnkleY + 30;
+      if (landingLineY < ctx.canvas.height) { // Ensure it's on the canvas
+        ctx.strokeStyle = 'rgba(100, 255, 100, 0.5)'; // Green for landing zone
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, landingLineY);
+        ctx.lineTo(ctx.canvas.width, landingLineY);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(100, 255, 100, 0.9)';
+        ctx.fillText('Landing zone', 10, landingLineY + 18);
+      }
+
+      ctx.setLineDash([]); // Reset line dash
+
+      // Visual feedback for proper jump form during takeoff
+      if (leftKnee && rightKnee && leftHip && rightHip) {
+        // Check for proper knee bend before takeoff
+        const avgKneeY = (leftKnee.y + rightKnee.y) / 2;
+        const avgHipY = (leftHip.y + rightHip.y) / 2;
+
+        // If knees are bent appropriately (preparation phase)
+        if (avgKneeY < avgAnkleY - 20) {
+          // Draw success indicator for proper preparation posture
+          const hipCenterX = (leftHip.x + rightHip.x) / 2;
+          const hipCenterY = (leftHip.y + rightHip.y) / 2;
+
+          ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(hipCenterX, hipCenterY, 20, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
+      }
+    }
   }
-  // TODO: Add form zones for jumps
 }
 
 function drawFormQualityOverlay(ctx: CanvasRenderingContext2D, score: number, pulse: boolean, isCalibrating: boolean = false) {
