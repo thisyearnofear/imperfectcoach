@@ -182,7 +182,7 @@ const Header = ({
 
           <div className="flex items-center gap-1 md:gap-2 min-w-0">
             {/* Network Status - Compact */}
-            <NetworkStatus variant="compact" showSwitchButton={true} />
+            <NetworkStatus variant="compact" showSwitchButton={false} />
 
             {/* Wallet Connection - Multi-chain (Base + Solana) */}
             <MultiChainWallet variant="header" size="sm" />

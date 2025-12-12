@@ -22,36 +22,18 @@ import {
   CheckCircle,
   Zap,
   ExternalLink,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 import { useUserBlockchain } from "@/hooks/useUserHooks";
 import { cn } from "@/lib/utils";
+import { getNetworkConfig, isNetworkSupported, getAvailableSupportedNetworks } from "@/lib/config";
 
 interface NetworkStatusProps {
   variant?: "compact" | "full" | "alert";
   showSwitchButton?: boolean;
   className?: string;
 }
-
-const NETWORK_INFO = {
-  8453: {
-    name: "Base Mainnet",
-    color: "blue",
-    status: "wrong" as const,
-    description: "switch to testnet to proceed",
-  },
-  84532: {
-    name: "Base Sepolia",
-    color: "green",
-    status: "correct" as const,
-    description: "Testnet - perfect for testing and development",
-  },
-  1: {
-    name: "Ethereum Mainnet",
-    color: "gray",
-    status: "wrong" as const,
-    description: "Ethereum mainnet - switch to Base Sepolia",
-  },
-} as const;
 
 export const NetworkStatus = ({
   variant = "compact",
@@ -60,53 +42,56 @@ export const NetworkStatus = ({
 }: NetworkStatusProps) => {
   const { isConnected } = useAccount();
   const chainId = useChainId();
-  const { switchToBaseSepolia } = useUserBlockchain();
 
   if (!isConnected) {
     return null;
   }
 
-  const networkInfo = NETWORK_INFO[chainId as keyof typeof NETWORK_INFO] || {
+  const networkConfig = getNetworkConfig(chainId);
+  const isSupported = isNetworkSupported(chainId);
+  
+  const displayInfo = networkConfig || {
     name: `Unknown Network (${chainId})`,
-    color: "gray",
-    status: "wrong" as const,
-    description: "Unknown network - please switch to Base Sepolia",
+    status: "unsupported" as const,
+    features: [] as string[],
+    description: "Unsupported network. Switch to a supported testnet above.",
   };
-
-  const isCorrectNetwork = networkInfo.status === "correct";
 
   // Compact variant for headers/toolbars
   if (variant === "compact") {
+    const badgeVariant = displayInfo.status === "supported" ? "default" : displayInfo.status === "coming_soon" ? "secondary" : "destructive";
+    const iconComponent = displayInfo.status === "supported" ? CheckCircle : displayInfo.status === "coming_soon" ? Clock : AlertTriangle;
+    const Icon = iconComponent;
+
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <div className={cn("flex items-center gap-2", className)}>
               <Badge
-                variant={isCorrectNetwork ? "default" : "destructive"}
-                className="text-xs"
+                variant={badgeVariant}
+                className={cn(
+                  "text-xs",
+                  displayInfo.status === "supported" && "bg-green-100 text-green-800 border-green-200",
+                  displayInfo.status === "coming_soon" && "bg-blue-100 text-blue-800 border-blue-200",
+                  displayInfo.status === "unsupported" && "bg-red-100 text-red-800 border-red-200"
+                )}
               >
-                <Network className="h-3 w-3 mr-1" />
-                {networkInfo.name}
+                <Icon className="h-3 w-3 mr-1" />
+                {displayInfo.name}
               </Badge>
-              {!isCorrectNetwork && showSwitchButton && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={switchToBaseSepolia}
-                  className="h-6 px-2 text-xs"
-                >
-                  <Zap className="h-3 w-3 mr-1" />
-                  Switch
-                </Button>
-              )}
             </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p className="text-xs">{networkInfo.description}</p>
-            {!isCorrectNetwork && (
+            <p className="text-xs">{displayInfo.description}</p>
+            {"features" in displayInfo && displayInfo.features && displayInfo.features.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Features: {displayInfo.features.join(", ")}
+              </p>
+            )}
+            {!isSupported && (
               <p className="text-xs font-medium text-orange-600 mt-1">
-                Click "Switch" to change networks
+                Switch to a supported network in your wallet
               </p>
             )}
           </TooltipContent>
@@ -117,28 +102,34 @@ export const NetworkStatus = ({
 
   // Alert variant for inline warnings
   if (variant === "alert") {
-    if (isCorrectNetwork) return null;
+    if (displayInfo.status === "supported") return null;
 
     return (
-      <Alert className="border-orange-200 bg-orange-50">
-        <AlertTriangle className="h-4 w-4 text-orange-600" />
-        <AlertDescription className="text-orange-800">
-          <div className="flex items-center justify-between">
+      <Alert className={cn(
+        displayInfo.status === "coming_soon" ? "border-blue-200 bg-blue-50" : "border-orange-200 bg-orange-50"
+      )}>
+        <AlertCircle className={cn(
+          "h-4 w-4",
+          displayInfo.status === "coming_soon" ? "text-blue-600" : "text-orange-600"
+        )} />
+        <AlertDescription className={cn(
+          displayInfo.status === "coming_soon" ? "text-blue-800" : "text-orange-800"
+        )}>
+          <div className="space-y-2">
             <div>
-              <span className="font-medium">Wrong Network:</span>{" "}
-              {networkInfo.name}
-              <div className="text-xs mt-1">{networkInfo.description}</div>
+              <span className="font-medium">{displayInfo.status === "coming_soon" ? "Coming Soon" : "Unsupported Network"}:</span>{" "}
+              {displayInfo.name}
+              <div className="text-xs mt-1">{displayInfo.description}</div>
             </div>
-            {showSwitchButton && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={switchToBaseSepolia}
-                className="ml-4 border-orange-300 text-orange-700 hover:bg-orange-100"
-              >
-                <Zap className="h-4 w-4 mr-1" />
-                Switch to Base Sepolia
-              </Button>
+            {displayInfo.status === "unsupported" && (
+              <div className="text-xs space-y-1">
+                <p className="font-medium">Supported networks:</p>
+                <ul className="list-disc list-inside">
+                  {getAvailableSupportedNetworks().map(net => (
+                    <li key={net.chainId}>{net.name}</li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </AlertDescription>
@@ -147,15 +138,33 @@ export const NetworkStatus = ({
   }
 
   // Full variant for detailed display
+  const getChainDocs = (chainId: number) => {
+    switch (chainId) {
+      case 84532:
+        return { name: "Base Docs", url: "https://docs.base.org/" };
+      case 43113:
+      case 43114:
+        return { name: "Avalanche Docs", url: "https://docs.avax.network/" };
+      default:
+        return null;
+    }
+  };
+
+  const docs = getChainDocs(chainId);
+
   return (
     <Card className={cn("w-full", className)}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Network className="h-5 w-5" />
           Network Status
-          {isCorrectNetwork ? (
+          {displayInfo.status === "supported" && (
             <CheckCircle className="h-4 w-4 text-green-600" />
-          ) : (
+          )}
+          {displayInfo.status === "coming_soon" && (
+            <Clock className="h-4 w-4 text-blue-600" />
+          )}
+          {displayInfo.status === "unsupported" && (
             <AlertTriangle className="h-4 w-4 text-orange-600" />
           )}
         </CardTitle>
@@ -164,83 +173,112 @@ export const NetworkStatus = ({
         {/* Current Network */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="font-medium">{networkInfo.name}</div>
+            <div className="font-medium">{displayInfo.name}</div>
             <div className="text-sm text-muted-foreground">
               Chain ID: {chainId}
             </div>
           </div>
           <Badge
-            variant={isCorrectNetwork ? "default" : "destructive"}
             className={cn(
-              isCorrectNetwork
-                ? "bg-green-100 text-green-800 border-green-200"
-                : "bg-orange-100 text-orange-800 border-orange-200"
+              displayInfo.status === "supported" && "bg-green-100 text-green-800 border-green-200",
+              displayInfo.status === "coming_soon" && "bg-blue-100 text-blue-800 border-blue-200",
+              displayInfo.status === "unsupported" && "bg-orange-100 text-orange-800 border-orange-200"
             )}
           >
-            {isCorrectNetwork ? "✅ Correct" : "⚠️ Wrong Network"}
+            {displayInfo.status === "supported" ? "✅ Supported" : displayInfo.status === "coming_soon" ? "⏱️ Coming Soon" : "⚠️ Unsupported"}
           </Badge>
         </div>
 
         {/* Network Description */}
         <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg">
-          {networkInfo.description}
+          {displayInfo.description}
         </div>
 
-        {/* Actions */}
-        {!isCorrectNetwork && (
+        {/* Features */}
+        {"features" in displayInfo && displayInfo.features && displayInfo.features.length > 0 && (
+          <div className="text-sm space-y-2">
+            <p className="font-medium">Available Features:</p>
+            <div className="flex flex-wrap gap-1">
+              {displayInfo.features.map(feature => (
+                <Badge key={feature} variant="outline" className="text-xs">
+                  {feature}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Network Selection */}
+        {!isSupported && (
           <div className="space-y-3">
-            {showSwitchButton && (
-              <Button
-                onClick={switchToBaseSepolia}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                <Zap className="h-4 w-4 mr-2" />
-                Switch to Base Sepolia
-              </Button>
-            )}
+            <div className="text-sm space-y-2">
+              <p className="font-medium">Supported Networks:</p>
+              <div className="space-y-1">
+                {getAvailableSupportedNetworks().map(net => (
+                  <div key={net.chainId} className="text-xs p-2 bg-muted rounded flex justify-between items-center">
+                    <span>{net.name}</span>
+                    <span className="text-muted-foreground">{net.features.join(", ")}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Manual Instructions */}
             <div className="text-xs text-muted-foreground space-y-1">
-              <p className="font-medium">Manual switching:</p>
+              <p className="font-medium">To switch networks:</p>
               <p>1. Open your wallet settings</p>
               <p>2. Find "Networks" or "Switch Network"</p>
-              <p>3. Select "Base Sepolia" from the list</p>
+              <p>3. Select a supported network from above</p>
             </div>
 
             {/* External Resources */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  window.open("https://chainlist.org/chain/84532", "_blank")
+                  window.open("https://chainlist.org/", "_blank")
                 }
                 className="text-xs"
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
                 Chainlist
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open("https://docs.base.org/", "_blank")}
-                className="text-xs"
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                Base Docs
-              </Button>
+              {docs && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(docs.url, "_blank")}
+                  className="text-xs"
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  {docs.name}
+                </Button>
+              )}
             </div>
           </div>
         )}
 
         {/* Success State */}
-        {isCorrectNetwork && (
+        {displayInfo.status === "supported" && (
           <div className="text-center py-2">
             <div className="text-green-600 font-medium">
-              🎉 Perfect! You're on the right network
+              🎉 Perfect! Network is supported
             </div>
             <div className="text-sm text-muted-foreground mt-1">
-              Ready to submit scores to the blockchain
+              Ready to use: {displayInfo.features?.join(", ")}
+            </div>
+          </div>
+        )}
+
+        {/* Coming Soon State */}
+        {displayInfo.status === "coming_soon" && (
+          <div className="text-center py-2">
+            <div className="text-blue-600 font-medium">
+              ⏱️ Mainnet support coming soon
+            </div>
+            <div className="text-sm text-muted-foreground mt-1">
+              {displayInfo.description}
             </div>
           </div>
         )}

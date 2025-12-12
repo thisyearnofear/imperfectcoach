@@ -13,6 +13,7 @@ import {
 import { useAccount, useChainId } from "wagmi";
 import { getCDPStatus, getNetworkStatus, type CDPNetworkStatus } from "@/lib/cdp";
 import { useUserBlockchain } from "@/hooks/useUserHooks";
+import { getNetworkConfig, isNetworkSupported } from "@/lib/config";
 import { cn } from "@/lib/utils";
 
 interface StatusStripProps {
@@ -23,12 +24,6 @@ interface StatusStripProps {
   className?: string;
 }
 
-const NETWORK_INFO = {
-  8453: { name: "Base Mainnet", isCorrect: false },
-  84532: { name: "Base Sepolia", isCorrect: true },
-  1: { name: "Ethereum Mainnet", isCorrect: false },
-} as const;
-
 export function StatusStrip({
   variant = "compact",
   showCDP = true,
@@ -38,7 +33,7 @@ export function StatusStrip({
 }: StatusStripProps) {
   const { isConnected } = useAccount();
   const chainId = useChainId();
-  const { switchToBaseSepolia } = useUserBlockchain();
+  const { switchToChain } = useUserBlockchain();
   
   const [cdpStatus, setCdpStatus] = useState(getCDPStatus());
   const [networkStatus, setNetworkStatus] = useState<CDPNetworkStatus>(null);
@@ -65,12 +60,14 @@ export function StatusStrip({
     return null;
   }
 
-  const networkInfo = NETWORK_INFO[chainId as keyof typeof NETWORK_INFO] || {
+  const networkConfig = getNetworkConfig(chainId);
+  const isSupported = isNetworkSupported(chainId);
+
+  const networkInfo = networkConfig || {
     name: `Unknown (${chainId})`,
-    isCorrect: false,
   };
 
-  const hasIssues = !networkInfo.isCorrect;
+  const hasIssues = !isSupported;
   const needsAction = hasIssues;
 
   // Compact variant for inline display
@@ -91,7 +88,7 @@ export function StatusStrip({
         {/* Network Status */}
         {showNetwork && (
           <Badge
-            variant={networkInfo.isCorrect ? "default" : "destructive"}
+            variant={isSupported ? "default" : "destructive"}
             className="text-xs"
           >
             <Network className="h-3 w-3 mr-1" />
@@ -117,7 +114,7 @@ export function StatusStrip({
           <Button
             variant="outline"
             size="sm"
-            onClick={onFixAction || switchToBaseSepolia}
+            onClick={onFixAction || (() => switchToChain('base'))}
             className="h-6 px-2 text-xs"
           >
             <Zap className="h-3 w-3 mr-1" />
@@ -147,7 +144,7 @@ export function StatusStrip({
             <Button
               variant="outline"
               size="sm"
-              onClick={onFixAction || switchToBaseSepolia}
+              onClick={onFixAction || (() => switchToChain('base'))}
               className="border-orange-300 text-orange-700 hover:bg-orange-100 flex-shrink-0"
             >
               <Zap className="h-4 w-4 mr-1" />

@@ -68,7 +68,7 @@ export const useUserBlockchain = () => {
     currentTxHash,
     submitScore,
     refreshLeaderboard,
-    switchToBaseSepolia,
+    switchToChain,
     hasSubmittedScore,
   } = useUser();
 
@@ -87,7 +87,7 @@ export const useUserBlockchain = () => {
     currentTxHash,
     submitScore,
     refetch: refreshLeaderboard,
-    switchToBaseSepolia,
+    switchToChain,
     hasSubmittedScore,
   };
 };

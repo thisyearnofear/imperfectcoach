@@ -28,8 +28,48 @@ export const NETWORKS = {
     SOLANA_DEVNET: "solana-devnet",
 } as const;
 
+// Chain ID mappings for EVM networks
+export const CHAIN_IDS = {
+    BASE_MAINNET: 8453,
+    BASE_SEPOLIA: 84532,
+    AVALANCHE_MAINNET: 43114,
+    AVALANCHE_FUJI: 43113,
+} as const;
+
+// Supported networks - single source of truth
+export const SUPPORTED_EVM_NETWORKS = {
+    [CHAIN_IDS.BASE_SEPOLIA]: {
+        name: "Base Sepolia",
+        networkKey: NETWORKS.BASE_SEPOLIA,
+        status: "supported" as const,
+        features: ["leaderboards", "passport", "agents"],
+        description: "Testnet - all features available",
+    },
+    [CHAIN_IDS.AVALANCHE_FUJI]: {
+        name: "Avalanche Fuji",
+        networkKey: NETWORKS.AVALANCHE_FUJI,
+        status: "supported" as const,
+        features: ["agents"],
+        description: "Testnet - agent services available",
+    },
+    [CHAIN_IDS.AVALANCHE_MAINNET]: {
+        name: "Avalanche C-Chain",
+        networkKey: NETWORKS.AVALANCHE_MAINNET,
+        status: "coming_soon" as const,
+        features: ["leaderboards", "passport", "agents"],
+        description: "Mainnet support launching Q1 2025",
+    },
+    [CHAIN_IDS.BASE_MAINNET]: {
+        name: "Base Mainnet",
+        networkKey: NETWORKS.BASE_MAINNET,
+        status: "coming_soon" as const,
+        features: ["leaderboards", "passport", "agents"],
+        description: "Mainnet support launching Q1 2025",
+    },
+} as const;
+
 // Default network (can be overridden via env)
-export const DEFAULT_NETWORK = import.meta.env.VITE_DEFAULT_NETWORK || NETWORKS.BASE_MAINNET;
+export const DEFAULT_NETWORK = import.meta.env.VITE_DEFAULT_NETWORK || NETWORKS.BASE_SEPOLIA;
 
 // Feature flags
 export const FEATURES = {
@@ -37,3 +77,18 @@ export const FEATURES = {
     ENABLE_AGENT_DISCOVERY: import.meta.env.VITE_ENABLE_DISCOVERY !== "false",
     ENABLE_MULTI_NETWORK: import.meta.env.VITE_ENABLE_MULTI_NETWORK !== "false",
 } as const;
+
+// Network utilities
+export const isNetworkSupported = (chainId: number): boolean => {
+    return chainId in SUPPORTED_EVM_NETWORKS;
+};
+
+export const getNetworkConfig = (chainId: number) => {
+    return SUPPORTED_EVM_NETWORKS[chainId as keyof typeof SUPPORTED_EVM_NETWORKS];
+};
+
+export const getAvailableSupportedNetworks = () => {
+    return Object.entries(SUPPORTED_EVM_NETWORKS)
+        .filter(([_, config]) => config.status === "supported")
+        .map(([chainId, config]) => ({ chainId: parseInt(chainId), ...config }));
+};
