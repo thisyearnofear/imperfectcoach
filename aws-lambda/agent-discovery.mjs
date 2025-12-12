@@ -30,14 +30,18 @@ const CORS_HEADERS = {
 let dynamicAgents = new Map();
 
 export const handler = async (event) => {
-    console.log("🔍 Discovery Event:", event.httpMethod, event.path);
+    // Support both REST API (httpMethod) and HTTP API v2 (requestContext.http.method) formats
+    const httpMethod = event.httpMethod || event.requestContext?.http?.method;
+    const path = event.path || event.rawPath;
+
+    console.log("🔍 Discovery Event:", httpMethod, path);
 
     // CORS Preflight
-    if (event.httpMethod === "OPTIONS") {
+    if (httpMethod === "OPTIONS") {
         return { statusCode: 200, headers: CORS_HEADERS, body: "" };
     }
 
-    const { httpMethod, path, queryStringParameters, body } = event;
+    const { queryStringParameters, body } = event;
 
     try {
         // 1. DISCOVERY (GET /agents)
@@ -176,7 +180,7 @@ export const handler = async (event) => {
 
             // Find agent (dynamic or core)
             let agent = dynamicAgents.get(agentId) || CORE_AGENTS.find(a => a.id === agentId);
-            
+
             if (!agent) {
                 return {
                     statusCode: 404,
@@ -195,13 +199,13 @@ export const handler = async (event) => {
             }
 
             const tierAvailability = agent.serviceAvailability[tier];
-            
+
             // Check slots
             if (tierAvailability.slotsFilled >= tierAvailability.slots) {
                 return {
                     statusCode: 409,
                     headers: CORS_HEADERS,
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         error: "No slots available",
                         nextAvailable: tierAvailability.nextAvailable
                     })
@@ -221,9 +225,9 @@ export const handler = async (event) => {
             tierAvailability.slotsFilled++;
 
             // Get pricing for tier
-            const tieredPrice = agent.tieredPricing?.[capability]?.[tier] || 
-                              agent.pricing?.[capability] ||
-                              { baseFee: "0.01", asset: "USDC", chain: "base-sepolia" };
+            const tieredPrice = agent.tieredPricing?.[capability]?.[tier] ||
+                agent.pricing?.[capability] ||
+                { baseFee: "0.01", asset: "USDC", chain: "base-sepolia" };
 
             // Generate booking ID (timestamp + random)
             const bookingId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

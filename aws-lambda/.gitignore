@@ -1,1 +1,8 @@
+node_modules
+dist
 *.zip
+.env
+.DS_Store
+response.json
+aws-lambda-layer.zip
+layer-content/

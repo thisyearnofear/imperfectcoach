@@ -3,7 +3,7 @@ import { calculateAngle } from "@/lib/pose-analysis";
 import { RepState, PoseData, ProcessorResult, JumpRepDetails } from "@/lib/types";
 import { convertHeight } from "@/lib/heightConversion";
 
-interface JumpState {
+export interface JumpState {
   isCalibrated: boolean;
   groundLevel: number | null;
   lastAnkleY: number | null;

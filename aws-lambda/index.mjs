@@ -335,13 +335,14 @@ Format as detailed, professional fitness analysis.
  * Implements x402 payment protocol for both User and Agent interactions
  */
 export const handler = async (event) => {
-  console.log("🚀 Server Agent - Event received:", event);
+  console.log("🚀 Server Agent - Event received:", JSON.stringify(event, null, 2));
 
   // Initialize Agent (background)
   // await getAgentKit(); // Optional for simple data query
 
-  // Handle CORS preflight
-  if (event.httpMethod === "OPTIONS") {
+  // Handle CORS preflight - support both REST API and HTTP API v2 formats
+  const httpMethod = event.httpMethod || event.requestContext?.http?.method;
+  if (httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
       headers: CORS_HEADERS,

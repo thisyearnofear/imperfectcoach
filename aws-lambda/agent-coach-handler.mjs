@@ -503,16 +503,16 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
   console.log(`   Amount: ${amount} USDC`);
   if (serviceTier) console.log(`   Tier: ${serviceTier} (SLA enforced)`);
   if (bookingId) console.log(`   Booking ID: ${bookingId}`);
-  
+
   // Track execution time for SLA enforcement
   const executionStartTime = Date.now();
   const network = "base-sepolia"; // Primary network
-  
+
   try {
     // 1. Discover specialist from CORE_AGENTS
     console.log(`\n🔍 Searching CORE_AGENTS for ${capability}...`);
     const specialists = coreHandler.findAgentsByCapability(capability);
-    
+
     if (!specialists || specialists.length === 0) {
       return {
         error: "No specialists found for capability",
@@ -520,18 +520,18 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
         message: `No agents available for ${capability}`
       };
     }
-    
+
     const specialist = specialists[0];
     console.log(`   ✅ Found: ${specialist.name} (${specialist.id})`);
     console.log(`      Reputation: ${specialist.reputationScore}/100`);
-    
+
     // 2. Coach agent identity
     const coachAgent = {
       id: "agent-fitness-core-01",
       name: "Fitness Coach",
       address: process.env.AGENT_WALLET_ADDRESS || "0x1234567890123456789012345678901234567890"
     };
-    
+
     // 3. x402 payment via CORE_AGENTS (simulate for demo)
     console.log(`\n💳 Executing x402 payment...`);
     const paymentProof = await coreHandler.simulateX402Payment(
@@ -539,7 +539,7 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
       amount,
       network
     );
-    
+
     if (!paymentProof.success) {
       return {
         error: "Payment failed",
@@ -547,9 +547,9 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
         message: "Unable to process x402 payment"
       };
     }
-    
+
     console.log(`   ✅ Payment executed: ${paymentProof.transactionHash}`);
-    
+
     // 4. Call specialist's endpoint
     console.log(`\n🤝 Calling specialist endpoint...`);
     const response = await coreHandler.callSpecialistEndpoint(
@@ -557,9 +557,9 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
       capability,
       data_query
     );
-    
+
     console.log(`   ✅ Response received`);
-    
+
     // 5. Record payment in audit trail
     console.log(`\n📊 Recording payment...`);
     const paymentRecord = await coreHandler.recordAgentPayment(
@@ -568,20 +568,20 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
       paymentProof,
       capability
     );
-    
+
     // 6. Calculate SLA performance (if tier specified)
     let slaData = null;
     if (serviceTier) {
       const executionTimeMs = Date.now() - executionStartTime;
       slaData = coreHandler.calculateSLAPerformance(serviceTier, executionTimeMs);
-      
+
       console.log(`\n⏱️  SLA Performance:`);
       console.log(`   Tier: ${slaData.tier}`);
       console.log(`   Expected: ${slaData.expectedMs}ms`);
       console.log(`   Actual: ${slaData.actualMs}ms`);
       console.log(`   ${slaData.message}`);
     }
-    
+
     // 7. Build response with payment proof, SLA status, and specialist data
     return {
       success: true,
@@ -617,7 +617,7 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
         bookingId: bookingId || null
       }
     };
-    
+
   } catch (error) {
     console.error(`❌ Specialist call error: ${error.message}`);
     return {
@@ -782,6 +782,20 @@ function extractReasoningSteps(history) {
 export const handler = async (event) => {
   console.log("🚀 AI Coach Agent Lambda invoked");
   console.log("Event:", JSON.stringify(event, null, 2));
+
+  // Handle CORS preflight - support both REST API and HTTP API v2 formats
+  const httpMethod = event.httpMethod || event.requestContext?.http?.method;
+  if (httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type, X-Payment, X-Chain, X-Signature, X-Agent-ID",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+      },
+      body: "",
+    };
+  }
 
   try {
     // Parse request

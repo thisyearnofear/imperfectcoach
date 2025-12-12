@@ -4,6 +4,9 @@ import { PublicKey } from "@solana/web3.js";
 import {
   JUMPS_LEADERBOARD_CONFIG,
   PULLUPS_LEADERBOARD_CONFIG,
+  JUMPS_LEADERBOARD_ADDRESSES,
+  PULLUPS_LEADERBOARD_ADDRESSES,
+  EXERCISE_LEADERBOARD_ABI,
 } from "@/lib/contracts";
 import {
   getTopUsersFromSolana,
@@ -12,8 +15,8 @@ import {
 import { useReadContract } from "wagmi";
 
 export interface UnifiedLeaderboardEntry {
-  user: string; // 0x... (Base) or Solana pubkey string
-  chain: "base" | "solana";
+  user: string; // 0x... (Base/Avalanche) or Solana pubkey string
+  chain: "base" | "avalanche" | "solana";
   pullups: number;
   jumps: number;
   totalScore: number;
@@ -22,7 +25,7 @@ export interface UnifiedLeaderboardEntry {
   rank?: number;
 }
 
-export type ChainFilter = "all" | "base" | "solana";
+export type ChainFilter = "all" | "base" | "avalanche" | "solana";
 
 interface UseLeaderboardParallelOptions {
   limit?: number;
@@ -39,8 +42,11 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
 
   const { connection } = useConnection();
   const [solanaLeaderboard, setSolanaLeaderboard] = useState<UnifiedLeaderboardEntry[]>([]);
+  const [avalancheLeaderboard, setAvalancheLeaderboard] = useState<UnifiedLeaderboardEntry[]>([]);
   const [isSolanaLoading, setIsSolanaLoading] = useState(false);
+  const [isAvalancheLoading, setIsAvalancheLoading] = useState(false);
   const [solanaError, setSolanaError] = useState<string | null>(null);
+  const [avalancheError, setAvalancheError] = useState<string | null>(null);
 
   // Base leaderboard reads (existing)
   const {
@@ -52,8 +58,8 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
     address: JUMPS_LEADERBOARD_CONFIG.address as `0x${string}`,
     abi: JUMPS_LEADERBOARD_CONFIG.abi,
     functionName: "getTopUsers",
-    args: [limit],
-    chainId: 84532,
+    args: [BigInt(limit)],
+    chainId: 84532, // Base Sepolia
     query: {
       enabled: enabled && (chain === "all" || chain === "base"),
       staleTime: 60000,
@@ -72,10 +78,51 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
     address: PULLUPS_LEADERBOARD_CONFIG.address as `0x${string}`,
     abi: PULLUPS_LEADERBOARD_CONFIG.abi,
     functionName: "getTopUsers",
-    args: [limit],
-    chainId: 84532,
+    args: [BigInt(limit)],
+    chainId: 84532, // Base Sepolia
     query: {
       enabled: enabled && (chain === "all" || chain === "base"),
+      staleTime: 60000,
+      gcTime: 300000,
+      refetchOnWindowFocus: false,
+      refetchInterval: false,
+    },
+  });
+
+  // Avalanche leaderboard reads
+  const {
+    data: avalancheJumpsLeaderboardData,
+    isLoading: isAvalancheJumpsLoading,
+    error: avalancheJumpsError,
+    refetch: refetchAvalancheJumpsLeaderboard,
+  } = useReadContract({
+    address: JUMPS_LEADERBOARD_ADDRESSES["avalanche-fuji"] as `0x${string}`,
+    abi: EXERCISE_LEADERBOARD_ABI,
+    functionName: "getTopUsers",
+    args: [BigInt(limit)],
+    chainId: 43113, // Avalanche Fuji
+    query: {
+      enabled: enabled && (chain === "all" || chain === "avalanche"),
+      staleTime: 60000,
+      gcTime: 300000,
+      refetchOnWindowFocus: false,
+      refetchInterval: false,
+    },
+  });
+
+  const {
+    data: avalanchePullupsLeaderboardData,
+    isLoading: isAvalanchePullupsLoading,
+    error: avalanchePullupsError,
+    refetch: refetchAvalanchePullupsLeaderboard,
+  } = useReadContract({
+    address: PULLUPS_LEADERBOARD_ADDRESSES["avalanche-fuji"] as `0x${string}`,
+    abi: EXERCISE_LEADERBOARD_ABI,
+    functionName: "getTopUsers",
+    args: [BigInt(limit)],
+    chainId: 43113, // Avalanche Fuji
+    query: {
+      enabled: enabled && (chain === "all" || chain === "avalanche"),
       staleTime: 60000,
       gcTime: 300000,
       refetchOnWindowFocus: false,
@@ -118,10 +165,92 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
     }
   }, [connection, limit, enabled, chain]);
 
-  // Fetch Solana leaderboard when enabled or chain filter changes
+  // Fetch Avalanche leaderboard data
+  const fetchAvalancheLeaderboard = useCallback(() => {
+    if (!enabled || (chain !== "all" && chain !== "avalanche")) {
+      setAvalancheLeaderboard([]);
+      return;
+    }
+
+    try {
+      setIsAvalancheLoading(true);
+      setAvalancheError(null);
+
+      const avalancheLeaderboardData: UnifiedLeaderboardEntry[] = [];
+
+      // Process avalanche jumps data
+      if (avalancheJumpsLeaderboardData && Array.isArray(avalancheJumpsLeaderboardData)) {
+        avalancheJumpsLeaderboardData.forEach(
+          (entry: {
+            user: `0x${string}`;
+            totalScore: bigint;
+            bestSingleScore: bigint;
+            submissionCount: bigint;
+            lastSubmissionTime: bigint;
+          }) => {
+            avalancheLeaderboardData.push({
+              user: entry.user,
+              chain: "avalanche",
+              pullups: 0,
+              jumps: Number(entry.totalScore),
+              totalScore: Number(entry.totalScore),
+              submissionCount: Number(entry.submissionCount), // Convert to number
+              lastSubmissionTime: Number(entry.lastSubmissionTime),
+            });
+          }
+        );
+      }
+
+      // Process avalanche pullups data and merge with existing entries
+      if (avalanchePullupsLeaderboardData && Array.isArray(avalanchePullupsLeaderboardData)) {
+        avalanchePullupsLeaderboardData.forEach(
+          (entry: {
+            user: `0x${string}`;
+            totalScore: bigint;
+            bestSingleScore: bigint;
+            submissionCount: bigint;
+            lastSubmissionTime: bigint;
+          }) => {
+            // Find if user already exists in the array
+            const existingIndex = avalancheLeaderboardData.findIndex(user => user.user === entry.user);
+            if (existingIndex !== -1) {
+              // Update existing entry
+              avalancheLeaderboardData[existingIndex].pullups = Number(entry.totalScore);
+              avalancheLeaderboardData[existingIndex].totalScore += Number(entry.totalScore);
+              avalancheLeaderboardData[existingIndex].lastSubmissionTime = Math.max(
+                avalancheLeaderboardData[existingIndex].lastSubmissionTime,
+                Number(entry.lastSubmissionTime)
+              );
+            } else {
+              // Add new entry
+              avalancheLeaderboardData.push({
+                user: entry.user,
+                chain: "avalanche",
+                pullups: Number(entry.totalScore),
+                jumps: 0,
+                totalScore: Number(entry.totalScore),
+                submissionCount: Number(entry.submissionCount), // Convert to number
+                lastSubmissionTime: Number(entry.lastSubmissionTime),
+              });
+            }
+          }
+        );
+      }
+
+      setAvalancheLeaderboard(avalancheLeaderboardData);
+      setIsAvalancheLoading(false);
+    } catch (error) {
+      console.error("Error fetching Avalanche leaderboard:", error);
+      setAvalancheError(error instanceof Error ? error.message : "Failed to fetch Avalanche leaderboard");
+      setIsAvalancheLoading(false);
+    }
+  }, [avalancheJumpsLeaderboardData, avalanchePullupsLeaderboardData, enabled, chain, limit]);
+
+  // Fetch Solana and Avalanche leaderboards when enabled or chain filter changes
   useEffect(() => {
     fetchSolanaLeaderboard();
-  }, [fetchSolanaLeaderboard]);
+    fetchAvalancheLeaderboard();
+  }, [fetchSolanaLeaderboard, fetchAvalancheLeaderboard]);
 
   // Combine and process leaderboard data
   const leaderboard = useMemo(() => {
@@ -195,6 +324,11 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
       });
     }
 
+    // Add Avalanche leaderboard
+    if (chain === "all" || chain === "avalanche") {
+      combined.push(...avalancheLeaderboard);
+    }
+
     // Add Solana leaderboard
     if (chain === "all" || chain === "solana") {
       combined.push(...solanaLeaderboard);
@@ -209,14 +343,21 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
     });
 
     return combined;
-  }, [jumpsLeaderboardData, pullupsLeaderboardData, solanaLeaderboard, chain]);
+  }, [jumpsLeaderboardData, pullupsLeaderboardData, solanaLeaderboard, avalancheLeaderboard, chain]);
 
   return {
     leaderboard,
-    isLoading: isJumpsLoading || isPullupsLoading || isSolanaLoading,
-    error: jumpsError?.message || pullupsError?.message || solanaError,
+    isLoading: isJumpsLoading || isPullupsLoading || isSolanaLoading || isAvalancheLoading,
+    error: jumpsError?.message || pullupsError?.message || solanaError || avalancheError,
     refetch: async () => {
-      await Promise.all([refetchJumpsLeaderboard(), refetchPullupsLeaderboard()]);
+      await Promise.all([
+        refetchJumpsLeaderboard(),
+        refetchPullupsLeaderboard()
+      ]);
+      await Promise.all([
+        refetchAvalancheJumpsLeaderboard(),
+        refetchAvalanchePullupsLeaderboard()
+      ]);
       await fetchSolanaLeaderboard();
     },
   };

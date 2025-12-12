@@ -34,7 +34,7 @@ interface LeaderboardEntry {
   jumps: number;
   timestamp: number;
   rank: number;
-  chain?: "base" | "solana";
+  chain?: "base" | "solana" | "avalanche";
 }
 
 interface LeaderboardProps {
@@ -47,22 +47,33 @@ interface LeaderboardProps {
 }
 
 // Chain badge component
-const ChainBadge = ({ chain }: { chain?: "base" | "solana" }) => {
+const ChainBadge = ({ chain }: { chain?: "base" | "avalanche" | "solana" }) => {
   if (!chain) return null;
-  
-  return chain === "solana" ? (
-    <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 dark:text-purple-400 text-xs">
-      SOL
-    </Badge>
-  ) : (
-    <Badge variant="secondary" className="bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs">
-      BASE
-    </Badge>
-  );
+
+  switch (chain) {
+    case "solana":
+      return (
+        <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 dark:text-purple-400 text-xs">
+          SOL
+        </Badge>
+      );
+    case "avalanche":
+      return (
+        <Badge variant="secondary" className="bg-red-500/10 text-red-700 dark:text-red-400 text-xs">
+          AVAX
+        </Badge>
+      );
+    default: // base
+      return (
+        <Badge variant="secondary" className="bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs">
+          BASE
+        </Badge>
+      );
+  }
 };
 
 // Enhanced user display component with social identity support
-const UserDisplay = ({ address, chain, showActions = false }: { address: string; chain?: "base" | "solana"; showActions?: boolean }) => {
+const UserDisplay = ({ address, chain, showActions = false }: { address: string; chain?: "base" | "avalanche" | "solana"; showActions?: boolean }) => {
   const { basename, isLoading: basenameLoading } = useBasename(address);
   const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
     enabled: !basenameLoading && !basename // Only fetch if no basename
@@ -502,6 +513,7 @@ const Leaderboard = ({
                <SelectContent>
                  <SelectItem value="all">All Chains</SelectItem>
                  <SelectItem value="base">Base</SelectItem>
+                 <SelectItem value="avalanche">Avalanche</SelectItem>
                  <SelectItem value="solana">Solana</SelectItem>
                </SelectContent>
              </Select>

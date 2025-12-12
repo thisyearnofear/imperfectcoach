@@ -361,7 +361,52 @@ export const useSolanaNameService = (walletAddress?: string) => {
   return { solName, isLoading, error };
 };
 
-export const useDisplayName = (address?: string, chain?: 'solana' | 'base') => {
+// ENS name resolution hook
+const useENSName = (address?: string) => {
+  const [ensName, setEnsName] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!address || !address.startsWith('0x')) {
+      setEnsName(null);
+      setError(null);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    const resolveENS = async () => {
+      try {
+        // Import viem's getEnsName directly
+        const { getEnsName } = await import('viem/ens');
+        const { createPublicClient, http } = await import('viem');
+        const { mainnet } = await import('viem/chains');
+
+        const client = createPublicClient({
+          chain: mainnet,
+          transport: http(),
+        });
+
+        const name = await getEnsName(client, { address: address as `0x${string}` });
+        setEnsName(name);
+        setIsLoading(false);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'ENS lookup failed';
+        setError(errorMsg);
+        setEnsName(null);
+        setIsLoading(false);
+      }
+    };
+
+    resolveENS();
+  }, [address]);
+
+  return { ensName, isLoading, error };
+};
+
+export const useDisplayName = (address?: string, chain?: 'solana' | 'base' | 'avalanche') => {
   const { basename, isLoading: basenameLoading } = useBasename(address);
   const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
     enabled: !basenameLoading && !basename,
@@ -369,11 +414,13 @@ export const useDisplayName = (address?: string, chain?: 'solana' | 'base') => {
   const social = getPrimarySocialIdentity();
   const shouldRunSNS = !social && !basename && chain === 'solana';
   const { solName, isLoading: snsLoading } = useSolanaNameService(shouldRunSNS ? address : undefined);
+  const shouldRunENS = !social && !basename && chain === 'avalanche';
+  const { ensName, isLoading: ensLoading } = useENSName(shouldRunENS ? address : undefined);
 
-  const isLoading = basenameLoading || identityLoading || snsLoading;
+  const isLoading = basenameLoading || identityLoading || snsLoading || ensLoading;
 
   let displayName: string;
-  let source: 'social' | 'basename' | 'sol' | 'address';
+  let source: 'social' | 'basename' | 'sol' | 'ens' | 'address';
 
   if (isLoading) {
     displayName = 'Loading...';
@@ -387,6 +434,9 @@ export const useDisplayName = (address?: string, chain?: 'solana' | 'base') => {
   } else if (solName) {
     displayName = solName;
     source = 'sol';
+  } else if (ensName) {
+    displayName = ensName;
+    source = 'ens';
   } else if (address) {
     displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
     source = 'address';

@@ -10,7 +10,7 @@ import {
 } from "@/lib/types";
 import { useAudioFeedback } from "./useAudioFeedback";
 import { processPullups, createPullupState, resetPullupState, type PullupState } from "@/lib/exercise-processors/pullupProcessor";
-import { processJumpsEnhanced, createJumpState } from "@/lib/exercise-processors/enhancedJumpProcessor";
+import { processJumpsEnhanced, createJumpState, type JumpState } from "@/lib/exercise-processors/enhancedJumpProcessor";
 import { useAIFeedback } from "./useAIFeedback";
 import { useExerciseState } from "./useExerciseState";
 import { handleProcessorResult } from "@/lib/processorResultHandler";
@@ -73,34 +73,34 @@ export const useExerciseProcessor = ({
   const formIssuePulse = useRef(false);
   const pulseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentJumpHeight = useRef(0);
-  
+
   // AGGRESSIVE CONSOLIDATION: Single jump state replaces multiple tracking systems
-  const jumpState = useRef(createJumpState());
-  
+  const jumpState = useRef<JumpState>(createJumpState());
+
   // ENHANCEMENT: Pull-up state for learning phase management (mirrors jump pattern)
   const pullupState = useRef<PullupState>(createPullupState());
-  
+
   // ENHANCEMENT: Reset pull-up state when exercise changes
   useEffect(() => {
     if (exercise === 'pull-ups') {
       resetPullupState(pullupState.current);
     }
   }, [exercise]);
-  
+
   // CLEAN: Simple pose validation without complex readiness system
   const validateBasicPose = useCallback((keypoints: posedetection.Keypoint[]) => {
-    const requiredPoints = exercise === 'jumps' 
+    const requiredPoints = exercise === 'jumps'
       ? ['left_hip', 'right_hip', 'left_knee', 'right_knee', 'left_ankle', 'right_ankle']
       : ['left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist'];
-    
+
     const visibleCount = requiredPoints.filter(name => {
       const point = keypoints.find(k => k.name === name);
       return point && point.score > 0.4;
     }).length;
-    
+
     const readinessScore = (visibleCount / requiredPoints.length) * 100;
     const canProceed = readinessScore >= 70; // Simple threshold
-    
+
     let feedback = '';
     if (readinessScore < 40) {
       feedback = 'Make sure your full body is visible in the camera.';
@@ -109,7 +109,7 @@ export const useExerciseProcessor = ({
     } else {
       feedback = exercise === 'jumps' ? 'Ready to jump!' : 'Ready for pull-ups!';
     }
-    
+
     return { score: readinessScore, feedback, canProceed };
   }, [exercise]);
 
@@ -139,13 +139,13 @@ export const useExerciseProcessor = ({
       }
 
       let result:
-        | (Omit<ProcessorResult, "feedback"> & { feedback?: string })
+        | (Omit<ProcessorResult, "feedback"> & { feedback?: string; jumpState?: JumpState; pullupState?: PullupState })
         | null = null;
 
       // CLEAN: Simple pose validation when workout is not active
       if (!isWorkoutActive) {
         const readinessScore = validateBasicPose(keypoints);
-        
+
         if (onReadinessUpdate) {
           onReadinessUpdate(readinessScore);
         }
@@ -180,7 +180,7 @@ export const useExerciseProcessor = ({
             lastRepIssues: lastRepIssues.current,
             jumpState: jumpState.current,
           });
-          
+
           // Update jump height for display
           if (jumpState.current.isCalibrated && jumpState.current.groundLevel) {
             const leftAnkle = keypoints.find(k => k.name === 'left_ankle');
@@ -198,7 +198,7 @@ export const useExerciseProcessor = ({
         if ('jumpState' in result && result.jumpState) {
           jumpState.current = result.jumpState;
         }
-        
+
         // Update pull-up state if returned by processor
         if ('pullupState' in result && result.pullupState) {
           pullupState.current = result.pullupState;
@@ -266,14 +266,15 @@ export const useExerciseProcessor = ({
       currentRepAngles,
       peakAirborneY,
       incrementReps,
+      updateFormStreak,
     ]
   );
 
   return {
     processPose,
     formIssuePulse: formIssuePulse.current,
-    avgScore: repScores.current.length > 0 
-      ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length 
+    avgScore: repScores.current.length > 0
+      ? repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length
       : 0,
     currentJumpHeight: currentJumpHeight.current,
     jumpGroundLevel: jumpState.current.groundLevel,
