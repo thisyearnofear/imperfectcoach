@@ -99,11 +99,15 @@ export const useIndexPage = () => {
 
   // Effects
   useEffect(() => {
-    // When workout ends, open analytics if reps were done
+    // When workout ends (either manual stop or timeout), update state and scroll
     if (wasWorkoutActive.current && !isWorkoutActive && repHistory.length > 0) {
-      setFormFeedback("Time's up! Great session. Here's your summary.");
+      // Only show "Time's up" message if this was a timeout (not manual stop)
+      if (timeLeft <= 0) {
+        setFormFeedback("Time's up! Great session. Here's your summary.");
+      }
       setIsAnalyticsOpen(true);
       setSessionHasConcluded(true);
+      // Scroll to results section - this triggers autoscroll in PostWorkoutFlow
       setTimeout(
         () =>
           analyticsRef.current?.scrollIntoView({
@@ -114,7 +118,7 @@ export const useIndexPage = () => {
       );
     }
     wasWorkoutActive.current = isWorkoutActive;
-  }, [isWorkoutActive, repHistory.length, setFormFeedback, analyticsRef]);
+  }, [isWorkoutActive, repHistory.length, setFormFeedback, analyticsRef, timeLeft]);
 
   // AI summary generation moved to PostWorkoutFlow component to avoid duplication
 
