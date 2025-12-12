@@ -100,7 +100,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
       // PRINCIPLE: DRY - Single source of truth for agents and their sequence
       const specialists = getSpecialists();
       const coachAgent = getAgent('agent-fitness-core-01');
-      
+
       // Build progress steps: payment → coach init → specialists → synthesis
       const progressSteps: Array<{ step: string; progress: number; agentIndex: number; status: ContributionStatus; agent?: CoreAgent }> = [
         { step: "Processing x402 payment...", progress: 10, agentIndex: -1, status: 'processing' },
@@ -113,24 +113,24 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
         const basePrice = specialist.pricing[specialist.capabilities[0]]?.baseFee || "0.00";
         const repBadge = `${specialist.reputationScore}/100`; // Reputation badge
         progressSteps.push(
-          { 
-            step: `🔍 Discovering ${specialist.name}... [${repBadge}]`, 
-            progress: 20 + ((idx + 1) * progressPerAgent * 0.3), 
-            agentIndex: idx + 1, 
+          {
+            step: `🔍 Discovering ${specialist.name}... [${repBadge}]`,
+            progress: 20 + ((idx + 1) * progressPerAgent * 0.3),
+            agentIndex: idx + 1,
             status: 'discovering',
             agent: specialist
           },
-          { 
-            step: `💳 Negotiating with ${specialist.name} ($${basePrice})...`, 
-            progress: 20 + ((idx + 1) * progressPerAgent * 0.6), 
-            agentIndex: idx + 1, 
+          {
+            step: `💳 Negotiating with ${specialist.name} ($${basePrice})...`,
+            progress: 20 + ((idx + 1) * progressPerAgent * 0.6),
+            agentIndex: idx + 1,
             status: 'negotiating',
             agent: specialist
           },
-          { 
-            step: `${specialist.emoji} ${specialist.name} analyzing... [${specialist.successRate * 100 | 0}% success]`, 
-            progress: 20 + ((idx + 1) * progressPerAgent), 
-            agentIndex: idx + 1, 
+          {
+            step: `${specialist.emoji} ${specialist.name} analyzing... [${specialist.successRate * 100 | 0}% success]`,
+            progress: 20 + ((idx + 1) * progressPerAgent),
+            agentIndex: idx + 1,
             status: 'processing',
             agent: specialist
           }
@@ -185,7 +185,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
             } else if (current.agentIndex > 0) {
               const idx = current.agentIndex - 1;
               if (updated.contributors[idx]) {
-                const agentKey = agentKeys[current.agentIndex];
+                const agentKey = current.agent?.id || 'agent-fitness-core-01';
                 updated.contributors[idx] = {
                   ...updated.contributors[idx],
                   status: current.status,
@@ -510,21 +510,21 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   return (
     <Card className="border-purple-500/50 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/30 backdrop-blur-sm">
       <CardHeader className="pb-2">
-       <div className="flex items-center justify-between">
-         <div className="flex items-center gap-2">
-           <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-indigo-500/20">
-             <Brain className="h-6 w-6 text-purple-400" />
-           </div>
-           <div>
-             <CardTitle>AI Coach Agent</CardTitle>
-             <p className="text-sm text-muted-foreground">Powered by x402 Agent Economy</p>
-           </div>
-         </div>
-         <Badge variant="outline" className="bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border-purple-400 text-purple-200">
-           <Sparkles className="h-3 w-3 mr-1" />
-           {getSpecialists().length} Specialists
-         </Badge>
-       </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-indigo-500/20">
+              <Brain className="h-6 w-6 text-purple-400" />
+            </div>
+            <div>
+              <CardTitle>AI Coach Agent</CardTitle>
+              <p className="text-sm text-muted-foreground">Powered by x402 Agent Economy</p>
+            </div>
+          </div>
+          <Badge variant="outline" className="bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border-purple-400 text-purple-200">
+            <Sparkles className="h-3 w-3 mr-1" />
+            {getSpecialists().length} Specialists
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Agent Value Proposition - Shows what user gets */}
