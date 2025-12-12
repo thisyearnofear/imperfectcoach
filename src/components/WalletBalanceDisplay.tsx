@@ -29,7 +29,7 @@ interface ChainBalance {
 
 // USDC contract addresses for supported chains
 const USDC_ADDRESS_BASE = getAddress("0x036CbD53842c5426634e7929541eC2318f3dCF7e");
-const USDC_ADDRESS_AVALANCHE = getAddress("0x5425890298aed601595a70AB815c96711a756003");
+const USDC_ADDRESS_AVALANCHE = getAddress("0x5425890298aed601595a70AB815c96711a31Bc65");
 const USDC_MINT_SOLANA = "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr";
 
 // Helper to get chain config based on chainId
@@ -122,16 +122,15 @@ export function WalletBalanceDisplay({
           onInsufficientFunds();
         }
       } catch (error) {
-        console.warn(`Could not fetch USDC balance on ${currentChainName}:`, error);
-        
-        // For testnet chains, gracefully degrade: show native balance only, no USDC requirement
+        console.error(`Failed to fetch ${currentChainName} balances:`, error);
+        console.error("Address:", baseAddress);
+        console.error("USDC contract address:", currentUsdcAddress);
+        console.error("Chain:", currentChain.id, currentChainName);
+
         setBaseBalance(prev => ({
-          chain: "base",
-          usdc: 0, // Assume 0 USDC if contract doesn't respond
-          native: nativeAmount,
-          hasEnough: true, // Don't block on USDC check for testnet
+          ...prev,
           isLoading: false,
-          error: undefined,
+          error: "Failed to fetch balance",
         }));
       }
     };
