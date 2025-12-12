@@ -95,7 +95,12 @@ const CORS_HEADERS = {
  * Generate x402 402 Payment Required challenge
  */
 function createPaymentChallenge(network = "base-mainnet") {
-  const config = X402_CONFIG[network];
+  // Normalize network aliases
+  let targetNetwork = network;
+  if (network === "base") targetNetwork = "base-sepolia";
+  if (network === "avalanche") targetNetwork = "avalanche-fuji";
+
+  const config = X402_CONFIG[targetNetwork];
   if (!config) {
     throw new Error(`Unknown network: ${network}`);
   }

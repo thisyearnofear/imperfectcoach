@@ -69,10 +69,20 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   const { data: walletClient } = useWalletClient();
   const { solanaAddress, isSolanaConnected } = useWalletConnection();
 
-  // Determine which wallet is connected
+  // Determine which wallet is connected and the actual chain
   const walletAddress = address || solanaAddress;
   const walletConnected = isConnected || isSolanaConnected;
-  const walletChain = isConnected ? "base" : isSolanaConnected ? "solana" : undefined;
+  
+  // Detect actual chain for EVM wallets
+  let walletChain = isSolanaConnected ? "solana" : undefined;
+  if (isConnected && walletClient?.chain) {
+    const chainId = walletClient.chain.id;
+    if (chainId === 43113) { // Avalanche Fuji
+      walletChain = "avalanche";
+    } else if (chainId === 84532) { // Base Sepolia
+      walletChain = "base";
+    }
+  }
 
   const handleUnlockAgent = async () => {
     if (!walletConnected || !walletAddress) {
@@ -89,7 +99,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
     setCurrentStep("Initializing AI Coach Agent...");
 
     // Determine network for agent economy
-    const networkId = walletChain === 'solana' ? 'solana-devnet' : 'avalanche-c-chain';
+    const networkId = walletChain === 'solana' ? 'solana-devnet' : walletChain === 'avalanche' ? 'avalanche-c-chain' : 'base-sepolia';
 
     // Initialize agent coordination state
     const initialCoordination = createInitialCoordinationState(networkId);
@@ -235,7 +245,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
         },
         evmWallet: walletClient,
         evmAddress: address, // 'address' from wagmi
-        preferredChain: walletChain === 'solana' ? 'solana' : 'base'
+        preferredChain: walletChain === 'solana' ? 'solana' : walletChain === 'avalanche' ? 'avalanche' : 'base'
       });
 
       // Stop the simulation once real result (or error) comes back

@@ -120,15 +120,23 @@ const BedrockAnalysisSection = ({
       // Determine which wallet to use
       let address: string;
       let signMessage: (message: string) => Promise<string>;
-      let walletChain: "base" | "solana";
+      let walletChain: "base" | "avalanche" | "solana";
 
       if (isConnected && walletClient) {
-        // Use Base wallet
+        // Use EVM wallet - detect if it's Base or Avalanche
         address = walletClient.account?.address || "";
         if (!address) {
-          throw new Error("No Base wallet address found");
+          throw new Error("No EVM wallet address found");
         }
-        walletChain = "base";
+        
+        // Detect current chain by checking chainId
+        const chainId = walletClient.chain?.id;
+        if (chainId === 43113) { // Avalanche Fuji
+          walletChain = "avalanche";
+        } else { // Default to Base Sepolia
+          walletChain = "base";
+        }
+        
         signMessage = async (msg: string) => {
           return await walletClient.signMessage({
             account: address as `0x${string} `,
@@ -171,7 +179,7 @@ const BedrockAnalysisSection = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Chain": walletChain || "base" // Tell server which chain we're using
+          "X-Chain": walletChain === "avalanche" ? "avalanche-fuji" : walletChain === "base" ? "base-sepolia" : "solana-devnet"
         },
         body: JSON.stringify({
           workoutData: {
@@ -227,7 +235,7 @@ const BedrockAnalysisSection = ({
           headers: {
             "Content-Type": "application/json",
             "X-Payment": paymentHeader,
-            "X-Chain": walletChain || "base"
+            "X-Chain": walletChain === "avalanche" ? "avalanche-fuji" : walletChain === "base" ? "base-sepolia" : "solana-devnet"
           },
           body: JSON.stringify({
             workoutData: {

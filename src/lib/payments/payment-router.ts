@@ -31,7 +31,7 @@ export interface RoutingContext {
     requestBody: any;
     evmWallet?: any; // WalletClient type is tricky with wagmi versions sometimes, keeping flexible or typed if possible
     evmAddress?: string;
-    preferredChain?: "base" | "solana";
+    preferredChain?: "base" | "solana" | "avalanche";
 }
 
 export interface PaymentResult {
@@ -65,23 +65,36 @@ export class PaymentRouter {
 
         // Detect available chains based on connected wallets
         const isSolanaAvailable = solanaWalletManager.isConnected();
-        const isBaseAvailable = !!evmWallet && !!evmAddress;
-        const isAvalancheAvailable = !!evmWallet && !!evmAddress; // Avalanche uses same EVM wallet as Base
+        const isEvmAvailable = !!evmWallet && !!evmAddress;
 
-        if (!isSolanaAvailable && !isAvalancheAvailable && !isBaseAvailable) {
+        if (!isSolanaAvailable && !isEvmAvailable) {
             throw new Error("No wallet connected. Please connect a wallet to proceed.");
         }
 
-        // Determine initial chain hint header
-        let chainHeader = "avalanche-fuji"; // Default to Avalanche (Hack2Build primary)
-        if (preferredChain === "solana" && isSolanaAvailable) {
-            chainHeader = "solana-devnet";
-        } else if (preferredChain === "base" && isBaseAvailable) {
-            chainHeader = "base-sepolia";
-        } else if (preferredChain === "avalanche" && isAvalancheAvailable) {
-            chainHeader = "avalanche-fuji";
+        // Determine actual chain by checking wallet client chain ID
+        let chainHeader = "base-sepolia"; // Default to Base Sepolia
+
+        // If EVM wallet is available, detect the actual chain
+        if (isEvmAvailable && evmWallet?.chain) {
+            const chainId = evmWallet.chain.id;
+            if (chainId === 43113) { // Avalanche Fuji
+                chainHeader = "avalanche-fuji";
+            } else if (chainId === 84532) { // Base Sepolia
+                chainHeader = "base-sepolia";
+            }
         } else if (isSolanaAvailable) {
             chainHeader = "solana-devnet";
+        }
+
+        // Override with preferredChain if explicitly specified
+        if (preferredChain) {
+            if (preferredChain === "solana" && isSolanaAvailable) {
+                chainHeader = "solana-devnet";
+            } else if (preferredChain === "base" && isEvmAvailable) {
+                chainHeader = "base-sepolia";
+            } else if (preferredChain === "avalanche" && isEvmAvailable) {
+                chainHeader = "avalanche-fuji";
+            }
         }
 
         console.log(`🚀 PaymentRouter: Starting request to ${apiUrl} [Preferred: ${chainHeader}]`);
@@ -176,6 +189,8 @@ export class PaymentRouter {
         // Try to match target chain first
         if (targetChain.includes("solana")) {
             selectedRequirement = availableSchemes.find(s => s.network.includes("solana"));
+        } else if (targetChain.includes("avalanche")) {
+            selectedRequirement = availableSchemes.find(s => s.network.includes("avalanche"));
         } else {
             selectedRequirement = availableSchemes.find(s => s.network.includes("base") || s.network.includes("ethereum"));
         }
