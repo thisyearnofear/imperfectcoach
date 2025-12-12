@@ -18,6 +18,7 @@ import { ServiceTier, AgentCapability, AgentProfile } from "@/lib/agents/types";
 import { PaymentRouter, RoutingContext } from "@/lib/payments/payment-router";
 import { API_ENDPOINTS } from "@/lib/config";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { calculateTieredPrice } from "@/lib/agents/service-tiers";
 
 type BookingStep = "tier-select" | "agent-select" | "confirm" | "processing" | "complete" | "error";
 
@@ -84,9 +85,8 @@ export const ServiceBookingFlow = ({
     if (!isConnected) {
       setBooking((prev) => ({
         ...prev,
-        errorMessage: `Please connect your ${
-          preferredChain === "solana" ? "Solana" : "Base"
-        } wallet to proceed.`,
+        errorMessage: `Please connect your ${preferredChain === "solana" ? "Solana" : "Base"
+          } wallet to proceed.`,
       }));
       setStep("error");
       return;
@@ -165,10 +165,7 @@ export const ServiceBookingFlow = ({
   };
 
   const getTierPrice = (tier: ServiceTier): string => {
-    const { TIER_PRICE_MULTIPLIERS } = require("@/lib/agents/service-tiers");
-    const baseNum = parseFloat(basePrice);
-    const multiplier = TIER_PRICE_MULTIPLIERS[tier];
-    return (baseNum * multiplier).toFixed(4);
+    return calculateTieredPrice(basePrice, tier);
   };
 
   return (
@@ -411,7 +408,6 @@ export const ServiceBookingFlow = ({
               <Button
                 variant="outline"
                 onClick={() => setStep("confirm")}
-                disabled={step === "tier-select"}
               >
                 Back
               </Button>
