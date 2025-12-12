@@ -71,7 +71,7 @@ const X402_CONFIG = {
   },
   "avalanche-fuji": {
     amount: "50000",
-    asset: "0x5425890298aed601595a70AB815c96711a756003",
+    asset: "0x5425890298aed601595a70AB815c96711a31Bc65",
     payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
     chainId: 43113,
   },

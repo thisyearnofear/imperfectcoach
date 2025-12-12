@@ -4,7 +4,7 @@ set -e
 echo "🔨 Building Lambda functions with esbuild..."
 
 # Clean start to fix pnpm symlink issues
-rm -rf node_modules dist
+rm -rf dist
 mkdir -p dist
 
 echo "📥 Installing dependencies with pnpm (hoisted)..."
