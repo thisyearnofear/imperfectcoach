@@ -1,8 +1,10 @@
 import { useCallback, useState, useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
+import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
+import { baseSepolia, avalancheFuji } from "wagmi/chains";
 import { toast } from "sonner";
 import { getContractConfig } from "@/lib/contracts";
+import { JUMPS_LEADERBOARD_ADDRESSES, PULLUPS_LEADERBOARD_ADDRESSES } from "@/lib/contracts";
+import { EXERCISE_LEADERBOARD_ABI } from "@/lib/contracts";
 import { trackTransaction, analyzeTransactionError } from "@/lib/cdp";
 import { submitScoreToSolana, type ExerciseType } from "@/lib/solana/leaderboard";
 import { areAddressesConfigured } from "@/lib/solana/config";
@@ -15,6 +17,28 @@ interface ScoreSubmissionState {
   lastHash?: string;
   submitError?: string;
 }
+
+// Helper to get the leaderboard address for current chain
+const getLeaderboardAddressForChain = (exercise: "jumps" | "pullups", chainId?: number): string => {
+  // Determine which addresses object to use
+  const addressMap = exercise === "jumps" ? JUMPS_LEADERBOARD_ADDRESSES : PULLUPS_LEADERBOARD_ADDRESSES;
+  
+  // Map chain ID to key
+  let key: keyof typeof addressMap = "base-sepolia"; // default
+  if (chainId === avalancheFuji.id) {
+    key = "avalanche-fuji";
+  }
+  
+  return addressMap[key];
+};
+
+// Helper to get the correct wagmi chain object
+const getChainForChainId = (chainId?: number) => {
+  if (chainId === avalancheFuji.id) {
+    return avalancheFuji;
+  }
+  return baseSepolia; // default
+};
 
 export const useScoreSubmission = (
   // Base wallet state
@@ -32,6 +56,9 @@ export const useScoreSubmission = (
   const [submissionState, setSubmissionState] = useState<ScoreSubmissionState>({
     isSubmittingScore: false,
   });
+  
+  // Get current chain from wagmi
+  const { chainId } = useAccount();
 
   // Base blockchain submission
   const { writeContract, data: writeContractData } = useWriteContract();
@@ -96,20 +123,26 @@ export const useScoreSubmission = (
 
   const submitToBase = useCallback(async (exercise: "jumps" | "pullups", score: number) => {
     if (!isConnected || !address) {
-      toast.error("Please connect your Base wallet first");
+      toast.error("Please connect your wallet first");
       return;
     }
 
     return handleSubmission(async () => {
-      const contractConfig = getContractConfig(exercise);
+      // Get the correct contract address for the current chain
+      const contractAddress = getLeaderboardAddressForChain(exercise, chainId);
+      const currentChain = getChainForChainId(chainId);
+      
+      if (!contractAddress) {
+        throw new Error(`Leaderboard contract not deployed on this chain`);
+      }
 
       // Call writeContract - it triggers the transaction and wagmi manages the hash internally
       writeContract({
-        address: contractConfig.address as `0x${string}`,
-        abi: contractConfig.abi,
+        address: contractAddress as `0x${string}`,
+        abi: EXERCISE_LEADERBOARD_ABI,
         functionName: "addScore",
         args: [address, score],
-        chain: baseSepolia,
+        chain: currentChain,
         account: address as `0x${string}`,
       });
 
@@ -117,7 +150,7 @@ export const useScoreSubmission = (
       // Return empty object as the hash is managed by the hook
       return {};
     }, 'base', exercise);
-  }, [isConnected, address, writeContract, handleSubmission]);
+  }, [isConnected, address, writeContract, handleSubmission, chainId]);
 
   const submitToSolana = useCallback(async (exercise: ExerciseType, score: number, leaderboardAddress: PublicKey, wallet: WalletContextState) => {
     if (!isSolanaConnected || !solanaPublicKey || !connection) {

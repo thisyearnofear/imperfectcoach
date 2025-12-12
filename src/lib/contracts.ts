@@ -576,6 +576,17 @@ export const EXERCISE_LEADERBOARD_ABI = [
 
 // Contract configurations for individual exercise leaderboards
 // PUBLIC LEADERBOARDS - Users can submit their own scores directly
+// Leaderboard contract addresses by chain
+export const PULLUPS_LEADERBOARD_ADDRESSES = {
+  "base-sepolia": "0xf117057bd019C9680D5C92b48d825C294FA6c197",
+  "avalanche-fuji": "0x8f9e2A8e2C8d0E9F5A2B3C4D5E6F7A8B9C0D1E2F", // TODO: Deploy on Avalanche Fuji
+};
+
+export const JUMPS_LEADERBOARD_ADDRESSES = {
+  "base-sepolia": "0xCD12e7B14dE9481297D4f32d98177aEC95fcC444",
+  "avalanche-fuji": "0x9A0B1C2D3E4F5A6B7C8D9E0F1A2B3C4D5E6F7A8B", // TODO: Deploy on Avalanche Fuji
+};
+
 export const PULLUPS_LEADERBOARD_CONFIG: ContractConfig = {
   address: "0xf117057bd019C9680D5C92b48d825C294FA6c197", // Pullups Leaderboard on Base Sepolia (Public)
   abi: EXERCISE_LEADERBOARD_ABI,
