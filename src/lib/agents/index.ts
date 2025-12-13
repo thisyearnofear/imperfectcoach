@@ -36,3 +36,6 @@ export * from './oumi-integration';
 export * from './enhanced-orchestrator';
 export * from './real-payments';
 export * from './marketplace';
+
+// Analysis Transformation: Converts raw JSON to structured data for visualization
+export * from './analysis-transformer';
