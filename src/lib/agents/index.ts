@@ -29,8 +29,8 @@ export { AgentRegistry } from './registry';
 // Service Tiers: SLA and tier definitions
 export * from './service-tiers';
 
-// Enhanced Agent Economy: Advanced orchestration and integration
-export * from './integration-layer';
+// Enhanced Agent Economy: Advanced orchestration integrated into existing components
+// PRINCIPLE: AGGRESSIVE CONSOLIDATION - Using enhanced profiles instead of separate files
 export * from './kestra-orchestrator';
 export * from './oumi-integration';
 export * from './enhanced-orchestrator';
