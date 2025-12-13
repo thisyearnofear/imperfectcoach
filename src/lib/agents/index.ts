@@ -28,3 +28,11 @@ export { AgentRegistry } from './registry';
 
 // Service Tiers: SLA and tier definitions
 export * from './service-tiers';
+
+// Enhanced Agent Economy: Advanced orchestration and integration
+export * from './integration-layer';
+export * from './kestra-orchestrator';
+export * from './oumi-integration';
+export * from './enhanced-orchestrator';
+export * from './real-payments';
+export * from './marketplace';
