@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useAccount, useChainId } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ import {
 import { useUserBlockchain } from "@/hooks/useUserHooks";
 import { cn } from "@/lib/utils";
 import { getNetworkConfig, isNetworkSupported, getAvailableSupportedNetworks } from "@/lib/config";
+import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
 
 interface NetworkStatusProps {
   variant?: "compact" | "full" | "alert";
@@ -42,20 +43,49 @@ export const NetworkStatus = ({
 }: NetworkStatusProps) => {
   const { isConnected } = useAccount();
   const chainId = useChainId();
+  const [solanaConnected, setSolanaConnected] = useState(false);
 
-  if (!isConnected) {
+  // Monitor Solana wallet connection
+  useEffect(() => {
+    const checkSolana = () => {
+      const state = solanaWalletManager.getState();
+      setSolanaConnected(state.connected);
+    };
+
+    checkSolana();
+    const interval = setInterval(checkSolana, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!isConnected && !solanaConnected) {
     return null;
   }
 
-  const networkConfig = getNetworkConfig(chainId);
-  const isSupported = isNetworkSupported(chainId);
+  // Determine which network is active
+  const isSolanaActive = solanaConnected && !isConnected;
   
-  const displayInfo = networkConfig || {
-    name: `Unknown Network (${chainId})`,
-    status: "unsupported" as const,
-    features: [] as string[],
-    description: "Unsupported network. Switch to a supported testnet above.",
-  };
+  let displayInfo;
+  
+  if (isSolanaActive) {
+    // Solana is the active network
+    displayInfo = {
+      name: "Solana Devnet",
+      status: "supported" as const,
+      features: ["agents", "payments"],
+      description: "Solana devnet - agent services available",
+    };
+  } else {
+    // EVM network is active
+    const networkConfig = getNetworkConfig(chainId);
+    const isSupported = isNetworkSupported(chainId);
+    
+    displayInfo = networkConfig || {
+      name: `Unknown Network (${chainId})`,
+      status: "unsupported" as const,
+      features: [] as string[],
+      description: "Unsupported network. Switch to a supported testnet above.",
+    };
+  }
 
   // Compact variant for headers/toolbars
   if (variant === "compact") {
