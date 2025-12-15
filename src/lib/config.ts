@@ -16,7 +16,7 @@ export const API_ENDPOINTS = {
 
     // Agent Discovery Service
     AGENT_DISCOVERY: import.meta.env.VITE_AGENT_DISCOVERY_URL ||
-        "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/discovery",
+        "https://r03m1wznai.execute-api.eu-north-1.amazonaws.com/prod/agents",
 } as const;
 
 // Network Configuration
