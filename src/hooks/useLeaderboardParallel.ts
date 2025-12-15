@@ -143,8 +143,6 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
       setIsSolanaLoading(true);
       setSolanaError(null);
 
-      // For now, return empty array - getTopUsersFromSolana returns [] until program deployed
-      // This ensures parallel fetch structure is in place
       const solanaEntries = await getTopUsersFromSolana(limit);
 
       // Convert Solana entries to unified format
@@ -165,7 +163,7 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
       setSolanaError(error instanceof Error ? error.message : "Failed to fetch Solana leaderboard");
       setIsSolanaLoading(false);
     }
-  }, [connection, limit, enabled, chain]);
+  }, [limit, enabled, chain]);
 
   // Fetch Avalanche leaderboard data
   const fetchAvalancheLeaderboard = useCallback(() => {

@@ -1,28 +1,48 @@
 /**
  * Solana Leaderboard Configuration
- * Update these addresses after deploying the exercise-specific contracts
+ * Single source of truth for all Solana configuration
  */
 
 import { Connection, PublicKey } from "@solana/web3.js";
 import type { ExerciseType } from "./leaderboard";
 
-// RPC Configuration - CENTRALIZED (DRY Principle)
-// 1. Try VITE env var (custom RPC)
-// 2. Fallback to Helius Devnet (Hardcoded for immediate stability)
-export const SOLANA_RPC_URL = import.meta.env.VITE_SOLANA_DEVNET_RPC_URL || "https://devnet.helius-rpc.com/?api-key=e96c1161-caae-409e-bd32-f536c1d354ef";
+// Determine runtime env (supports Vite/browser + Node scripts/tests)
+const runtimeEnv = (() => {
+  if (typeof import.meta !== "undefined" && (import.meta as any).env) {
+    return (import.meta as any).env as Record<string, string | undefined>;
+  }
+  if (typeof process !== "undefined" && process.env) {
+    return process.env as Record<string, string | undefined>;
+  }
+  return {} as Record<string, string | undefined>;
+})();
+
+// RPC Configuration - CENTRALIZED (DRY + PERFORMANT)
+// Priority: Custom RPC > Helius (with key) > Public endpoint (rate-limited)
+function buildRpcUrl(): string {
+  const customRpc = runtimeEnv.VITE_SOLANA_DEVNET_RPC_URL || runtimeEnv.SOLANA_DEVNET_RPC_URL;
+  if (customRpc?.trim()) return customRpc.trim();
+
+  const heliusKey = runtimeEnv.VITE_HELIUS_API_KEY || runtimeEnv.HELIUS_API_KEY;
+  if (heliusKey?.trim()) {
+    return `https://devnet.helius-rpc.com/?api-key=${heliusKey.trim()}`;
+  }
+
+  return "https://api.devnet.solana.com";
+}
+
+export const SOLANA_RPC_URL = buildRpcUrl();
 
 // Shared singleton connection (PERFORMANT Principle)
 export const solanaConnection = new Connection(SOLANA_RPC_URL, {
   commitment: "confirmed",
-  // 429 Retry logic is handled at the application layer (fetchWithRetry), 
-  // but we set a reasonable timeout here
   confirmTransactionInitialTimeout: 60000,
 });
 
 // Leaderboard addresses for each exercise (initialized on devnet)
 export const SOLANA_LEADERBOARD_ADDRESSES = {
-  pullups: new PublicKey("7ohw3tXESGWNNsJwJ2CoNwbgGz9ygjDbUFP23yMeNs76"), // ✅ Initialized leaderboard account
-  jumps: new PublicKey("6djmqGnS67Am52V2aEhw9qkNZBMrgCxTf198DjX7KccC"),   // ✅ Initialized leaderboard account
+  pullups: new PublicKey("7ohw3tXESGWNNsJwJ2CoNwbgGz9ygjDbUFP23yMeNs76"),
+  jumps: new PublicKey("6djmqGnS67Am52V2aEhw9qkNZBMrgCxTf198DjX7KccC"),
 } as const;
 
 /**
@@ -43,9 +63,6 @@ export function areAddressesConfigured(): boolean {
   );
 }
 
-/**
- * Configuration checklist for deployment
- */
 export const DEPLOYMENT_CHECKLIST = {
   "1. Deploy SolanaPullupsLeaderboard contract": "✅ Complete - GDSkDgf6Q5mMN5kHZiKTXaAs2CLAkopDRDkSCM1tpcQa",
   "2. Deploy SolanaJumpsLeaderboard contract": "✅ Complete - 7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd",
