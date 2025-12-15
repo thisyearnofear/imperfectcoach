@@ -370,23 +370,16 @@ const AuthenticatedState = ({
           <Trophy className="h-3 w-3 mr-1 shrink-0" />
           <span className="truncate max-w-24">{displayName}</span>
         </Badge>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={signOut}
-                className="h-8 px-2 shrink-0"
-              >
-                <LogOut className="h-3 w-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Disconnect wallet</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={signOut}
+          className="h-8 px-2 shrink-0 text-xs gap-1"
+          title="Disconnect wallet and sign out"
+        >
+          <LogOut className="h-3 w-3" />
+          <span className="hidden sm:inline">Sign Out</span>
+        </Button>
       </div>
     );
   }
