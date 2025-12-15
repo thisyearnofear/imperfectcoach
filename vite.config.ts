@@ -93,6 +93,7 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     exclude: [
       'ox', // Exclude ox from pre-bundling to avoid parsing errors
+      'viem', // Exclude viem since it depends on ox subpaths
       '@tensorflow/tfjs-core',
       '@tensorflow/tfjs-backend-webgl',
       '@tensorflow/tfjs-backend-cpu',
