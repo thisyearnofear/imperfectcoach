@@ -12,7 +12,7 @@ x402-powered agent coordination system where specialized agents work together to
 
 Imperfect Coach is an **autonomous AI agent system** that demonstrates x402 protocol concepts with coordinated specialist agents (fitness coach, nutrition planner, biomechanics analyzer, recovery specialist). The agents coordinate internally using x402-style payment verification.
 
-**Note**: The Reap Protocol agent discovery is under development. The system currently uses internally defined CORE_AGENTS.
+**Note**: Reap Protocol enables agentic commerce for product search and Web2/Web3 settlement. Currently using internally defined agents; Reap integration planned for future expansion.
 
 Users benefit from:
 - **Specialist Agent Coordination**: Multiple AI agents contribute specialized expertise
@@ -53,7 +53,6 @@ Users benefit from:
 - **Primary Network**: Base Sepolia (for payment verification and settlement)
 - **Transaction Audit**: On-chain transaction logging for all payments
 - **Zero Escrow**: No pre-locking of funds, immediate blockchain settlement
-- **Future Ready**: Reap Protocol discovery and true autonomous agent-to-agent payments when available
 
 ### 🧠 Coaching & Service Tiers
 - **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)
@@ -118,7 +117,7 @@ pnpm run dev
 - x402 protocol (HTTP 402 Payment Required, immediate settlement)
 - **Avalanche C-Chain** (primary - Fuji testnet), Base Sepolia, Solana Devnet
 - USDC stablecoin with automatic network routing
-- **Reap Protocol**: Real agent discovery (Phase A), negotiation (Phase B), settlement (Phase C)
+- **Reap Protocol**: Agentic commerce platform (search products, verify inventory, purchase autonomously with Web2/Web3 settlement bridge)
 - **AgentRegistry Contract**: On-chain agent profiles, pricing, and reputation
 
 ---

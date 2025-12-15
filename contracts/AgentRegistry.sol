@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 /**
  * @title AgentRegistry
- * @dev Minimal on-chain registry for discovering and pricing agents in the x402 economy.
+ * @dev On-chain registry for discovering and pricing agents in the x402 economy.
  *
  * Purpose:
  * - Store agent profiles (endpoint, capabilities, pricing)
@@ -13,9 +13,9 @@ pragma solidity ^0.8.20;
  *
  * Design:
  * - Lightweight: Only essential data on-chain
- * - Reap Protocol compatible: Works alongside Reap for real agent discovery
  * - x402 optimized: Supports per-request pricing negotiation
  * - Multi-chain ready: Deploy on Avalanche Fuji + Base Sepolia
+ * - Paired with DynamoDB off-chain persistence (agent-discovery.js)
  */
 
 contract AgentRegistry {

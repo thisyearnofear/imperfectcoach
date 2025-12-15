@@ -4,13 +4,15 @@
  * Consolidated data layer for all agents (core + dynamic)
  * - Single source of truth for agent definitions
  * - Persistent storage via DynamoDB
- * - Hybrid discovery (Reap → Registry → Core agents)
+ * - Agent discovery: DynamoDB → AgentRegistry contract → Core agents (fallback)
  * - Signature verification for identity
  * 
- * Follows DRY principle: Consolidates duplicate discovery logic from:
- * - reap-integration.mjs (CORE_AGENTS definition)
- * - agent-discovery.mjs (dynamicAgents Map)
+ * Follows DRY principle: Consolidates discovery logic from:
+ * - reap-integration.mjs (CORE_AGENTS fallback definition)
+ * - agent-discovery.js (permissionless registration + DynamoDB)
  * - core-agent-handler.mjs (agent lookups)
+ * 
+ * Reap Protocol reserved for future agentic commerce (product search, inventory verification)
  */
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -487,14 +489,16 @@ export class AgentRegistry {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// HYBRID DISCOVERY (consolidated from reap-integration.mjs)
+// AGENT DISCOVERY (DynamoDB → AgentRegistry → Core Agents)
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Discover agents - hybrid approach:
- * 1. Try Reap Protocol (when implemented)
- * 2. Query AgentRegistry (primary)
- * 3. Fall back to CORE_AGENTS (guaranteed)
+ * Discover agents - layered approach:
+ * 1. Query DynamoDB for registered agents (primary)
+ * 2. Fall back to CORE_AGENTS (guaranteed availability)
+ * 
+ * Reap Protocol reserved for future agentic commerce features
+ * (product search, inventory verification, autonomous purchasing)
  */
 export async function discoverAgents(
     capability,

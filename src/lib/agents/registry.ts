@@ -5,15 +5,18 @@ import { API_ENDPOINTS } from "@/lib/config";
  * Client-Side Registry Wrapper
  * Queries the Discovery Service to find available agents.
  * 
- * PHASE A: Integrates Reap Protocol for real agent discovery!
- * PHASE D: Adds service tier filtering and availability checks
- * Falls back to mock data if service is unavailable.
+ * Discovers agents via:
+ * - AgentRegistry smart contract (on-chain profiles)
+ * - DynamoDB persistence (permissionless registration)
+ * - Core agents as fallback
+ * 
+ * Reap Protocol reserved for future agentic commerce (product search, inventory verification)
  */
 export class AgentRegistry {
     /**
      * Find agents matching specific criteria
-     * Phase A: Queries Reap Protocol for real specialist agents
-     * Phase D: Supports tier filtering and SLA constraints
+     * Queries backend Discovery Service (agent-discovery.js)
+     * Supports tier filtering and SLA constraints
      */
     static async findAgents(query: DiscoveryQuery): Promise<AgentProfile[]> {
         try {

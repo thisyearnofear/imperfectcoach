@@ -1,13 +1,18 @@
 /**
  * Reap Protocol Integration Service
  * 
- * Enables real agent discovery from Reap Protocol registries.
- * Falls back to core agents if Reap is unavailable.
+ * Reap Protocol: Agentic Commerce Platform
+ * - Enables AI agents to search real products, verify inventory, purchase autonomously
+ * - Bridges Web2 shops with Web3 settlement (blockchain payment confirmation)
+ * - Not for agent discovery - that's AgentRegistry contract + agent-discovery.js
  * 
- * Phase A: Discovery Enhancement
- * - Integrates Reap's Agent Discovery API
- * - Queries real specialists (nutrition, biomechanics, recovery)
- * - Maintains local core agents as fallback
+ * Future use cases for Imperfect Coach:
+ * - Agents booking massage/recovery services (product inventory check)
+ * - Purchase supplements/equipment recommendations (autonomous commerce)
+ * - Verify supplier inventory before recommending (product search)
+ * 
+ * Current status: Core agents managed by AgentRegistry contract + DynamoDB
+ * Reap integration reserved for future agentic commerce features
  */
 
 // import { ReapClient } from "@reap-protocol/sdk"; // Temporarily disabled
@@ -72,20 +77,30 @@ export async function getReapClient() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Real Agent Discovery via Reap Protocol
+// Reap Product Search Integration (Future)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Search for real agents via Reap Protocol
+ * Reap Protocol Product Search (Reserved for Future)
  * 
- * Queries Reap's agent registries for specialists matching capabilities.
- * Returns both x402 and A2A agents.
+ * When enabled, will search products, verify inventory, and purchase autonomously
+ * via Reap Protocol's Web2/Web3 settlement bridge.
+ * 
+ * Agent discovery is currently handled by:
+ * - AgentRegistry smart contract (on-chain profiles)
+ * - agent-discovery.js (permissionless registration + DynamoDB persistence)
+ * - Core agents as fallback (CORE_AGENTS array below)
+ * 
+ * Reap use cases for future:
+ * - Agents autonomously booking recovery services (product inventory)
+ * - Purchasing supplements/equipment recommendations (Web2 shop integration)
+ * - Verifying supplier inventory before recommendations (product search)
  */
 export async function discoverReapAgents(capability, paymentProtocol = "x402") {
     const client = await getReapClient();
 
     if (!client) {
-        console.warn("⚠️ Reap client unavailable - skipping real agent discovery");
+        console.warn("⚠️ Reap client unavailable - using AgentRegistry + DynamoDB for agent discovery");
         return [];
     }
 
@@ -318,30 +333,36 @@ const CORE_AGENTS = [
 ];
 
 /**
- * Unified discovery: Real agents (Reap) + Core agents (fallback)
+ * Agent Discovery: AgentRegistry + Core Agents
  * 
- * Prioritizes: Real Reap agents > Core agents
+ * Prioritizes: AgentRegistry (DynamoDB) > Core agents (fallback)
  * Deduplicates based on capability
+ * 
+ * Note: Reap Protocol is reserved for future agentic commerce features
+ * (product search, inventory verification, autonomous purchasing)
  */
-export async function discoverAgentsHybrid(capability, prioritizeReap = true) {
+export async function discoverAgentsHybrid(capability, prioritizeReap = false) {
     let agents = [];
 
-    // Phase A: Query real Reap agents first
+    // NOTE: Reap prioritization disabled - Reap is for commerce, not agent discovery
+    // Agent discovery uses AgentRegistry (deployed to DynamoDB)
+    // See agent-discovery.js for implementation
+    
     if (prioritizeReap) {
-        console.log("🌐 Attempting real agent discovery via Reap Protocol...");
+        console.log("🌐 Attempting Reap Protocol integration (future feature)...");
         const reapAgents = await discoverReapAgents(capability, "x402");
         agents = agents.concat(reapAgents);
 
         if (reapAgents.length > 0) {
-            console.log(`✅ Using ${reapAgents.length} Reap-discovered agents`);
+            console.log(`✅ Using ${reapAgents.length} Reap-discovered services`);
         }
     }
 
-    // Fallback: Add core agents if no Reap agents found
+    // Core agents (always included as fallback)
     const coreMatches = CORE_AGENTS.filter(a => a.capabilities.includes(capability));
 
     if (agents.length === 0 && coreMatches.length > 0) {
-        console.log(`📦 Falling back to ${coreMatches.length} core agents`);
+        console.log(`📦 Using ${coreMatches.length} core agents`);
         agents = agents.concat(coreMatches);
     } else if (coreMatches.length > 0) {
         // Also include core agents as backup options (sorted by reputation)

@@ -15,11 +15,12 @@
  */
 
 import { initializeRegistry, discoverAgents } from "./lib/agents.mjs";
+import { verifyX402Signature } from "./lib/core-agent-handler.mjs";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 
 const CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type, X-Agent-ID, X-Signature",
+    "Access-Control-Allow-Headers": "Content-Type, X-Agent-ID, X-Signature, X-Payment, X-Chain",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
@@ -184,12 +185,16 @@ const handler = async (event) => {
         }
 
         // 4. BOOKING (POST /agents/{id}/book)
-        // Reserve service slot with SLA constraints
+        // Reserve service slot with x402 payment verification
         if (httpMethod === "POST" && path.includes("/agents/") && path.endsWith("/book")) {
             const registry = await getRegistry();
             const agentId = path.split("/")[2];
             const data = JSON.parse(body || "{}");
             const { tier, capability, requestData } = data;
+
+            // Get payment headers
+            const paymentHeader = event.headers["x-payment"] || event.headers["X-Payment"];
+            const networkHeader = event.headers["x-chain"] || event.headers["X-Chain"] || "base-sepolia";
 
             const agent = registry.getById(agentId);
             if (!agent) {
@@ -232,7 +237,75 @@ const handler = async (event) => {
                 };
             }
 
-            // Reserve slot
+            // Get pricing for tier
+            const tieredPrice = agent.tieredPricing?.[capability]?.[tier] ||
+                agent.pricing?.[capability] ||
+                { baseFee: "0.01", asset: "USDC", chain: "base-sepolia" };
+
+            // Convert price to amount in smallest units (6 decimals for USDC)
+            const priceAmount = tieredPrice.baseFee ? 
+                Math.floor(parseFloat(tieredPrice.baseFee) * 1000000).toString() : 
+                "10000"; // Default 0.01 USDC
+
+            // PAYMENT VERIFICATION: Step 1 - Check if payment provided
+            if (!paymentHeader) {
+                console.log(`💳 No payment for booking ${agentId} - returning 402 challenge`);
+                
+                const challenge = {
+                    amount: priceAmount,
+                    asset: tieredPrice.asset || "USDC",
+                    network: tieredPrice.chain || networkHeader,
+                    payTo: agent.walletAddress || agentId,
+                    scheme: networkHeader.includes("solana") ? "ed25519" : "eip-191",
+                    timestamp: Math.floor(Date.now() / 1000),
+                    nonce: Math.random().toString(36).substring(2, 15),
+                };
+
+                return {
+                    statusCode: 402,
+                    headers: {
+                        ...CORS_HEADERS,
+                        "Content-Type": "application/json",
+                        "X-Payment-Challenge": Buffer.from(JSON.stringify(challenge)).toString('base64'),
+                    },
+                    body: JSON.stringify({
+                        error: "Payment Required",
+                        message: `Payment of ${tieredPrice.baseFee || "0.01"} USDC required to book ${agent.name} (${tier} tier)`,
+                        challenge,
+                        instructions: {
+                            step1: "Sign the challenge using your wallet",
+                            step2: "Encode signed payment as base64 and send in X-Payment header",
+                            step3: `Retry POST /agents/${agentId}/book with X-Payment header`,
+                        },
+                    })
+                };
+            }
+
+            // PAYMENT VERIFICATION: Step 2 - Verify signature
+            console.log(`🔐 Verifying payment for booking ${agentId}...`);
+            
+            const verification = await verifyX402Signature(
+                paymentHeader,
+                priceAmount,
+                tieredPrice.chain || networkHeader
+            );
+
+            if (!verification.verified) {
+                console.error(`❌ Payment verification failed for booking: ${verification.reason}`);
+                return {
+                    statusCode: 401,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({
+                        error: "Payment verification failed",
+                        reason: verification.reason,
+                        hint: "Ensure you signed the payment challenge correctly"
+                    })
+                };
+            }
+
+            console.log(`✅ Payment verified for booking - payer: ${verification.payerAddress}`);
+
+            // PAYMENT VERIFICATION: Step 3 - Reserve slot ONLY after payment verified
             try {
                 await registry.updateAvailability(agentId, tier, {
                     slotsFilled: tierAvailability.slotsFilled + 1
@@ -245,16 +318,12 @@ const handler = async (event) => {
                 };
             }
 
-            // Get pricing for tier
-            const tieredPrice = agent.tieredPricing?.[capability]?.[tier] ||
-                agent.pricing?.[capability] ||
-                { baseFee: "0.01", asset: "USDC", chain: "base-sepolia" };
-
             // Generate booking ID
             const bookingId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-            console.log(`📅 Booking: ${bookingId} for ${agent.name} (${tier} tier)`);
+            console.log(`📅 Booking: ${bookingId} for ${agent.name} (${tier} tier) - Payment verified`);
 
+            // Return booking confirmation with payment proof
             return {
                 statusCode: 201,
                 headers: CORS_HEADERS,
@@ -272,6 +341,14 @@ const handler = async (event) => {
                     sla: {
                         responseSLA: tierAvailability.responseSLA,
                         uptime: tierAvailability.uptime
+                    },
+                    paymentProof: {
+                        verified: true,
+                        payer: verification.payerAddress,
+                        amount: verification.amount,
+                        network: tieredPrice.chain || networkHeader,
+                        signature: verification.signature,
+                        timestamp: verification.timestamp
                     },
                     expiryTime: Date.now() + 3600000,
                     requestData

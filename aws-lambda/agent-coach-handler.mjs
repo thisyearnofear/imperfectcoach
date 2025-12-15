@@ -152,7 +152,7 @@ const AGENT_TOOLS = [
   {
     name: "call_specialist_agent",
     description:
-      "Discovers real specialist agents via Reap Protocol and calls them with x402 payment negotiation (Phase B & C)",
+      "Discovers specialist agents via AgentRegistry and calls them with x402 payment verification",
     input_schema: {
       type: "object",
       properties: {

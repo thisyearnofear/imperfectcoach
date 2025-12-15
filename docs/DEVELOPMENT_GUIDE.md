@@ -18,8 +18,10 @@ pnpm run dev
 - TensorFlow.js + MediaPipe (pose detection)
 
 ### Agent System Notes
-- Core agents are internally defined (not discovered via Reap Protocol)
-- x402 payment verification is implemented but blockchain settlement is simulated
+- Core agents are internally defined (fallback when no agents registered in DynamoDB)
+- Agent discovery uses AgentRegistry smart contract + DynamoDB persistence (agent-discovery.js)
+- Reap Protocol reserved for future agentic commerce (product search, inventory, autonomous purchasing)
+- x402 payment verification is implemented with DynamoDB audit trail
 - Real blockchain settlement can be enabled with PayAI integration
 
 ### Frontend
@@ -99,10 +101,8 @@ pnpm run build
 cd aws-lambda
 node index.mjs
 
-# Test Reap Protocol Integration
-node test-reap-integration.mjs      # Phase A: Discovery
-node test-reap-phase-b.mjs          # Phase B: x402 Negotiation
-node test-reap-phase-c.mjs          # Phase C: Real Settlement
+# Test Agent Discovery Service (agent-discovery.js)
+curl https://r03m1wznai.execute-api.eu-north-1.amazonaws.com/prod/agents?capability=nutrition_planning
 ```
 
 ### x402 Protocol Testing
@@ -149,9 +149,9 @@ SOLANA_RPC_URL=https://api.devnet.solana.com
 AGENT_PRIVATE_KEY=your_agent_evm_private_key
 CX0_API_KEY=your_0xgasless_api_key
 
-# Reap Protocol Integration
-AGENT_WALLET_KEY=your_agent_evm_wallet_private_key  # For autonomous agent identity
-AVALANCHE_RPC=https://api.avax-test.network/ext/bc/C/rpc
+# Reap Protocol (Reserved for Future Agentic Commerce)
+# AGENT_WALLET_KEY=your_agent_evm_wallet_private_key  # For autonomous product purchasing
+# AVALANCHE_RPC=https://api.avax-test.network/ext/bc/C/rpc
 ```
 
 ## Debugging

@@ -4,6 +4,9 @@
  * Mirrors backend CORE_AGENTS from aws-lambda/lib/reap-integration.mjs
  * Used for frontend display, pricing, and agent coordination UI
  * 
+ * These are the default agents when no agents are discovered via DynamoDB/AgentRegistry
+ * Reap Protocol reserved for future agentic commerce features
+ * 
  * PRINCIPLE: DRY - Keep in sync with backend definition
  */
 

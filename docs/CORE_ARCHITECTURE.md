@@ -165,7 +165,7 @@ External Agent → POST /agents/register
 
 ### Why This Approach
 
-**Previous**: Reap Protocol integration was planned but underdeveloped. Reap focuses on product commerce, not agent discovery.
+**Previous**: Reap Protocol integration was planned for agent discovery, but Reap is designed for agentic commerce (product search, inventory verification, autonomous purchasing), not agent discovery.
 
 **Current**: Self-hosted registry provides:
 - True permissionless agent discovery
@@ -173,7 +173,11 @@ External Agent → POST /agents/register
 - Dynamic agent registration without pre-arrangement
 - Foundation for true X402 (unknown agents can find and pay each other)
 
-**Future**: Reap can be added as optional layer once their agent discovery matures.
+**Future**: Reap can be integrated for agentic commerce features:
+- Agents autonomously booking recovery services
+- Purchasing supplements/equipment recommendations
+- Verifying supplier inventory before recommendations
+- Web2/Web3 settlement bridge for commerce transactions
 
 ## Phase 2: Production Enhancements
 
