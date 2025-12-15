@@ -242,15 +242,16 @@ const SolanaWalletState = ({
   if (variant === "header") {
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+        <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
           <Zap className="h-3 w-3 mr-1" />
           {displayName}
         </Badge>
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={onDisconnect}
-          className="h-8 px-2 shrink-0"
+          className="h-8 px-2 shrink-0 text-xs gap-1"
+          title="Disconnect Solana wallet"
         >
           <LogOut className="h-3 w-3" />
         </Button>

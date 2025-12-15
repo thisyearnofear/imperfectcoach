@@ -187,25 +187,7 @@ const Header = ({
             {/* Wallet Connection - Multi-chain (Base + Solana) */}
             <MultiChainWallet variant="header" size="sm" />
 
-            {/* Focus Mode Toggle */}
-            <Button
-              variant={isFocusMode ? "default" : "outline"}
-              size="sm"
-              onClick={() => onFocusModeChange(!isFocusMode)}
-              className="hidden md:flex"
-            >
-              {isFocusMode ? (
-                <>
-                  <Focus className="h-4 w-4 mr-1" />
-                  Exit Focus
-                </>
-              ) : (
-                <>
-                  <Focus className="h-4 w-4 mr-1" />
-                  Focus
-                </>
-              )}
-            </Button>
+
 
             {/* Social Navigation */}
             <div className="hidden md:block">

@@ -1,4 +1,6 @@
 import { useState, forwardRef, useImperativeHandle, useRef } from "react";
+import { Focus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import VideoFeed from "@/components/VideoFeed";
 import WorkoutSidebar from "@/components/WorkoutSidebar";
 import CoachFeedback from "@/components/CoachFeedback";
@@ -104,6 +106,20 @@ export const TopSection = forwardRef<
             formScore={props.formScore}
             isFocusMode={props.isFocusMode}
           />
+
+          {/* Focus Mode Toggle - Below video for easy access during workout */}
+          <div className="flex items-center justify-end">
+            <Button
+              variant={props.isFocusMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => props.onFocusModeChange(!props.isFocusMode)}
+              title={props.isFocusMode ? "Exit minimalist mode" : "Minimize UI clutter - shows only essential metrics"}
+              className="gap-2"
+            >
+              <Focus className="h-4 w-4" />
+              <span>{props.isFocusMode ? "Exit Focus" : "Focus Mode"}</span>
+            </Button>
+          </div>
 
           {/* Contextual Suggestions - Appear during workout based on performance */}
           <div className="lg:hidden">
