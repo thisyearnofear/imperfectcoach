@@ -15,6 +15,7 @@
  */
 
 import { initializeRegistry, discoverAgents } from "./lib/agents.mjs";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 
 const CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
@@ -22,13 +23,18 @@ const CORS_HEADERS = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-// Initialize registry on cold start (core agents in memory)
-// Phase 2: Memory-only. Phase 3: Add DynamoDB persistence via IAM role update
+// Initialize registry on cold start with DynamoDB persistence
 let agentRegistry = null;
+let dynamoDb = null;
 
 async function getRegistry() {
     if (!agentRegistry) {
-        agentRegistry = await initializeRegistry(null); // null = memory-only mode
+        if (!dynamoDb) {
+            dynamoDb = new DynamoDBClient({
+                region: process.env.AWS_REGION || "eu-north-1"
+            });
+        }
+        agentRegistry = await initializeRegistry(dynamoDb);
     }
     return agentRegistry;
 }

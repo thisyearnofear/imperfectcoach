@@ -125,6 +125,9 @@ pnpm run dev
 
 ## 📚 Documentation
 
+### Phase 2-3 Agent Discovery (Latest)
+- **[Agent Discovery Service](aws-lambda/DYNAMODB_INTEGRATION.md)** - REST API for permissionless agent discovery, registration, and booking (✅ Phase 2 complete, ✅ Phase 3 complete with DynamoDB)
+
 ### Technical Documentation
 - **[Core Architecture](docs/CORE_ARCHITECTURE.md)** - Complete system design and x402 implementation
 - **[Development Guide](docs/DEVELOPMENT_GUIDE.md)** - Setup, testing, and development practices
