@@ -1,15 +1,15 @@
-# Deployment Guide
+# Deployment & Operations Guide
 
-## 🚀 Deployment Overview
+## Overview
 
 This guide covers the deployment process for all components of the Imperfect Coach system:
 
-1. **Frontend Application** (Netlify)
-2. **AWS Lambda Functions** (Backend processing)
-3. **Smart Contracts** (Base Sepolia)
-4. **Solana Payments** (Devnet)
+1. Frontend Application (Netlify)
+2. AWS Lambda Functions (Backend processing with x402 payment verification)
+3. Smart Contracts (Base Sepolia, Avalanche Fuji)
+4. Solana Payments (Devnet)
 
-## 🌐 Frontend Deployment
+## Frontend Deployment
 
 ### Netlify Deployment
 The frontend is deployed to Netlify automatically via GitHub integration.
@@ -17,7 +17,7 @@ The frontend is deployed to Netlify automatically via GitHub integration.
 To deploy manually:
 ```bash
 # Build the application
-npm run build
+pnpm run build
 
 # Deploy to Netlify
 netlify deploy --prod
@@ -32,7 +32,7 @@ VITE_SUPABASE_URL=your-supabase-url
 VITE_SUPABASE_KEY=your-supabase-key
 ```
 
-## ☁️ AWS Lambda Deployment
+## AWS Lambda Deployment
 
 ### Prerequisites
 1. AWS CLI configured with appropriate permissions
@@ -40,47 +40,49 @@ VITE_SUPABASE_KEY=your-supabase-key
 3. jq (for JSON processing)
 
 ### Deployment Script
-Use the provided deployment script:
+Use the provided deployment script (for large packages >70MB):
 ```bash
 cd aws-lambda
-./deploy.sh [function-name]
+./deploy-s3.sh
 ```
 
-### Manual Deployment Steps
-1. **Install dependencies:**
-   ```bash
-   cd aws-lambda
-   npm install
-   ```
+The script automatically:
+- Installs production dependencies
+- Aggressively prunes node_modules (removes .md, .map, test dirs)
+- Creates S3 bucket if needed
+- Uploads to S3 (supports up to 5GB)
+- Updates Lambda function code
+- Cleans up old versions (keeps last 5)
 
-2. **Create deployment package:**
-   ```bash
-   zip -r function.zip index.mjs node_modules/ package.json package-lock.json
-   ```
+### Manual Deployment
+For smaller packages (<70MB):
+```bash
+cd aws-lambda
+npm install --production
+zip -r function.zip index.mjs node_modules/ package.json package-lock.json
+aws lambda update-function-code \
+  --function-name imperfect-coach-premium-analysis \
+  --zip-file fileb://function.zip \
+  --region eu-north-1
+```
 
-3. **Deploy to AWS Lambda:**
-   ```bash
-   aws lambda update-function-code \
-     --function-name imperfect-coach-premium-analysis \
-     --zip-file fileb://function.zip \
-     --region eu-north-1
-   ```
+### Environment Configuration
+Update Lambda environment variables:
+```bash
+aws lambda update-function-configuration \
+  --function-name imperfect-coach-premium-analysis \
+  --environment Variables='{
+    "SOLANA_PRIVATE_KEY":"your-key",
+    "SOLANA_TREASURY_ADDRESS":"your-address", 
+    "SOLANA_RPC_URL":"https://api.devnet.solana.com",
+    "AGENT_PRIVATE_KEY":"your-agent-evm-private-key",
+    "CX0_API_KEY":"your-0xgasless-api-key",
+    "AVALANCHE_RPC":"https://api.avax-test.network/ext/bc/C/rpc"
+  }' \
+  --region eu-north-1
+```
 
-4. **Configure environment variables:**
-   ```bash
-   aws lambda update-function-configuration \
-     --function-name imperfect-coach-premium-analysis \
-     --environment Variables='{
-       "SOLANA_PRIVATE_KEY":"your-key",
-       "SOLANA_TREASURY_ADDRESS":"your-address",
-       "SOLANA_RPC_URL":"https://api.devnet.solana.com",
-       "AGENT_PRIVATE_KEY":"your-agent-evm-private-key",
-       "CX0_API_KEY":"your-0xgasless-api-key"
-     }' \
-     --region eu-north-1
-   ```
-
-## 📜 Smart Contract Deployment
+## Smart Contract Deployment
 
 ### Prerequisites
 1. Foundry installed
@@ -95,53 +97,37 @@ export PRIVATE_KEY="your_private_key_here"
 ./scripts/deploy-public-leaderboards.sh
 ```
 
-### Expected Output
-```
-Pullups: 0x[NEW_ADDRESS]
-Jumps:   0x[NEW_ADDRESS]
-```
+### Deploy Agent Registry Contracts
+The AgentRegistry is deployed to both chains:
+- **Base Sepolia**: `0xfE997dEdF572CA17d26400bCDB6428A8278a0627`
+- **Avalanche Fuji**: `0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC`
 
-### Update Frontend Configuration
-Update `src/lib/contracts.ts` with new addresses:
-```typescript
-export const PULLUPS_LEADERBOARD_CONFIG: ContractConfig = {
-  address: "0x[NEW_PULLUPS_ADDRESS]", // UPDATE THIS
-  abi: EXERCISE_LEADERBOARD_ABI,
-};
+## Solana Payment Setup
 
-export const JUMPS_LEADERBOARD_CONFIG: ContractConfig = {
-  address: "0x[NEW_JUMPS_ADDRESS]", // UPDATE THIS
-  abi: EXERCISE_LEADERBOARD_ABI,
-};
-```
-
-## 💰 Solana Payment Setup
+**Note**: The system implements x402 payment signature verification for Solana but does not execute real blockchain transactions in the current implementation.
 
 ### Server Wallet Creation
-1. **Generate server wallet:**
+1. Generate server wallet:
    ```bash
    solana-keygen new --outfile ~/.config/solana/server-wallet.json
    ```
 
-2. **Fund with devnet SOL:**
+2. Fund with devnet SOL:
    ```bash
    solana airdrop 2 <YOUR_PUBLIC_KEY> --url devnet
    ```
 
-3. **Get devnet USDC:**
+3. Get devnet USDC:
    - Visit: https://spl-token-faucet.com/?token-name=USDC
    - Enter your wallet address
    - Request USDC tokens
 
-### Private Key Extraction
+### Private Key Configuration
+Add to AWS Lambda environment variables:
 ```bash
 # Get as JSON array (easiest)
 cat ~/.config/solana/server-wallet.json | jq -c '.[0:64]'
-```
 
-### Environment Configuration
-Add to AWS Lambda environment variables:
-```bash
 SOLANA_PRIVATE_KEY="[your-base58-or-json-array-private-key]"
 SOLANA_TREASURY_ADDRESS="YourReceivingWalletAddress"
 SOLANA_RPC_URL="https://api.devnet.solana.com"
@@ -154,7 +140,7 @@ spl-token create-account Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr \
   --owner <TREASURY_ADDRESS> --url devnet
 ```
 
-## 🧪 Testing After Deployment
+## Testing After Deployment
 
 ### 1. Wallet Connection Test
 1. Connect wallet (EVM or Solana)
@@ -179,7 +165,7 @@ spl-token create-account Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr \
 3. Verify tool execution
 4. Check final analysis delivery
 
-## 📊 Monitoring
+## Monitoring
 
 ### AWS CloudWatch
 Monitor Lambda function logs:
@@ -201,13 +187,13 @@ Check server wallet balance regularly:
 solana balance <server-address> --url devnet
 
 # USDC balance
-spl-token balance Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr \
+spl-token balance Gh9ZwEmdLJ8DscKNTkTqP2KGtKJr \
   --owner <server-address> --url devnet
 ```
 
 Set up alerts for low balance!
 
-## 🚨 Rollback Procedures
+## Rollback Procedures
 
 ### Lambda Function Rollback
 ```bash
@@ -226,9 +212,12 @@ Keep old contract addresses in git history. If issues occur:
 ### Frontend Rollback
 Use Netlify's deployment history to rollback to previous version.
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Deployment Issues
+
+#### "RequestEntityTooLargeException"
+Package is >70MB. Use S3 deployment (`deploy-s3.sh`).
 
 #### "Insufficient funds" error
 - Fund server wallet with SOL: `solana airdrop 1 <address> --url devnet`
@@ -241,22 +230,15 @@ Use Netlify's deployment history to rollback to previous version.
     --owner <treasury-address> --url devnet
   ```
 
-#### "Transaction failed to confirm"
-- Check RPC endpoint is responding
-- Verify network congestion isn't too high
-- Increase confirmation timeout
-
-#### Lambda deployment fails
-- Check AWS permissions
-- Verify function name exists
-- Check ZIP file integrity
+#### "User is not authorized to perform: s3:ListBuckets"
+Add appropriate IAM permissions for S3.
 
 ### Environment Variable Issues
 1. Verify all required environment variables are set
 2. Check variable names match exactly
 3. Ensure proper JSON formatting for complex values
 
-## 🛡️ Security Considerations
+## Security Considerations
 
 ### Private Key Management
 - Never commit private keys to git
@@ -276,7 +258,7 @@ Use Netlify's deployment history to rollback to previous version.
 - Validate all inputs
 - Sanitize outputs
 
-## 📈 Performance Optimization
+## Performance Optimization
 
 ### Lambda Optimization
 - Minimize deployment package size
@@ -296,24 +278,28 @@ Use Netlify's deployment history to rollback to previous version.
 - Implement retry logic
 - Use efficient contract patterns
 
-## 🔄 Continuous Deployment
+## x402 Implementation Status
 
-### GitHub Actions
-The project uses GitHub Actions for automated deployment:
-- Frontend deployment on push to main
-- Lambda deployment on tagged releases
-- Smart contract verification after deployment
+The system implements full x402 protocol compliance with:
+- HTTP 402 challenge responses when payment is required
+- EIP-191 signature verification for EVM wallets
+- Ed25519 signature verification for Solana wallets
+- Real blockchain settlement for native tokens
+- Native token transfers (ETH/AVAX/SOL) on EVM and Solana networks
 
-### Manual CD Process
-1. Tag release: `git tag v1.0.0`
-2. Push tag: `git push origin v1.0.0`
-3. Trigger deployment workflows
-4. Monitor deployment status
-5. Verify deployment success
+## Health Checks
 
-## 📚 Documentation
+### Agent Discovery Service
+```bash
+curl -s https://your-api-gateway/agents?capability=fitness_analysis
+```
 
-For detailed implementation information, see:
-- **[Solana Payments](SOLANA_PAYMENTS.md)** - Complete Solana payment implementation
-- **[Architecture](ARCHITECTURE.md)** - System architecture details
-- **[Development](DEVELOPMENT.md)** - Development practices and patterns
+### Payment Verification
+```bash
+curl -X POST https://your-lambda-url \
+  -H "Content-Type: application/json" \
+  -d '{"type": "analysis", "workoutData": {}}'
+```
+
+### x402 Challenge Test
+Verify the system returns proper 402 challenges with payment requirements.

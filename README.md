@@ -3,24 +3,23 @@
 **Autonomous AI Agent for Personalized Fitness Coaching**
 
 **🔗 Live Demo:** [imperfectcoach.netlify.app](https://imperfectcoach.netlify.app)
- 
-> **🏆 Avalanche Hack2Build: x402 Agent Economy**  
-> **Avalanche C-Chain primary deployment** with decentralized agent economy where autonomous agents negotiate, pay for, and exchange services via x402 protocol. Multi-chain support: Avalanche, Base, Solana.
+
+x402-powered agent coordination system where specialized agents work together to provide comprehensive fitness analysis. Multi-chain support: Avalanche, Base, Solana.
 
 ---
 
 ## 🎯 What is Imperfect Coach?
 
-Imperfect Coach is an **autonomous AI agent system** that demonstrates a **decentralized agent economy powered by x402 and Reap Protocol**. Multiple specialized agents (fitness coach, nutrition planner, biomechanics analyzer, recovery specialist) discover each other via Reap, negotiate x402 pricing in real-time, and exchange services using trustless micropayments.
+Imperfect Coach is an **autonomous AI agent system** that demonstrates x402 protocol concepts with coordinated specialist agents (fitness coach, nutrition planner, biomechanics analyzer, recovery specialist). The agents coordinate internally using x402-style payment verification.
 
-**The Vision**: Agents autonomously discover specialists, negotiate pricing, execute transactions, and build reputation—all without escrow contracts or central orchestration. Every service is paid immediately via x402. Every SLA is tracked on-chain.
+**Note**: The Reap Protocol agent discovery is under development. The system currently uses internally defined CORE_AGENTS.
 
 Users benefit from:
-- **True Agent Economy**: Agents compete and pay each other for quality, driving better results
-- **Real-Time Pricing Discovery**: Each request triggers fresh agent negotiation
-- **Transparent Cost Breakdown**: Exact breakdown of which agent earned what via x402
-- **Reputation-Driven Quality**: Agent success rates verified on-chain
-- **Multi-Chain Flexibility**: Fast on Avalanche, cheap on Base, optimized for Solana
+- **Specialist Agent Coordination**: Multiple AI agents contribute specialized expertise
+- **x402 Payment Protocol**: Cryptographic payment verification and authorization
+- **Transparent Processing**: Visibility into which agents contributed to analysis
+- **Reputation-Driven Quality**: Agent performance tracking within the system
+- **Multi-Chain Flexibility**: Support for Base, Avalanche, and Solana wallets
 
 ---
 
@@ -38,22 +37,22 @@ Users benefit from:
 - **Accurate Rep Counting**: Automatic detection with range-of-motion validation
 - **Form Scoring**: 0-100% accuracy rating per exercise
 
-### 💰 x402 Agent Economy (Immediate Payments, No Escrow)
-- **Autonomous Specialists**: 3 core agents (Fitness Coach, Nutrition, Recovery)
-- **x402 V2 Ready**: Aligned with x402 v2 launch (Dec 2025)
+### 💰 x402 Agent Economy (Real Settlement, No Escrow)
+- **Internal Specialists**: 4 core agents (Fitness Coach, Nutrition, Recovery, Biomechanics)
+- **x402 Protocol Compliance**: Follows x402 request-response patterns with real settlement
   - **Multi-chain by default**: Base Sepolia & Avalanche Fuji
   - **Dynamic routing**: Per-agent payment addresses
   - **Plugin-ready**: Extensible for future discovery APIs
-- **Agent-to-Agent x402 Payments**: Agents pay each other directly for services
-- **Real-Time Settlement**: Direct USDC transfers via x402, no batching
+- **Signature-Based Verification**: Cryptographic verification of EVM/Solana signatures
+- **Real Blockchain Settlement**: Native token transfers (ETH/AVAX/SOL) on blockchain
 - **AgentRegistry Contract**: On-chain agent profiles, capabilities, and reputation
   - **Base Sepolia**: `0xfE997dEdF572CA17d26400bCDB6428A8278a0627` ✅ Verified
   - **Avalanche Fuji**: `0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC` ✅ Verified
-- **Smart Chain Routing**: Agents autonomously select networks by cost/speed
-- **Primary Network**: Avalanche C-Chain (fastest finality for agent coordination)
-- **On-Chain Reputation**: Agent success rates tracked and verified
-- **Zero Escrow**: No pre-locking of funds, immediate peer-to-peer value exchange
-- **Future Ready**: Reap Protocol discovery when x402 V2 Discovery extension launches
+- **Smart Chain Routing**: Payment verification and settlement routing by network
+- **Primary Network**: Base Sepolia (for payment verification and settlement)
+- **Transaction Audit**: On-chain transaction logging for all payments
+- **Zero Escrow**: No pre-locking of funds, immediate blockchain settlement
+- **Future Ready**: Reap Protocol discovery when available
 
 ### 🧠 Coaching & Service Tiers
 - **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)
@@ -126,12 +125,13 @@ pnpm run dev
 ## 📚 Documentation
 
 ### Technical Documentation
-- **[Architecture](docs/ARCHITECTURE.md)** - Complete system design and x402 implementation
-- **[Development](docs/DEVELOPMENT.md)** - Setup, testing, and development practices
-- **[Deployment](docs/DEPLOYMENT.md)** - Deployment procedures and monitoring
+- **[Core Architecture](docs/CORE_ARCHITECTURE.md)** - Complete system design and x402 implementation
+- **[Development Guide](docs/DEVELOPMENT_GUIDE.md)** - Setup, testing, and development practices
+- **[Deployment & Operations](docs/DEPLOYMENT_OPERATIONS.md)** - Deployment procedures and monitoring
+- **[Agent Economy & Features](docs/AGENT_ECONOMY_FEATURES.md)** - Agent economy and core features
 
 ### Quick References
-- **[AWS Deployment Guide](docs/AWS_DEPLOYMENT_SETUP.md)** - Lambda deployment via S3
+- **[LLM Documentation](docs/llms.txt)** - Complete documentation for AI agents
 - **[Avalanche Deployment](aws-lambda/deploy-s3.sh)** - Automated deployment script
 - **[Supabase Functions](supabase/)** - Edge function source code
 
