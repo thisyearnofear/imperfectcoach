@@ -377,30 +377,32 @@ export class AgentRegistry {
     }
 
     /**
-     * Persist agent to DynamoDB
+     * Persist agent to DynamoDB (AWS SDK v3)
      * @private
      */
     async save(agentId, agentData) {
         if (!this.dynamoDB) {
-            console.log(`📚 [Cache-Only] Saved ${agentId} to memory (DynamoDB not configured)`);
+            console.log(`📚 [Memory-Only] Saved ${agentId} in-process (DynamoDB not configured)`);
             return;
         }
 
         try {
+            const { PutItemCommand } = await import("@aws-sdk/client-dynamodb");
             const dynamoItem = {
                 agentId: { S: agentId },
                 ...this.toDynamoDBFormat(agentData)
             };
             
-            await this.dynamoDB.putItem({
+            await this.dynamoDB.send(new PutItemCommand({
                 TableName: "AgentRegistry",
                 Item: dynamoItem
-            }).promise();
+            }));
             
             console.log(`💾 Persisted ${agentId} to DynamoDB`);
         } catch (error) {
-            console.error(`❌ Failed to persist agent ${agentId}:`, error.message);
-            throw error;
+            console.warn(`⚠️ DynamoDB save failed for ${agentId}: ${error.message}`);
+            // Don't throw—allow registration to succeed even if persistence fails
+            // Phase 3 will add retry logic and proper error handling
         }
     }
 
@@ -529,16 +531,17 @@ export async function initializeRegistry(dynamoDb = null) {
     if (dynamoDb) {
         try {
             console.log("📂 Loading dynamic agents from DynamoDB...");
+            const { ScanCommand } = await import("@aws-sdk/client-dynamodb");
             
             // Query for all dynamic agents (type='dynamic')
-            const result = await dynamoDb.scan({
+            const result = await dynamoDb.send(new ScanCommand({
                 TableName: "AgentRegistry",
-                FilterExpression: "attribute_type(#t, :type)",
+                FilterExpression: "#t = :type",
                 ExpressionAttributeNames: { "#t": "type" },
                 ExpressionAttributeValues: {
                     ":type": { S: "dynamic" }
                 }
-            }).promise();
+            }));
 
             if (result.Items && result.Items.length > 0) {
                 console.log(`✅ Loaded ${result.Items.length} dynamic agents from DynamoDB`);

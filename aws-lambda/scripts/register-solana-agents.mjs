@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
 import { Connection, Keypair, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { CORE_AGENTS } from "../lib/reap-integration.mjs";
+import { CORE_AGENTS } from "../lib/agents.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

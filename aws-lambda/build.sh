@@ -22,11 +22,11 @@ npx esbuild index.mjs \
   '--external:@aws-sdk/*' \
   --outfile=dist/index.js
 
-npx esbuild agent-discovery.mjs \
+npx esbuild agent-discovery.js \
   --bundle \
   --platform=node \
   --target=node18 \
-  --format=esm \
+  --format=cjs \
   '--external:@aws-sdk/*' \
   --outfile=dist/agent-discovery.js
 

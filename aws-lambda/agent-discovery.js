@@ -22,17 +22,18 @@ const CORS_HEADERS = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-// Initialize registry on cold start (loads core agents + dynamic from DynamoDB)
+// Initialize registry on cold start (core agents in memory)
+// Phase 2: Memory-only. Phase 3: Add DynamoDB persistence via IAM role update
 let agentRegistry = null;
 
 async function getRegistry() {
     if (!agentRegistry) {
-        agentRegistry = await initializeRegistry(null); // Pass DynamoDB client in production
+        agentRegistry = await initializeRegistry(null); // null = memory-only mode
     }
     return agentRegistry;
 }
 
-export const handler = async (event) => {
+const handler = async (event) => {
     // Support both REST API (httpMethod) and HTTP API v2 (requestContext.http.method) formats
     const httpMethod = event.httpMethod || event.requestContext?.http?.method;
     const path = event.path || event.rawPath;
@@ -354,3 +355,6 @@ export const handler = async (event) => {
         };
     }
 };
+
+// Lambda expects CommonJS exports
+module.exports = { handler };
