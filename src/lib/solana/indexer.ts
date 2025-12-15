@@ -162,12 +162,9 @@ function combineRawScores(rawScores: RawUserScore[]): UserScoreOnChain[] {
 
 /**
  * Try fetching from multiple RPC endpoints with fallback
- * Uses getProgramAccountsV2 for Helius endpoints to handle large datasets
  */
 async function fetchWithFallback(endpoint: string, params: any[]): Promise<any> {
-  // Use getProgramAccountsV2 for Helius to handle large datasets
-  const isHelius = endpoint.includes('helius');
-  const method = isHelius ? "getProgramAccountsV2" : "getProgramAccounts";
+  const method = "getProgramAccounts"; // Always use standard method for compatibility
 
   let attempts = 0;
   const maxAttempts = 3;
@@ -265,14 +262,30 @@ async function fetchAllUserScoresFromSolanaPrograms(): Promise<UserScoreOnChain[
           ];
 
           const json = await fetchWithFallback(endpoint, params);
-          const result = json.result;
 
-          if (!result || !result.value) {
+          // ROBUST PARSING: Handle different RPC response shapes
+          // Standard getProgramAccounts usually returns Array direct or inside result
+          // paginate: result.value might be the array if withContext=true
+          let accounts = [];
+
+          if (Array.isArray(json.result)) {
+            accounts = json.result;
+          } else if (json.result && Array.isArray(json.result.value)) {
+            accounts = json.result.value;
+          } else if (json.result && Array.isArray(json.result.items)) {
+            // Some custom Helius APIs use 'items'
+            accounts = json.result.items;
+          } else {
+            console.warn(`Unexpected RPC response format from ${endpointName}`, json);
+            break; // Stop trying to parse this page
+          }
+
+          if (accounts.length === 0) {
             break;
           }
 
           // Process accounts - add them to our unified structure
-          for (const account of result.value) {
+          for (const account of accounts) {
             // Skip the leaderboard accounts themselves (they have different structure)
             const isLeaderboardAccount =
               account.pubkey === SOLANA_LEADERBOARD_ADDRESSES.jumps.toString() ||
@@ -297,7 +310,7 @@ async function fetchAllUserScoresFromSolanaPrograms(): Promise<UserScoreOnChain[
           }
 
           // Check for pagination
-          pageKey = result.pageKey;
+          pageKey = json.result?.pageKey;
           if (!pageKey) {
             break;
           }

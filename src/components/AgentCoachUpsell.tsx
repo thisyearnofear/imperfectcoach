@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { trackPaymentTransaction } from "@/lib/cdp";
 import { PaymentRouter, PaymentResult } from "@/lib/payments/payment-router";
-import { API_ENDPOINTS } from "@/lib/config";
+import { API_ENDPOINTS, CHAIN_IDS } from "@/lib/config";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,9 +77,9 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   let walletChain = isSolanaConnected ? "solana" : undefined;
   if (isConnected && walletClient?.chain) {
     const chainId = walletClient.chain.id;
-    if (chainId === 43113) { // Avalanche Fuji
+    if (chainId === CHAIN_IDS.AVALANCHE_FUJI) {
       walletChain = "avalanche";
-    } else if (chainId === 84532) { // Base Sepolia
+    } else if (chainId === CHAIN_IDS.BASE_SEPOLIA) {
       walletChain = "base";
     }
   }

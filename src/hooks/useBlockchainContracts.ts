@@ -5,6 +5,7 @@ import {
   JUMPS_LEADERBOARD_CONFIG,
   PULLUPS_LEADERBOARD_CONFIG,
 } from "@/lib/contracts";
+import { CHAIN_IDS } from "@/lib/config";
 import type { Hex } from "viem";
 
 export interface BlockchainScore {
@@ -28,7 +29,7 @@ export const useBlockchainContracts = (address?: string) => {
     abi: JUMPS_LEADERBOARD_CONFIG.abi,
     functionName: "getTopUsers",
     args: [10], // Get top 10 users
-    chainId: 84532, // Explicitly specify Base Sepolia
+    chainId: CHAIN_IDS.BASE_SEPOLIA,
     query: {
       enabled: true, // Enable now that leaderboards are deployed
       staleTime: 60000, // 1 minute - data stays fresh longer
@@ -51,7 +52,7 @@ export const useBlockchainContracts = (address?: string) => {
     abi: PULLUPS_LEADERBOARD_CONFIG.abi,
     functionName: "getTopUsers",
     args: [10], // Get top 10 users
-    chainId: 84532, // Explicitly specify Base Sepolia
+    chainId: CHAIN_IDS.BASE_SEPOLIA,
     query: {
       enabled: true, // Enable now that leaderboards are deployed
       staleTime: 60000, // 1 minute - data stays fresh longer
@@ -79,7 +80,7 @@ export const useBlockchainContracts = (address?: string) => {
     abi: contractConfig.abi,
     functionName: "getTimeUntilNextSubmission",
     args: address ? [address] : undefined,
-    chainId: 84532, // Explicitly specify Base Sepolia
+    chainId: CHAIN_IDS.BASE_SEPOLIA,
     query: {
       enabled: !!address,
       staleTime: 30000, // 30 seconds for cooldown

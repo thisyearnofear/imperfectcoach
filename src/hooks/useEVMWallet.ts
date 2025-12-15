@@ -3,6 +3,8 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import { SiweMessage } from "siwe";
 import { toast } from "sonner";
 import { baseSepolia, avalancheFuji, Chain } from "wagmi/chains";
+import { validateEvmAddress, requireValidEvmAddress, requireSupportedChainId } from "@/lib/wallet/validation";
+import { formatErrorForUser, parseBlockchainError } from "@/lib/wallet/errors";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -66,8 +68,9 @@ export const useEVMWallet = (options: UseEVMWalletOptions = {}) => {
       toast.success("Wallet connected successfully!");
     } catch (error) {
       console.error("Connection error:", error);
-      setError("Failed to connect wallet");
-      toast.error("Failed to connect wallet");
+      const { message, action } = formatErrorForUser(error, 'wallet-connection');
+      setError(message);
+      toast.error(message, { description: action });
     } finally {
       setIsLoading(false);
     }
@@ -88,26 +91,23 @@ export const useEVMWallet = (options: UseEVMWalletOptions = {}) => {
     // Check if wallet is connected
     if (!isConnected) {
       console.error("Cannot sign in: Wallet not connected");
-      setError("Wallet not connected. Please connect your wallet first.");
-      toast.error("Wallet not connected. Please connect your wallet first.");
+      const { message } = formatErrorForUser(new Error("Wallet not connected"), 'wallet-connection');
+      setError(message);
+      toast.error(message);
       return;
     }
     
-    // Check if address is available
-    if (!address) {
-      console.error("Cannot sign in: No wallet address available");
-      setError("No wallet address available. Please connect your wallet first.");
-      toast.error("No wallet address available. Please connect your wallet first.");
+    // Validate address
+    if (!address || !validateEvmAddress(address)) {
+      console.error("Cannot sign in: Invalid wallet address");
+      const { message } = formatErrorForUser(new Error(`Invalid address: ${address}`), 'wallet-connection');
+      setError(message);
+      toast.error(message);
       return;
     }
 
     try {
       setIsLoading(true);
-      
-      // Validate address format
-      if (!address.startsWith('0x') || address.length < 42) {
-        throw new Error(`Invalid address format: ${address}`);
-      }
       
       // Use connected chain ID or default
       const chainIdForMessage = chainId || defaultChain.id;
@@ -176,12 +176,13 @@ export const useEVMWallet = (options: UseEVMWalletOptions = {}) => {
         message,
         onError: (error) => {
           console.error("Sign in error:", error);
-          setError("Failed to sign in");
+          const { message: errorMsg, action } = formatErrorForUser(error, 'signature');
+          setError(errorMsg);
           setAuthState(prev => ({
             ...prev,
             isAuthenticated: false,
           }));
-          toast.error("Failed to sign in");
+          toast.error(errorMsg, { description: action });
         }
       });
 
@@ -192,15 +193,17 @@ export const useEVMWallet = (options: UseEVMWalletOptions = {}) => {
       });
     } catch (error) {
       console.error("Sign in error:", error);
-      setError("Failed to sign in: " + (error as Error).message);
-      toast.error("Failed to sign in: " + (error as Error).message);
+      const { message: errorMsg, action } = formatErrorForUser(error, 'signature');
+      setError(errorMsg);
+      toast.error(errorMsg, { description: action });
       setIsLoading(false);
     }
   }, [address, isConnected, signMessage, chainId, defaultChain.id]);
 
   const switchToChain = useCallback(async (chain: Chain) => {
     if (!isConnected) {
-      toast.error("Please connect your wallet first");
+      const { message } = formatErrorForUser(new Error("Not connected"), 'wallet-connection');
+      toast.error(message);
       return;
     }
 
@@ -209,7 +212,8 @@ export const useEVMWallet = (options: UseEVMWalletOptions = {}) => {
       toast.success(`Switched to ${chain.name} network!`);
     } catch (error) {
       console.error("Error switching network:", error);
-      toast.error("Failed to switch network. Please switch manually in your wallet.");
+      const { message, action } = formatErrorForUser(error, 'network-switch');
+      toast.error(message, { description: action });
     }
   }, [isConnected, switchChain]);
 

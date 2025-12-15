@@ -1,7 +1,9 @@
 /**
- * Chain color utilities - single source of truth for chain visual indicators
+ * Chain color utilities - delegates to CHAIN_COLORS in config
  * Following core principle: DRY (Single source of truth for all shared logic)
  */
+
+import { CHAIN_COLORS, CHAIN_IDS } from './config';
 
 export type ChainColor = 'blue' | 'red' | 'purple' | 'green' | 'gray';
 
@@ -14,15 +16,12 @@ export interface ChainColorConfig {
 
 /**
  * Get color scheme based on chain ID
- * Base Sepolia: 84532 -> blue
- * Avalanche Fuji: 43113 -> red
- * Solana: null -> purple
- * EVM unconnected: null -> green
+ * Pulls from CHAIN_COLORS config as single source of truth
  */
 export const getChainColor = (chainId?: number | null): ChainColor => {
-  if (chainId === 84532) return 'blue';     // Base Sepolia
-  if (chainId === 43113) return 'red';      // Avalanche Fuji
-  return 'gray';
+  if (!chainId) return 'gray';
+  const colorConfig = CHAIN_COLORS[chainId as keyof typeof CHAIN_COLORS];
+  return colorConfig?.name ?? 'gray';
 };
 
 export const getSolanaColor = (): ChainColor => 'purple';
@@ -70,10 +69,10 @@ export const getChainColorClasses = (color: ChainColor): ChainColorConfig => {
 };
 
 /**
- * Get chain name for display
+ * Get chain name for display from config
  */
 export const getChainName = (chainId?: number | null): string => {
-  if (chainId === 84532) return 'Base';
-  if (chainId === 43113) return 'Avalanche';
-  return 'Unknown';
+  if (!chainId) return 'Unknown';
+  const colorConfig = CHAIN_COLORS[chainId as keyof typeof CHAIN_COLORS];
+  return colorConfig?.displayName ?? 'Unknown';
 };

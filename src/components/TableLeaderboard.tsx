@@ -42,6 +42,7 @@ import { useBasename } from "@/hooks/useBasename";
 import { useSolanaNameService, useDisplayName } from "@/hooks/useMemoryIdentity";
 import { SmartRefresh, RefreshButton } from "./SmartRefresh";
 import { cn } from "@/lib/utils";
+import { DataTableSkeleton } from "@/components/SkeletonLoaders";
 
 interface LeaderboardEntry {
   address: string;
@@ -308,8 +309,8 @@ export const TableLeaderboard = ({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-8">
-                    <Loader2 className="h-4 w-4 animate-spin inline" />
+                  <TableCell colSpan={3} className="p-0">
+                    <DataTableSkeleton rows={5} cols={3} />
                   </TableCell>
                 </TableRow>
               ) : displayData.length === 0 ? (
@@ -464,14 +465,9 @@ export const TableLeaderboard = ({
               <TableRow>
                 <TableCell
                   colSpan={exercise ? 4 : 6}
-                  className="text-center py-12"
+                  className="p-0"
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">
-                      Loading leaderboard...
-                    </p>
-                  </div>
+                  <DataTableSkeleton rows={10} cols={exercise ? 4 : 6} />
                 </TableCell>
               </TableRow>
             ) : displayData.length === 0 ? (

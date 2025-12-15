@@ -36,6 +36,24 @@ export const CHAIN_IDS = {
     AVALANCHE_FUJI: 43113,
 } as const;
 
+// Visual configuration for chains (colors, display)
+export const CHAIN_COLORS = {
+    [CHAIN_IDS.BASE_SEPOLIA]: {
+        name: 'blue',
+        displayName: 'Base',
+        bg: 'bg-blue-100',
+        text: 'text-blue-700',
+        border: 'border-blue-200',
+    },
+    [CHAIN_IDS.AVALANCHE_FUJI]: {
+        name: 'red',
+        displayName: 'Avalanche',
+        bg: 'bg-red-100',
+        text: 'text-red-700',
+        border: 'border-red-200',
+    },
+} as const;
+
 // Supported networks - single source of truth
 export const SUPPORTED_EVM_NETWORKS = {
     [CHAIN_IDS.BASE_SEPOLIA]: {

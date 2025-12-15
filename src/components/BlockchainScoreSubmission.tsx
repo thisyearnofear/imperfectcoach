@@ -29,7 +29,8 @@ import {
   getAvailableChains,
   ChainType,
 } from "@/lib/chainRouting";
-import { getExplorerUrl } from "@/lib/config";
+import { getExplorerUrl, CHAIN_IDS } from "@/lib/config";
+import { formatErrorForUser } from "@/lib/wallet/errors";
 
 interface BlockchainScoreSubmissionProps {
   exercise: Exercise;
@@ -75,7 +76,7 @@ export const BlockchainScoreSubmission = ({
 
   const [error, setError] = useState<string>();
 
-  const isOnCorrectEVMNetwork = chain?.id === 84532 || chain?.id === 43113; // Base Sepolia or Avalanche Fuji
+  const isOnCorrectEVMNetwork = chain?.id === CHAIN_IDS.BASE_SEPOLIA || chain?.id === CHAIN_IDS.AVALANCHE_FUJI;
   const availableChains = getAvailableChains({
     baseAddress: isConnected ? "0x..." : undefined,
     solanaAddress,
@@ -134,7 +135,8 @@ export const BlockchainScoreSubmission = ({
     } catch (error) {
       console.error("Failed to submit score:", error);
       setHasSubmitted(false); // Ensure we don't show success on error
-      setError(`Failed to submit score to ${chain}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const { message } = formatErrorForUser(error, 'contract-interaction');
+      setError(message);
     }
   };
 

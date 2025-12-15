@@ -1,3 +1,5 @@
+import { CHAIN_IDS } from "./config";
+
 export type ChainType = "base" | "avalanche" | "solana";
 
 export interface ChainRoutingState {
@@ -14,8 +16,8 @@ export interface ChainRoutingState {
 export function getAvailableChains(state: ChainRoutingState): ChainType[] {
   const chains: ChainType[] = [];
   if (state.isBaseConnected && state.baseAddress) {
-    // Detect if on Avalanche Fuji (43113) or Base Sepolia (84532)
-    if (state.chainId === 43113) {
+    // Detect if on Avalanche Fuji or Base Sepolia
+    if (state.chainId === CHAIN_IDS.AVALANCHE_FUJI) {
       chains.push("avalanche");
     } else {
       chains.push("base");

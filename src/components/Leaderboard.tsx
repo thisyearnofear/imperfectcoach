@@ -26,6 +26,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useLeaderboardParallel, ChainFilter } from "@/hooks/useLeaderboardParallel";
+import { LeaderboardListSkeleton } from "@/components/SkeletonLoaders";
 
 interface LeaderboardEntry {
   address: string;
@@ -222,9 +223,7 @@ const ExerciseLeaderboard = ({
       {exercise}
     </h4>
     {isLoading ? (
-      <div className="flex justify-center py-4">
-        <Loader2 className="h-4 w-4 animate-spin" />
-      </div>
+      <LeaderboardListSkeleton count={compact ? 3 : 10} />
     ) : data.length === 0 ? (
       <div className="text-center py-4 text-xs text-muted-foreground">
         No scores yet

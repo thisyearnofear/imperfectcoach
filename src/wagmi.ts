@@ -1,5 +1,5 @@
 import { http } from "wagmi";
-import { base, baseSepolia, avalanche, avalancheFuji } from "wagmi/chains";
+import { baseSepolia, avalancheFuji } from "wagmi/chains";
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 
 // App logo URL - use production URL if available, otherwise localhost with common dev port
@@ -15,15 +15,13 @@ const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID |
 export const config = getDefaultConfig({
   appName: "Imperfect Coach - AI Fitness Tracker",
   projectId: WALLETCONNECT_PROJECT_ID,
-  chains: [base, baseSepolia, avalanche, avalancheFuji],
+  chains: [baseSepolia, avalancheFuji],
   ssr: true,
   transports: {
-    [base.id]: http(),
     [baseSepolia.id]: http(
       import.meta.env.VITE_BASE_SEPOLIA_RPC_URL ||
       "https://sepolia.base.org"
     ),
-    [avalanche.id]: http(),
     [avalancheFuji.id]: http(
       import.meta.env.VITE_AVALANCHE_FUJI_RPC_URL ||
       "https://api.avax-test.network/ext/bc/C/rpc"

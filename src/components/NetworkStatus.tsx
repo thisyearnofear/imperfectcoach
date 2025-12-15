@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { useUserBlockchain } from "@/hooks/useUserHooks";
 import { cn } from "@/lib/utils";
-import { getNetworkConfig, isNetworkSupported, getAvailableSupportedNetworks } from "@/lib/config";
+import { getNetworkConfig, isNetworkSupported, getAvailableSupportedNetworks, CHAIN_IDS } from "@/lib/config";
 import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
 
 interface NetworkStatusProps {
@@ -46,16 +46,30 @@ export const NetworkStatus = ({
   const [viewPreference, setViewPreference] = useState<"auto" | "evm" | "solana">("auto");
   const [solanaConnected, setSolanaConnected] = useState(false);
 
-  // Monitor Solana wallet connection
+  // Monitor Solana wallet connection via event-based updates (PERFORMANT)
   useEffect(() => {
-    const checkSolana = () => {
-      const state = solanaWalletManager.getState();
-      setSolanaConnected(state.connected);
-    };
+    // Initial state check
+    const state = solanaWalletManager.getState();
+    setSolanaConnected(state.connected);
 
-    checkSolana();
-    const interval = setInterval(checkSolana, 1000);
-    return () => clearInterval(interval);
+    // Listen for Solana wallet changes instead of polling
+    const unsubscribeConnect = solanaWalletManager.subscribe('connect', (newState) => {
+      setSolanaConnected(newState.connected);
+    });
+
+    const unsubscribeDisconnect = solanaWalletManager.subscribe('disconnect', (newState) => {
+      setSolanaConnected(newState.connected);
+    });
+
+    const unsubscribeChange = solanaWalletManager.subscribe('change', (newState) => {
+      setSolanaConnected(newState.connected);
+    });
+
+    return () => {
+      unsubscribeConnect();
+      unsubscribeDisconnect();
+      unsubscribeChange();
+    };
   }, []);
 
   if (!isConnected && !solanaConnected) {
@@ -76,11 +90,15 @@ export const NetworkStatus = ({
     } else if (viewPreference === "evm") {
       isSolanaActive = false;
     } else {
-      // Auto: Prefer the supported network, or default to EVM if both/neither supported
+      // Auto: Default to Solana when both are available (Phantom is primary for this app)
+      // Otherwise prefer the supported network
       if (solanaIsSupported && !evmIsSupported) {
         isSolanaActive = true;
-      } else {
+      } else if (!solanaIsSupported && evmIsSupported) {
         isSolanaActive = false;
+      } else {
+        // Both supported or neither supported - default to Solana
+        isSolanaActive = true;
       }
     }
   } else {
@@ -253,10 +271,11 @@ export const NetworkStatus = ({
   // Full variant for detailed display
   const getChainDocs = (chainId: number) => {
     switch (chainId) {
-      case 84532:
+      case CHAIN_IDS.BASE_SEPOLIA:
+      case CHAIN_IDS.BASE_MAINNET:
         return { name: "Base Docs", url: "https://docs.base.org/" };
-      case 43113:
-      case 43114:
+      case CHAIN_IDS.AVALANCHE_FUJI:
+      case CHAIN_IDS.AVALANCHE_MAINNET:
         return { name: "Avalanche Docs", url: "https://docs.avax.network/" };
       default:
         return null;

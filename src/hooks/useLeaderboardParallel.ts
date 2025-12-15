@@ -13,6 +13,7 @@ import {
   SOLANA_LEADERBOARD_PROGRAM_ID,
 } from "@/lib/solana/leaderboard";
 import { useReadContract } from "wagmi";
+import { CHAIN_IDS } from "@/lib/config";
 
 export interface UnifiedLeaderboardEntry {
   user: string; // 0x... (Base/Avalanche) or Solana pubkey string
@@ -59,7 +60,7 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
     abi: JUMPS_LEADERBOARD_CONFIG.abi,
     functionName: "getTopUsers",
     args: [BigInt(limit)],
-    chainId: 84532, // Base Sepolia
+    chainId: CHAIN_IDS.BASE_SEPOLIA,
     query: {
       enabled: enabled && (chain === "all" || chain === "base"),
       staleTime: 60000,
@@ -79,7 +80,7 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
     abi: PULLUPS_LEADERBOARD_CONFIG.abi,
     functionName: "getTopUsers",
     args: [BigInt(limit)],
-    chainId: 84532, // Base Sepolia
+    chainId: CHAIN_IDS.BASE_SEPOLIA,
     query: {
       enabled: enabled && (chain === "all" || chain === "base"),
       staleTime: 60000,
@@ -100,7 +101,7 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
     abi: EXERCISE_LEADERBOARD_ABI,
     functionName: "getTopUsers",
     args: [BigInt(limit)],
-    chainId: 43113, // Avalanche Fuji
+    chainId: CHAIN_IDS.AVALANCHE_FUJI,
     query: {
       enabled: enabled && (chain === "all" || chain === "avalanche"),
       staleTime: 60000,
@@ -120,7 +121,7 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
     abi: EXERCISE_LEADERBOARD_ABI,
     functionName: "getTopUsers",
     args: [BigInt(limit)],
-    chainId: 43113, // Avalanche Fuji
+    chainId: CHAIN_IDS.AVALANCHE_FUJI,
     query: {
       enabled: enabled && (chain === "all" || chain === "avalanche"),
       staleTime: 60000,

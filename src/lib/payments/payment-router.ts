@@ -1,5 +1,6 @@
 import { WalletClient } from "viem";
 import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
+import { CHAIN_IDS } from "@/lib/config";
 
 // Types
 export interface PaymentRequirement {
@@ -77,9 +78,9 @@ export class PaymentRouter {
         // If EVM wallet is available, detect the actual chain
         if (isEvmAvailable && evmWallet?.chain) {
             const chainId = evmWallet.chain.id;
-            if (chainId === 43113) { // Avalanche Fuji
+            if (chainId === CHAIN_IDS.AVALANCHE_FUJI) {
                 chainHeader = "avalanche-fuji";
-            } else if (chainId === 84532) { // Base Sepolia
+            } else if (chainId === CHAIN_IDS.BASE_SEPOLIA) {
                 chainHeader = "base-sepolia";
             }
         } else if (isSolanaAvailable) {

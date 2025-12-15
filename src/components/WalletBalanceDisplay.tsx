@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { PublicKey } from "@solana/web3.js";
 import { createPublicClient, http, formatUnits, getAddress, Chain } from "viem";
 import { baseSepolia, avalancheFuji } from "viem/chains";
+import { BalanceCardSkeleton } from "@/components/SkeletonLoaders";
 
 interface WalletBalanceDisplayProps {
   requiredAmount?: string; // e.g. "0.05"
@@ -230,33 +231,47 @@ export function WalletBalanceDisplay({
     const showCurrency = "USDC";
     const displayAmount = activeBalance.usdc;
 
+    if (activeBalance.isLoading) {
+      return (
+        <div className={cn("inline-flex items-center gap-2 text-xs", className)}>
+          <Wallet className="h-3 w-3 text-purple-600" />
+          <span className="text-gray-600">Balance:</span>
+          <div className="h-6 w-20 bg-muted rounded animate-pulse" />
+        </div>
+      );
+    }
+
     return (
       <div className={cn("inline-flex items-center gap-2 text-xs", className)}>
         <Wallet className="h-3 w-3 text-purple-600" />
         <span className="text-gray-600">Balance:</span>
-        {activeBalance.isLoading ? (
-          <span className="text-gray-400">Loading...</span>
-        ) : (
-          <>
-            <Badge
-              variant="outline"
-              className={cn(
-                "font-mono",
-                activeBalance.hasEnough
-                  ? "bg-green-50 text-green-700 border-green-200"
-                  : "bg-orange-50 text-orange-700 border-orange-200"
-              )}
-            >
-              {displayAmount.toFixed(2)} {showCurrency}
-            </Badge>
-            <span className="text-gray-400">on {displayChainName}</span>
-          </>
-        )}
+        <Badge
+          variant="outline"
+          className={cn(
+            "font-mono",
+            activeBalance.hasEnough
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-orange-50 text-orange-700 border-orange-200"
+          )}
+        >
+          {displayAmount.toFixed(2)} {showCurrency}
+        </Badge>
+        <span className="text-gray-400">on {displayChainName}</span>
       </div>
     );
   }
 
   // Detailed variant - card with both chains
+  if (baseBalance.isLoading || solanaBalance.isLoading) {
+    return (
+      <Card className={cn("border-purple-200 bg-gradient-to-br from-purple-50/50 to-blue-50/50", className)}>
+        <div className="p-4">
+          <BalanceCardSkeleton />
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card className={cn("border-purple-200 bg-gradient-to-br from-purple-50/50 to-blue-50/50", className)}>
       <div className="p-4 space-y-3">
