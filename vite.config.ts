@@ -37,6 +37,30 @@ function stripTypeExportsPlugin(): Plugin {
   };
 }
 
+/**
+ * Custom Vite plugin to fix eventemitter3 ESM import issues
+ * The package has a broken index.mjs that imports from the CommonJS index.js
+ */
+function fixEventEmitter3Plugin(): Plugin {
+  return {
+    name: 'fix-eventemitter3',
+    enforce: 'pre',
+    async transform(code, id) {
+      if (id.includes('eventemitter3') && id.endsWith('.mjs')) {
+        // Replace the broken CommonJS import with the ESM dist version
+        const fixed = code.replace(
+          "import EventEmitter from './index.js'",
+          "import EventEmitter from './dist/eventemitter3.esm.js'"
+        );
+        if (fixed !== code) {
+          return { code: fixed };
+        }
+      }
+      return null;
+    }
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   base: "/",
@@ -46,6 +70,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     stripTypeExportsPlugin(),
+    fixEventEmitter3Plugin(),
     react(),
   ].filter(Boolean),
   resolve: {
