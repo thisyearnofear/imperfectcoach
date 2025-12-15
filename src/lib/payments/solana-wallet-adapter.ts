@@ -36,7 +36,7 @@ export class SolanaWalletManager {
       publicKey: null,
       connection: new Connection(solanaConfig.rpcUrl, 'confirmed')
     };
-    
+
     // Initialize event listener maps
     this.listeners.set('connect', new Set());
     this.listeners.set('disconnect', new Set());
@@ -61,54 +61,77 @@ export class SolanaWalletManager {
    * CONNECT TO PREFERRED WALLET
    * Smart selection similar to Base wallet logic
    */
+  /**
+   * CONNECT TO PREFERRED WALLET
+   * Smart selection similar to Base wallet logic with retry mechanism
+   */
   async connect(preferredWallet?: string): Promise<boolean> {
     if (this.state.connecting || this.state.connected) {
       return this.state.connected;
     }
 
     this.state.connecting = true;
+    let attempts = 0;
+    const maxAttempts = 3;
 
-    try {
-      let selectedAdapter: WalletAdapter | null = null;
+    while (attempts < maxAttempts) {
+      try {
+        let selectedAdapter: WalletAdapter | null = null;
+        attempts++;
 
-      if (preferredWallet) {
-        selectedAdapter = this.availableAdapters.find(
-          adapter => adapter.name.toLowerCase().includes(preferredWallet.toLowerCase())
-        ) || null;
+        if (preferredWallet) {
+          selectedAdapter = this.availableAdapters.find(
+            adapter => adapter.name.toLowerCase().includes(preferredWallet.toLowerCase())
+          ) || null;
+        }
+
+        // Fallback to first available wallet
+        if (!selectedAdapter) {
+          const available = this.detectAvailableWallets();
+          selectedAdapter = available[0] || null;
+        }
+
+        if (!selectedAdapter) {
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 500)); // Wait for injection
+            continue;
+          }
+          throw new Error('No Solana wallet found');
+        }
+
+        // Connect to the selected adapter
+        await selectedAdapter.connect();
+
+        this.state.adapter = selectedAdapter;
+        this.state.connected = selectedAdapter.connected;
+        this.state.publicKey = selectedAdapter.publicKey;
+
+        console.log(`✅ Connected to ${selectedAdapter.name}:`, selectedAdapter.publicKey?.toString());
+
+        // Emit connect event
+        this.emit('connect');
+        this.emit('change');
+
+        this.state.connecting = false;
+        return true;
+
+      } catch (error) {
+        console.warn(`Solana wallet connection attempt ${attempts} failed:`, error);
+
+        if (attempts >= maxAttempts) {
+          console.error('All Solana wallet connection attempts failed.');
+          this.state.connected = false;
+          this.state.connecting = false;
+          throw error;
+        }
+
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 800 * attempts));
       }
-
-      // Fallback to first available wallet
-      if (!selectedAdapter) {
-        const available = this.detectAvailableWallets();
-        selectedAdapter = available[0] || null;
-      }
-
-      if (!selectedAdapter) {
-        throw new Error('No Solana wallet found');
-      }
-
-      // Connect to the selected adapter
-      await selectedAdapter.connect();
-
-      this.state.adapter = selectedAdapter;
-      this.state.connected = selectedAdapter.connected;
-      this.state.publicKey = selectedAdapter.publicKey;
-
-      console.log(`✅ Connected to ${selectedAdapter.name}:`, selectedAdapter.publicKey?.toString());
-      
-      // Emit connect event
-      this.emit('connect');
-      this.emit('change');
-
-      return true;
-
-    } catch (error) {
-      console.error('Solana wallet connection failed:', error);
-      this.state.connected = false;
-      throw error;
-    } finally {
-      this.state.connecting = false;
     }
+
+    this.state.connecting = false;
+    return false;
   }
 
   /**
@@ -118,14 +141,14 @@ export class SolanaWalletManager {
     if (this.state.adapter) {
       await this.state.adapter.disconnect();
     }
-    
+
     this.state = {
       ...this.state,
       adapter: null,
       connected: false,
       publicKey: null
     };
-    
+
     // Emit disconnect event
     this.emit('disconnect');
     this.emit('change');
@@ -140,11 +163,13 @@ export class SolanaWalletManager {
       throw new Error('Wallet not connected');
     }
 
-    if (!this.state.adapter.signMessage) {
+    // Check if adapter supports signMessage (cast to any as WalletAdapter base type doesn't include it)
+    const adapter = this.state.adapter as any;
+    if (!adapter.signMessage) {
       throw new Error('Wallet does not support message signing');
     }
 
-    return await this.state.adapter.signMessage(message);
+    return await adapter.signMessage(message);
   }
 
   /**
@@ -156,11 +181,13 @@ export class SolanaWalletManager {
       throw new Error('Wallet not connected');
     }
 
-    if (!this.state.adapter.signTransaction) {
+    // Check if adapter supports signTransaction (cast to any as WalletAdapter base type doesn't include it)
+    const adapter = this.state.adapter as any;
+    if (!adapter.signTransaction) {
       throw new Error('Wallet does not support transaction signing');
     }
 
-    return await this.state.adapter.signTransaction(transaction);
+    return await adapter.signTransaction(transaction);
   }
 
   /**
@@ -224,11 +251,11 @@ export class SolanaWalletManager {
 
   formatPublicKey(): string {
     if (!this.state.publicKey) return '';
-    
+
     const key = this.state.publicKey.toString();
     return `${key.slice(0, 4)}...${key.slice(-4)}`;
   }
-  
+
   /**
    * EVENT SYSTEM
    * Subscribe to wallet state changes
@@ -238,7 +265,7 @@ export class SolanaWalletManager {
     if (eventListeners) {
       eventListeners.add(listener);
     }
-    
+
     // Return unsubscribe function
     return () => {
       const eventListeners = this.listeners.get(event);
@@ -247,7 +274,7 @@ export class SolanaWalletManager {
       }
     };
   }
-  
+
   private emit(event: WalletEventType): void {
     const eventListeners = this.listeners.get(event);
     if (eventListeners) {
