@@ -23,19 +23,27 @@ export const CORE_AGENTS = [
         name: "Imperfect Coach Core",
         emoji: "💪",
         role: "coordinator",
-        description: "Primary fitness analysis agent using Bedrock Nova Lite.",
+        description: "Primary fitness analysis agent using Bedrock Nova Lite. Multi-chain settlement.",
         location: "EU-North-1",
         type: "core",
         capabilities: ["fitness_analysis", "benchmark_analysis"],
         pricing: {
-            fitness_analysis: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" },
-            benchmark_analysis: { baseFee: "0.02", asset: "USDC", chain: "base-sepolia" }
+            fitness_analysis: {
+                base: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" },
+                avalanche: { baseFee: "0.05", asset: "USDC", chain: "avalanche-fuji" },
+                solana: { baseFee: "0.05", asset: "USDC", chain: "solana-devnet" }
+            },
+            benchmark_analysis: {
+                base: { baseFee: "0.02", asset: "USDC", chain: "base-sepolia" },
+                avalanche: { baseFee: "0.02", asset: "USDC", chain: "avalanche-fuji" },
+                solana: { baseFee: "0.02", asset: "USDC", chain: "solana-devnet" }
+            }
         },
         tieredPricing: {
             fitness_analysis: {
-                basic: { baseFee: "0.02", asset: "USDC", chain: "base-sepolia" },
-                pro: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" },
-                premium: { baseFee: "0.10", asset: "USDC", chain: "base-sepolia" }
+                basic: { baseFee: "0.02", asset: "USDC", multiChain: true },
+                pro: { baseFee: "0.05", asset: "USDC", multiChain: true },
+                premium: { baseFee: "0.10", asset: "USDC", multiChain: true }
             }
         },
         endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
@@ -56,18 +64,22 @@ export const CORE_AGENTS = [
         name: "Nutrition Planner",
         emoji: "🥗",
         role: "specialist",
-        description: "Specialized in post-workout nutrition plans.",
+        description: "Specialized in post-workout nutrition plans. Multi-chain settlement.",
         location: "US-West-2",
         type: "core",
         capabilities: ["nutrition_planning"],
         pricing: {
-            nutrition_planning: { baseFee: "0.03", asset: "USDC", chain: "base-sepolia" }
+            nutrition_planning: {
+                base: { baseFee: "0.03", asset: "USDC", chain: "base-sepolia" },
+                avalanche: { baseFee: "0.03", asset: "USDC", chain: "avalanche-fuji" },
+                solana: { baseFee: "0.03", asset: "USDC", chain: "solana-devnet" }
+            }
         },
         tieredPricing: {
             nutrition_planning: {
-                basic: { baseFee: "0.01", asset: "USDC", chain: "base-sepolia" },
-                pro: { baseFee: "0.025", asset: "USDC", chain: "base-sepolia" },
-                premium: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" }
+                basic: { baseFee: "0.01", asset: "USDC", multiChain: true },
+                pro: { baseFee: "0.025", asset: "USDC", multiChain: true },
+                premium: { baseFee: "0.05", asset: "USDC", multiChain: true }
             }
         },
         endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/nutrition-agent",
@@ -88,18 +100,22 @@ export const CORE_AGENTS = [
         name: "Recovery Planner",
         emoji: "😴",
         role: "specialist",
-        description: "Specialized in recovery optimization, sleep, and fatigue management.",
+        description: "Specialized in recovery optimization, sleep, and fatigue management. Multi-chain settlement.",
         location: "EU-West-1",
         type: "core",
         capabilities: ["recovery_planning"],
         pricing: {
-            recovery_planning: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" }
+            recovery_planning: {
+                base: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" },
+                avalanche: { baseFee: "0.05", asset: "USDC", chain: "avalanche-fuji" },
+                solana: { baseFee: "0.05", asset: "USDC", chain: "solana-devnet" }
+            }
         },
         tieredPricing: {
             recovery_planning: {
-                basic: { baseFee: "0.02", asset: "USDC", chain: "base-sepolia" },
-                pro: { baseFee: "0.05", asset: "USDC", chain: "base-sepolia" },
-                premium: { baseFee: "0.10", asset: "USDC", chain: "base-sepolia" }
+                basic: { baseFee: "0.02", asset: "USDC", multiChain: true },
+                pro: { baseFee: "0.05", asset: "USDC", multiChain: true },
+                premium: { baseFee: "0.10", asset: "USDC", multiChain: true }
             }
         },
         endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/recovery-agent",
@@ -120,18 +136,22 @@ export const CORE_AGENTS = [
         name: "Biomechanics Analyst",
         emoji: "🏋️",
         role: "specialist",
-        description: "Deep form analysis and movement quality assessment using pose data.",
+        description: "Deep form analysis and movement quality assessment using pose data. Multi-chain settlement.",
         location: "US-East-1",
         type: "core",
         capabilities: ["biomechanics_analysis"],
         pricing: {
-            biomechanics_analysis: { baseFee: "0.08", asset: "USDC", chain: "base-sepolia" }
+            biomechanics_analysis: {
+                base: { baseFee: "0.08", asset: "USDC", chain: "base-sepolia" },
+                avalanche: { baseFee: "0.08", asset: "USDC", chain: "avalanche-fuji" },
+                solana: { baseFee: "0.08", asset: "USDC", chain: "solana-devnet" }
+            }
         },
         tieredPricing: {
             biomechanics_analysis: {
-                basic: { baseFee: "0.04", asset: "USDC", chain: "base-sepolia" },
-                pro: { baseFee: "0.08", asset: "USDC", chain: "base-sepolia" },
-                premium: { baseFee: "0.15", asset: "USDC", chain: "base-sepolia" }
+                basic: { baseFee: "0.04", asset: "USDC", multiChain: true },
+                pro: { baseFee: "0.08", asset: "USDC", multiChain: true },
+                premium: { baseFee: "0.15", asset: "USDC", multiChain: true }
             }
         },
         endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/biomechanics-agent",
@@ -152,18 +172,22 @@ export const CORE_AGENTS = [
         name: "Recovery Booking",
         emoji: "💆",
         role: "utility",
-        description: "Books massage and physiotherapy sessions.",
+        description: "Books massage and physiotherapy sessions. Multi-chain settlement.",
         location: "Asia-Pacific",
         type: "core",
         capabilities: ["massage_booking"],
         pricing: {
-            massage_booking: { baseFee: "0.50", asset: "USDC", chain: "avalanche-c-chain" }
+            massage_booking: {
+                base: { baseFee: "0.50", asset: "USDC", chain: "base-sepolia" },
+                avalanche: { baseFee: "0.50", asset: "USDC", chain: "avalanche-fuji" },
+                solana: { baseFee: "0.50", asset: "USDC", chain: "solana-devnet" }
+            }
         },
         tieredPricing: {
             massage_booking: {
-                basic: { baseFee: "0.25", asset: "USDC", chain: "avalanche-c-chain" },
-                pro: { baseFee: "0.50", asset: "USDC", chain: "avalanche-c-chain" },
-                premium: { baseFee: "1.00", asset: "USDC", chain: "avalanche-c-chain" }
+                basic: { baseFee: "0.25", asset: "USDC", multiChain: true },
+                pro: { baseFee: "0.50", asset: "USDC", multiChain: true },
+                premium: { baseFee: "1.00", asset: "USDC", multiChain: true }
             }
         },
         endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/booking-agent",

@@ -113,6 +113,78 @@ async function testEVMRegistration() {
 }
 
 /**
+ * Test 1b: Solana Agent Registration (Ed25519)
+ */
+async function testSolanaRegistration() {
+    console.log('\n========================================');
+    console.log('Test 1b: Solana Agent Registration (Ed25519)');
+    console.log('========================================\n');
+
+    // Import Solana utilities
+    const { Keypair, PublicKey } = await import('@solana/web3.js');
+    const bs58 = await import('bs58');
+    const nacl = await import('tweetnacl');
+
+    // Generate test keypair
+    const keypair = Keypair.generate();
+    const publicKey = keypair.publicKey.toBase58();
+    const secretKey = keypair.secretKey;
+
+    const agentId = `test-solana-agent-${Date.now()}`;
+    const agentProfile = {
+        id: agentId,
+        name: 'Test Solana Agent',
+        endpoint: `https://test-sol-agent-${Date.now()}.example.com/x402`,
+        capabilities: ['fitness_analysis'],
+        pricing: {
+            fitness_analysis: {
+                baseFee: '0.05',
+                asset: 'USDC',
+                chain: 'solana-devnet'
+            }
+        },
+        signer: publicKey,
+        chain: 'solana',
+        timestamp: Math.floor(Date.now() / 1000)
+    };
+
+    // Create message to sign
+    const message = JSON.stringify({
+        agentId: agentProfile.id,
+        endpoint: agentProfile.endpoint,
+        timestamp: agentProfile.timestamp
+    });
+
+    // Sign with Ed25519
+    const messageBytes = new TextEncoder().encode(message);
+    const signature = nacl.default.sign.detached(messageBytes, secretKey);
+    const signatureB58 = bs58.default.encode(signature);
+
+    console.log('✓ Solana agent created');
+    console.log(`  ID: ${agentProfile.id}`);
+    console.log(`  Signer: ${publicKey}`);
+    console.log(`  Signature: ${signatureB58.slice(0, 20)}...`);
+
+    // Test 1b: Register via local registry
+    console.log('\n▶ Registering with local registry...');
+    try {
+        const registry = new AgentRegistry(null);
+        const registered = await registry.register(agentProfile, signatureB58);
+        
+        console.log('✅ Solana registration successful');
+        console.log(`  Type: ${registered.type}`);
+        console.log(`  Status: ${registered.status}`);
+        console.log(`  Chain: ${registered.chain}`);
+        console.log(`  Verified: ${registered.verifiedAt ? 'Yes' : 'No'}`);
+    } catch (error) {
+        console.error('❌ Solana registration failed:', error.message);
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * Test 2: Agent Discovery After Registration
  */
 async function testDiscovery() {
@@ -223,6 +295,7 @@ async function runTests() {
 
     const tests = [
         { name: 'EVM Registration', fn: testEVMRegistration },
+        { name: 'Solana Registration', fn: testSolanaRegistration },
         { name: 'Agent Discovery', fn: testDiscovery },
         { name: 'Heartbeat', fn: testHeartbeat },
         { name: 'Stale Detection', fn: testStaleDetection }

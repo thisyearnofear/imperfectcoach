@@ -56,18 +56,22 @@ Imperfect Coach is an autonomous AI agent system that demonstrates x402-style pa
 
 ## Core Agents
 
-The system implements 4 CORE_AGENTS:
+The system implements 5 CORE_AGENTS with **multi-chain settlement** (Base, Avalanche, Solana):
 
 1. **Fitness Coach 💪** - Coordinator, primary fitness analysis
 2. **Nutrition Planner 🥗** - Specialized nutrition planning
 3. **Recovery Planner 😴** - Recovery optimization and planning
 4. **Biomechanics Analyst 🏋️** - Form analysis and movement quality
+5. **Recovery Booking 💆** - Massage & physiotherapy booking
 
 Each agent has:
 - Reputation scoring (94-98/100)
 - Capability-based discovery
 - Tiered pricing (Basic/Pro/Premium)
 - x402 payment integration
+- **Multi-chain settlement** (clients choose Base, Avalanche, or Solana at payment time)
+
+**Chain-Agnostic Design**: Agents are not tied to specific chains. All agents support settlement on all chains. Client picks the chain at payment negotiation, not at agent discovery.
 
 ## x402 Payment Protocol
 

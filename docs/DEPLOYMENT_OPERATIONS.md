@@ -203,6 +203,19 @@ aws logs tail /aws/lambda/agent-discovery --follow
 # Look for: "✅ Loaded X dynamic agents from DynamoDB"
 ```
 
+### Testing Solana Agent Registration
+
+```bash
+# Test Solana agent registration with Ed25519 signatures
+node aws-lambda/test-agent-registration.mjs dev
+
+# The test includes:
+# - EVM agent registration (EIP-191)
+# - Solana agent registration (Ed25519)
+# - Multi-chain discovery
+# - Heartbeat and persistence
+```
+
 ### Monitoring Agent Registry
 
 ```bash
@@ -214,6 +227,9 @@ aws logs tail /aws/lambda/agent-discovery --follow --filter "stale"
 
 # Monitor discovery queries
 aws logs tail /aws/lambda/agent-discovery --follow --filter "Discovery"
+
+# Check Solana agent loads
+aws logs tail /aws/lambda/agent-discovery --follow --filter "Solana"
 ```
 
 ## Solana Payment Setup
