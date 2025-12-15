@@ -423,27 +423,32 @@ const useENSName = (address?: string) => {
 
 /**
  * Display name resolution with chain-aware preferences
- * - Base: Prefer Basename
- * - Avalanche: Prefer ENS  
- * - Solana: Prefer SNS
- * - Fallback: Social identity → Address
+ * Only calls the resolver needed for the given chain to minimize API calls
+ * - Base/Default: Basename → Social → Address
+ * - Avalanche: ENS → Social → Address  
+ * - Solana: SNS → Social → Address
  */
 export const useDisplayName = (address?: string, chain?: 'solana' | 'base' | 'avalanche') => {
-  // Resolve in priority order based on chain
-  const { basename, isLoading: basenameLoading } = useBasename(address);
+  // Only call the primary resolver for the target chain
+  const isAvalanche = chain === 'avalanche';
+  const isSolana = chain === 'solana';
+  
+  // Chain-specific primary resolver (only one called per chain)
+  const { basename, isLoading: basenameLoading } = useBasename(!isAvalanche && !isSolana ? address : undefined);
+  const { ensName, isLoading: ensLoading } = useENSName(isAvalanche ? address : undefined);
+  const { solName, isLoading: snsLoading } = useSolanaNameService(isSolana ? address : undefined);
+  
+  // Primary name from chain-specific resolver
+  const primaryName = isAvalanche ? ensName : isSolana ? solName : basename;
+  const primaryLoading = isAvalanche ? ensLoading : isSolana ? snsLoading : basenameLoading;
+  
+  // Social fallback only if primary not found and not loading
   const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
-    enabled: !basenameLoading && !basename,
+    enabled: !primaryLoading && !primaryName,
   });
   const social = getPrimarySocialIdentity();
-  
-  // Conditional ENS/SNS based on chain preference
-  const shouldRunENS = !social && !basename && chain === 'avalanche';
-  const { ensName, isLoading: ensLoading } = useENSName(shouldRunENS ? address : undefined);
-  
-  const shouldRunSNS = !social && !basename && chain === 'solana';
-  const { solName, isLoading: snsLoading } = useSolanaNameService(shouldRunSNS ? address : undefined);
 
-  const isLoading = basenameLoading || identityLoading || ensLoading || snsLoading;
+  const isLoading = primaryLoading || identityLoading;
 
   let displayName: string;
   let source: 'social' | 'basename' | 'sol' | 'ens' | 'address';
@@ -451,18 +456,12 @@ export const useDisplayName = (address?: string, chain?: 'solana' | 'base' | 'av
   if (isLoading) {
     displayName = 'Loading...';
     source = 'address';
-  } else if (basename) {
-    displayName = basename;
-    source = 'basename';
+  } else if (primaryName) {
+    displayName = primaryName;
+    source = isAvalanche ? 'ens' : isSolana ? 'sol' : 'basename';
   } else if (social) {
     displayName = social.username || social.id;
     source = 'social';
-  } else if (chain === 'avalanche' && ensName) {
-    displayName = ensName;
-    source = 'ens';
-  } else if (chain === 'solana' && solName) {
-    displayName = solName;
-    source = 'sol';
   } else if (address) {
     displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
     source = 'address';
