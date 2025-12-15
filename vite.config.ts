@@ -1,6 +1,41 @@
-import { defineConfig } from "vite";
+import { defineConfig, Plugin, transformWithEsbuild } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+
+/**
+ * Custom Vite plugin to handle ox package's TypeScript-in-JS files
+ * The ox package (viem dependency) incorrectly exports TypeScript types in .js files
+ */
+function stripTypeExportsPlugin(): Plugin {
+  return {
+    name: 'strip-type-exports',
+    enforce: 'pre',
+    async transform(code, id) {
+      // Only process ox package files that contain type exports
+      if (id.includes('node_modules') && id.includes('ox') && id.endsWith('.js')) {
+        // Check if file contains TypeScript type syntax
+        if (code.includes('export type ') || code.includes('export interface ')) {
+          try {
+            // Use Vite's internal esbuild to strip TypeScript syntax
+            const result = await transformWithEsbuild(code, id, {
+              loader: 'ts', // Treat as TypeScript to strip types
+              format: 'esm',
+              target: 'es2020',
+            });
+            return {
+              code: result.code,
+              map: result.map,
+            };
+          } catch (e) {
+            // If transform fails, log and continue
+            console.warn(`[strip-type-exports] Failed to transform ${id}:`, e);
+          }
+        }
+      }
+      return null;
+    }
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -10,6 +45,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   plugins: [
+    stripTypeExportsPlugin(),
     react(),
   ].filter(Boolean),
   resolve: {
@@ -50,8 +86,15 @@ export default defineConfig(({ mode }) => ({
     sourcemap: false,
     target: 'es2020',
     minify: 'esbuild',
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
   },
   optimizeDeps: {
+    include: [
+      'ox',
+      'viem',
+    ],
     exclude: [
       '@tensorflow/tfjs-core',
       '@tensorflow/tfjs-backend-webgl',
@@ -60,6 +103,6 @@ export default defineConfig(({ mode }) => ({
       '@tensorflow/tfjs-converter',
       '@tensorflow-models/pose-detection',
       '@mediapipe/pose'
-    ]
+    ],
   }
 }));

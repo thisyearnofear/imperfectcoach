@@ -29,13 +29,8 @@ export { AgentRegistry } from './registry';
 // Service Tiers: SLA and tier definitions
 export * from './service-tiers';
 
-// Enhanced Agent Economy: Advanced orchestration integrated into existing components
-// PRINCIPLE: AGGRESSIVE CONSOLIDATION - Using enhanced profiles instead of separate files
-export * from './kestra-orchestrator';
-export * from './oumi-integration';
-export * from './enhanced-orchestrator';
-export * from './real-payments';
-export * from './marketplace';
-
 // Analysis Transformation: Converts raw JSON to structured data for visualization
 export * from './analysis-transformer';
+
+// Core Agents: Static agent definitions that mirror backend
+export * from './core-agents';

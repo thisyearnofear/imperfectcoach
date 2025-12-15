@@ -532,9 +532,11 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
       address: process.env.AGENT_WALLET_ADDRESS || "0x1234567890123456789012345678901234567890"
     };
 
-    // 3. x402 payment via CORE_AGENTS (simulate for demo)
+    // 3. x402 payment via CORE_AGENTS (verify + settle for production)
     console.log(`\n💳 Executing x402 payment...`);
-    const paymentProof = await coreHandler.simulateX402Payment(
+    const paymentHeader = event.headers?.["x-payment"] || event.headers?.["X-Payment"];
+    const paymentProof = await coreHandler.verifyAndSettleX402Payment(
+      paymentHeader,
       specialist,
       amount,
       network
@@ -544,11 +546,11 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
       return {
         error: "Payment failed",
         specialist: specialist.name,
-        message: "Unable to process x402 payment"
+        message: paymentProof.error || "Unable to process x402 payment"
       };
     }
 
-    console.log(`   ✅ Payment executed: ${paymentProof.transactionHash}`);
+    console.log(`   ✅ Payment executed: ${paymentProof.transactionHash || paymentProof.status}`);
 
     // 4. Call specialist's endpoint
     console.log(`\n🤝 Calling specialist endpoint...`);

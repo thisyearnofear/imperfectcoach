@@ -137,19 +137,6 @@ export interface AgentEconomyProfile {
     description: string;
     baseCost: string;
     capability: AgentCapability;
-    // PRINCIPLE: ENHANCEMENT FIRST - Extended with optional enhanced capabilities
-    supportsKestraSynthesis?: boolean;
-    supportsOumiEnhancement?: boolean;
-    supportsRealPayments?: boolean;
-    kestraConfig?: {
-        synthesisQuality: 'basic' | 'advanced' | 'expert';
-        maxTokens: number;
-        temperature: number;
-    };
-    oumiConfig?: {
-        modelType: 'language' | 'vision-language';
-        enhancementLevel: 'light' | 'medium' | 'heavy';
-    };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

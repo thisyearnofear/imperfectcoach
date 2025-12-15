@@ -1,37 +1,42 @@
 #!/bin/bash
 set -e
 
-echo "🔨 Building Lambda functions with esbuild..."
+echo "🔨 Building Lambda functions..."
 
-# Clean start to fix pnpm symlink issues
+# Clean start
 rm -rf dist
 mkdir -p dist
 
-echo "📥 Installing dependencies with pnpm (hoisted)..."
+echo "📥 Installing dependencies with pnpm..."
 pnpm install --shamefully-hoist
 
-# Function to build a file
-build_file() {
-    src=$1
-    dest=$2
-    echo "📦 Building $src -> $dest..."
-    ./node_modules/.bin/esbuild "$src" \
-      --bundle \
-      --platform=node \
-      --target=node18 \
-      --format=cjs \
-      --outfile="$dest" \
-      --external:bufferutil \
-      --external:utf-8-validate \
-      --minify \
-      --sourcemap \
-      --log-level=warning
-    echo "✅ Built $dest ($(du -h "$dest" | cut -f1))"
-}
+echo ""
+echo "📦 Bundling with esbuild..."
 
-build_file "index.mjs" "dist/index.js"
-build_file "agent-discovery.mjs" "dist/agent-discovery.js"
-build_file "agent-coach-handler.mjs" "dist/agent-coach.js"
+# Build each handler
+npx esbuild index.mjs \
+  --bundle \
+  --platform=node \
+  --target=node18 \
+  --format=esm \
+  '--external:@aws-sdk/*' \
+  --outfile=dist/index.js
+
+npx esbuild agent-discovery.mjs \
+  --bundle \
+  --platform=node \
+  --target=node18 \
+  --format=esm \
+  '--external:@aws-sdk/*' \
+  --outfile=dist/agent-discovery.js
+
+npx esbuild agent-coach-handler.mjs \
+  --bundle \
+  --platform=node \
+  --target=node18 \
+  --format=esm \
+  '--external:@aws-sdk/*' \
+  --outfile=dist/agent-coach.js
 
 echo ""
 echo "🎉 Build complete!"
