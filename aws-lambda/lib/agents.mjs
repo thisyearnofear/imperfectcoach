@@ -186,33 +186,10 @@ export const CORE_AGENTS = [
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Verify EIP-191 signed message (agent identity proof)
- * @param {string} message - Message that was signed
- * @param {string} signature - 0x-prefixed hex signature
- * @param {string} signer - 0x-prefixed hex address that should have signed
- * @returns {boolean} true if signature is valid
+ * Import signature verification utilities
+ * Provides EIP-191 (EVM) and Ed25519 (Solana) verification
  */
-function verifyEIP191Signature(message, signature, signer) {
-    try {
-        if (!signature || !signer) return false;
-        
-        // In production, use viem or ethers.js:
-        // import { verifyMessage } from 'viem';
-        // const recovered = await verifyMessage({ message, signature, address: signer });
-        // return recovered;
-        
-        // For development: basic validation of format
-        // Full verification requires cryptographic library
-        const sigValid = signature.startsWith('0x') && signature.length === 132;
-        const addrValid = signer.startsWith('0x') && signer.length === 42;
-        
-        console.log(`🔐 EIP-191 Signature Validation: sig=${sigValid}, addr=${addrValid}`);
-        return sigValid && addrValid;
-    } catch (error) {
-        console.error('❌ EIP-191 verification error:', error.message);
-        return false;
-    }
-}
+import { verifySignature, verifyAgentIdentity } from './signature-verification.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // AGENT REGISTRY CLASS (persistent storage)
@@ -281,8 +258,8 @@ export class AgentRegistry {
 
     /**
      * Register a new agent (permissionless with signature verification)
-     * @param {object} profile - Agent profile { id, name, endpoint, capabilities, pricing, signer? }
-     * @param {string} signature - EIP-191 signed identity proof
+     * @param {object} profile - Agent profile { id, name, endpoint, capabilities, pricing, signer?, chain? }
+     * @param {string} signature - EIP-191 (EVM) or Ed25519 (Solana) signed identity proof
      * @returns {Agent} registered agent
      * @throws {Error} if signature verification fails
      */
@@ -293,17 +270,11 @@ export class AgentRegistry {
 
         // Verify signature (proof that agent controls the signing wallet)
         if (signature && profile.signer) {
-            const message = JSON.stringify({
-                agentId: profile.id,
-                endpoint: profile.endpoint,
-                timestamp: profile.timestamp || Date.now()
-            });
-            
-            const isValid = verifyEIP191Signature(message, signature, profile.signer);
+            const isValid = await verifyAgentIdentity(profile, signature);
             if (!isValid) {
                 throw new Error("Invalid signature: agent identity verification failed");
             }
-            console.log(`✅ Signature verified for ${profile.id}`);
+            console.log(`✅ Agent identity verified: ${profile.id}`);
         } else if (signature) {
             console.warn(`⚠️ Signature provided but no signer address - skipping verification`);
         } else {

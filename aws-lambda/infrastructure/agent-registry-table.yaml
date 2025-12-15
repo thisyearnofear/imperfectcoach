@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'DynamoDB table for Agent Registry persistence'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+
+Resources:
+  # Main Agent Registry Table
+  AgentRegistryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'AgentRegistry-${Environment}'
+      BillingMode: PAY_PER_REQUEST  # Auto-scaling for variable workloads
+      
+      AttributeDefinitions:
+        - AttributeName: agentId
+          AttributeType: S
+        - AttributeName: type
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: lastHeartbeat
+          AttributeType: N
+        - AttributeName: registeredAt
+          AttributeType: N
+      
+      KeySchema:
+        - AttributeName: agentId
+          KeyType: HASH  # Partition key
+      
+      # Global Secondary Indexes for efficient querying
+      GlobalSecondaryIndexes:
+        # Query agents by type (core vs dynamic)
+        - IndexName: TypeIndex
+          KeySchema:
+            - AttributeName: type
+              KeyType: HASH
+            - AttributeName: registeredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        
+        # Find stale agents (no heartbeat > threshold)
+        - IndexName: StatusHeartbeatIndex
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: lastHeartbeat
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      
+      # Point-in-time recovery for data protection
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !If [IsProd, true, false]
+      
+      # TTL for auto-cleanup of inactive agents (optional)
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      
+      # Tags for cost tracking
+      Tags:
+        - Key: Service
+          Value: agent-registry
+        - Key: Environment
+          Value: !Ref Environment
+
+Conditions:
+  IsProd: !Equals [!Ref Environment, prod]
+
+Outputs:
+  AgentRegistryTableName:
+    Description: DynamoDB table name
+    Value: !Ref AgentRegistryTable
+    Export:
+      Name: !Sub 'AgentRegistry-TableName-${Environment}'
+  
+  AgentRegistryTableArn:
+    Description: DynamoDB table ARN
+    Value: !GetAtt AgentRegistryTable.Arn
+    Export:
+      Name: !Sub 'AgentRegistry-TableArn-${Environment}'

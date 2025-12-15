@@ -102,6 +102,120 @@ The AgentRegistry is deployed to both chains:
 - **Base Sepolia**: `0xfE997dEdF572CA17d26400bCDB6428A8278a0627`
 - **Avalanche Fuji**: `0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC`
 
+## Agent Registry Deployment (Phase 2)
+
+### Prerequisites
+- AWS CLI configured with appropriate permissions
+- Terraform or CloudFormation access
+- Node.js 18+ for testing
+
+### 1. Deploy DynamoDB Table
+
+**Using CloudFormation:**
+```bash
+aws cloudformation create-stack \
+  --stack-name agent-registry-dev \
+  --template-body file://aws-lambda/infrastructure/agent-registry-table.yaml \
+  --parameters ParameterKey=Environment,ParameterValue=dev \
+  --region eu-north-1
+```
+
+**Using Terraform:**
+```bash
+cd aws-lambda/infrastructure
+terraform init
+terraform plan -var="environment=dev" -var="enable_pitr=false"
+terraform apply -var="environment=dev" -var="enable_pitr=false"
+```
+
+### 2. Update Lambda IAM Role
+
+Ensure Lambda execution role has DynamoDB permissions:
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "dynamodb:GetItem",
+    "dynamodb:PutItem",
+    "dynamodb:UpdateItem",
+    "dynamodb:Query",
+    "dynamodb:Scan"
+  ],
+  "Resource": "arn:aws:dynamodb:*:*:table/AgentRegistry-*"
+}
+```
+
+### 3. Configure Lambda Environment Variables
+
+```bash
+aws lambda update-function-configuration \
+  --function-name agent-discovery \
+  --environment Variables='{
+    "DYNAMODB_TABLE_NAME":"AgentRegistry-dev",
+    "DYNAMODB_REGION":"eu-north-1"
+  }' \
+  --region eu-north-1
+```
+
+### 4. Update Lambda Handler Code
+
+Edit `agent-discovery.mjs` to pass DynamoDB client:
+```javascript
+const dynamoDb = new DynamoDBClient({ region: process.env.DYNAMODB_REGION });
+
+async function getRegistry() {
+    if (!agentRegistry) {
+        agentRegistry = await initializeRegistry(dynamoDb);
+    }
+    return agentRegistry;
+}
+```
+
+### 5. Test Agent Registration with Signatures
+
+```bash
+# Run comprehensive test suite
+node aws-lambda/test-agent-registration.mjs dev
+
+# Test specific endpoint
+curl -X POST https://api-dev.imperfectcoach.app/agents/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "profile": {
+      "id": "test-agent-001",
+      "name": "Test Agent",
+      "endpoint": "https://test-agent.example.com",
+      "capabilities": ["fitness_analysis"],
+      "signer": "0x...",
+      "chain": "evm"
+    },
+    "signature": "0x..."
+  }'
+```
+
+### 6. Verify Cold-Start Persistence
+
+Deploy updated Lambda and trigger cold start:
+```bash
+# Monitor CloudWatch logs
+aws logs tail /aws/lambda/agent-discovery --follow
+
+# Look for: "✅ Loaded X dynamic agents from DynamoDB"
+```
+
+### Monitoring Agent Registry
+
+```bash
+# View registration activity
+aws logs tail /aws/lambda/agent-discovery --follow --filter "Register"
+
+# Check stale agents
+aws logs tail /aws/lambda/agent-discovery --follow --filter "stale"
+
+# Monitor discovery queries
+aws logs tail /aws/lambda/agent-discovery --follow --filter "Discovery"
+```
+
 ## Solana Payment Setup
 
 **Note**: The system implements x402 payment signature verification for Solana but does not execute real blockchain transactions in the current implementation.
