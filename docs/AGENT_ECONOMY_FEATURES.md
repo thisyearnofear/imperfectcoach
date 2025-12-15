@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Imperfect Coach implements an agent coordination system where specialized agents work together to provide comprehensive fitness analysis. The system follows x402 protocol patterns for payment negotiation, though currently operates with internally defined CORE_AGENTS rather than a fully decentralized agent network.
+The Imperfect Coach implements an agent coordination system where specialized agents work together to provide comprehensive fitness analysis. The system follows x402 protocol patterns for payment negotiation and settlement, with a unified agent registry enabling both internal core agents and external permissionless agent registration.
 
 ## Agent Coordination Architecture
 
@@ -37,12 +37,14 @@ Each agent offers tiered services with different SLA guarantees:
 - **Premium Tier**: Ultra-fast, <500ms SLA (5x price)
 
 ### Agent Discovery
-- **Internal Discovery**: Uses predefined CORE_AGENTS in the system
-- **Capability-based**: Find agents by specific capabilities
-- **Reputation-based**: Agents ranked by reputation scores
-- **SLA-constrained**: Response time requirements
+- **Core Agents**: Predefined CORE_AGENTS (5 fitness specialists) as guaranteed fallback
+- **External Agents**: Permissionless registration via `/agents/register` (EIP-191 signed)
+- **Capability-based**: `GET /agents?capability=X` queries unified registry
+- **Reputation-based**: Agents ranked by reputation scores (0-100)
+- **SLA-constrained**: Response time requirements and tier availability
+- **Implementation**: Unified registry in `aws-lambda/lib/agents.mjs` with DynamoDB-ready persistence
 
-## x402 Agent-to-Agent Payments
+## x402-Style Agent Coordination Payments
 
 ### Payment Flow
 ```

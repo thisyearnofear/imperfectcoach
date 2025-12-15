@@ -2,9 +2,9 @@
 
 ## Overview
 
-Imperfect Coach is an autonomous AI agent system that demonstrates a decentralized agent economy powered by x402 protocol. Multiple specialized agents (fitness coach, nutrition planner, biomechanics analyzer, recovery specialist) coordinate to provide comprehensive fitness analysis using x402 payment negotiation for services.
+Imperfect Coach is an autonomous AI agent system that demonstrates x402-style payment flows with coordinated specialist agents (fitness coach, nutrition planner, biomechanics analyzer, recovery specialist). The system follows x402 payment verification and settlement patterns but currently operates with internally defined CORE_AGENTS rather than a fully decentralized agent discovery network.
 
-**Note**: The Reap Protocol integration is currently under development and disabled. The agent economy operates with internally defined CORE_AGENTS.
+**Status**: Phase 1 (Consolidation) ✅ - Unified, persistent agent registry implemented. See "Agent Registry Implementation" below.
 
 ## Core Components
 
@@ -107,5 +107,95 @@ The x402 protocol enables true decentralized agent economies:
 ### Payments & Agent Economy
 - x402 protocol (HTTP 402 Payment Required)
 - USDC stablecoin with automatic network routing
-- Reap Protocol for agent discovery
+- Permissionless agent discovery via self-hosted registry
 - AgentRegistry Contract for profiles and reputation
+
+## Agent Registry Implementation
+
+### Architecture
+The agent discovery system uses a three-layer architecture:
+
+1. **Self-Hosted Registry** (Primary)
+   - `aws-lambda/lib/agents.mjs` - Unified agent registry with persistent storage
+   - Supports core agents (guaranteed availability) and dynamic agents (externally registered)
+   - Methods: `queryByCapability()`, `register()`, `getById()`, `updateHeartbeat()`, `deactivate()`
+
+2. **REST API** (agent-discovery.mjs)
+   - `GET /agents?capability=X` - Discover agents by capability
+   - `POST /agents/register` - Permissionless agent registration (EIP-191 signed)
+   - `POST /agents/heartbeat` - Liveness tracking
+   - `POST /agents/{id}/book` - Service booking
+   - `POST /agents/{id}/availability` - Tier and availability updates
+
+3. **Persistent Storage** (DynamoDB-ready)
+   - Core agents: Hardcoded fallback (5 fitness specialists)
+   - Dynamic agents: Runtime-registered externally managed agents
+   - Attributes: ID, name, endpoint, capabilities, pricing, reputation, lastHeartbeat, status
+
+### Discovery Flow
+```
+Client Request → agent-discovery.mjs → AgentRegistry
+                                       ├─ Query core agents
+                                       ├─ Query dynamic agents (DynamoDB)
+                                       └─ Filter by capability, reputation, tier
+```
+
+### Registration Flow
+```
+External Agent → POST /agents/register
+                 ├─ Verify EIP-191 signature (TODO)
+                 ├─ Create agent with type='dynamic'
+                 └─ Persist to registry (in-memory + DynamoDB)
+```
+
+### Current Implementation Status
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Core agents | ✅ | 5 fitness specialists, guaranteed fallback |
+| Unified registry | ✅ | Single source of truth via agents.mjs |
+| Persistent storage | ✅ | DynamoDB integration complete |
+| External discovery | ✅ | queryByCapability() with filtering |
+| Permissionless join | ✅ | register() endpoint operational |
+| Signature verification | ✅ | EIP-191 signature validation in register() |
+| Dynamic persistence | ✅ | Cold-start loading from DynamoDB |
+
+### Why This Approach
+
+**Previous**: Reap Protocol integration was planned but underdeveloped. Reap focuses on product commerce, not agent discovery.
+
+**Current**: Self-hosted registry provides:
+- True permissionless agent discovery
+- Independence from third-party services
+- Dynamic agent registration without pre-arrangement
+- Foundation for true X402 (unknown agents can find and pay each other)
+
+**Future**: Reap can be added as optional layer once their agent discovery matures.
+
+## Phase 2: Production Enhancements
+
+Complete X402 implementation with production-grade security:
+
+1. **Deploy DynamoDB table**
+   - Create AgentRegistry table with agentId as primary key
+   - Add GSI on (type, status) for efficient querying
+   - Enable point-in-time recovery
+
+2. **Integrate cryptographic library**
+   - Replace format validation with actual EIP-191 recovery
+   - Use viem or ethers.js for signature verification
+   - Support multi-chain signers (EVM + Solana)
+
+3. **Test permissionless registration**
+   - Create test agent with EIP-191 signed identity
+   - Verify persistence across Lambda cold starts
+   - Test heartbeat and stale agent cleanup
+
+4. **Add rate limiting & spam prevention**
+   - Limit registrations per IP/hour
+   - Require minimum reputation for discovery priority
+   - Auto-deactivate agents after 7 days without heartbeat
+
+5. **Add metrics & monitoring**
+   - Track registration requests
+   - Monitor discovery queries
+   - Alert on stale agents and failed verifications

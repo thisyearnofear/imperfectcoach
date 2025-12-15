@@ -1,13 +1,14 @@
 /**
  * Core Agent Handler
  * 
- * Manages communication with CORE_AGENTS (Fitness Coach, Nutrition, Recovery)
+ * Manages communication with agents (Fitness Coach, Nutrition, Recovery, etc)
  * Handles x402 payment negotiation and SLA tracking
  * 
+ * Uses consolidated AgentRegistry from agents.mjs
  * Used by Bedrock's call_specialist_agent tool
  */
 
-import { CORE_AGENTS } from "./reap-integration.mjs";
+import { CORE_AGENTS } from "./agents.mjs";
 import { verifyMessage, formatUnits } from "viem";
 import { base, baseSepolia, avalancheFuji } from "viem/chains";
 import nacl from "tweetnacl";
@@ -18,12 +19,13 @@ import bs58 from "bs58";
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Find agents matching a capability from CORE_AGENTS
+ * Find agents matching a capability
  * 
+ * Uses CORE_AGENTS as source (can be enhanced to query AgentRegistry in future)
  * Sorted by reputation (highest first)
  */
 export function findAgentsByCapability(capability) {
-  console.log(`🔍 Searching CORE_AGENTS for capability: ${capability}`);
+  console.log(`🔍 Searching agents for capability: ${capability}`);
 
   const matches = CORE_AGENTS.filter((agent) =>
     agent.capabilities.includes(capability)
@@ -41,7 +43,7 @@ export function getAgent(agentId) {
 }
 
 /**
- * Get all CORE_AGENTS
+ * Get all agents
  */
 export function getAllAgents() {
   return CORE_AGENTS;

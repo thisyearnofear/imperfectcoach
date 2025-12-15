@@ -278,9 +278,9 @@ Add appropriate IAM permissions for S3.
 - Implement retry logic
 - Use efficient contract patterns
 
-## x402 Implementation Status
+## x402-Style Implementation Status
 
-The system implements full x402 protocol compliance with:
+The system implements x402-style protocol compliance with:
 - HTTP 402 challenge responses when payment is required
 - EIP-191 signature verification for EVM wallets
 - Ed25519 signature verification for Solana wallets

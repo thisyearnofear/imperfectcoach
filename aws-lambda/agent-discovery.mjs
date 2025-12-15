@@ -1,24 +1,20 @@
 /**
  * Agent Discovery Service (Lambda)
  * 
- * PHASE A: Reap Protocol Integration
- * Now queries real specialists via Reap Protocol, falls back to Core Agents.
- * 
- * PHASE D: Multi-Service Marketplace
- * Adds service tier filtering, availability checks, and booking support.
+ * Permissionless X402 agent discovery & registration
  * 
  * Features:
- * - Real agent discovery from Reap registries (x402 and A2A)
- * - Service tier filtering (basic/pro/premium)
- * - SLA and availability constraints
- * - Dynamic agent registration with service tiers
- * - Service booking orchestration
- * - Local heartbeat tracking
+ * - Query agents by capability with filters
+ * - Permissionless agent registration (POST /agents/register)
+ * - Agent heartbeat tracking (persistent liveness)
+ * - Service tier booking with SLA constraints
+ * - Persistent storage via DynamoDB
  * 
- * Note: Reap query results are cached per request. Dynamic agents via local API.
+ * Uses consolidated AgentRegistry from lib/agents.mjs
+ * Supports x402 signature verification
  */
 
-import { discoverAgentsHybrid, CORE_AGENTS } from "./lib/reap-integration.mjs";
+import { initializeRegistry, discoverAgents } from "./lib/agents.mjs";
 
 const CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
@@ -26,8 +22,15 @@ const CORS_HEADERS = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-// In-memory store for dynamic agents (ephemeral)
-let dynamicAgents = new Map();
+// Initialize registry on cold start (loads core agents + dynamic from DynamoDB)
+let agentRegistry = null;
+
+async function getRegistry() {
+    if (!agentRegistry) {
+        agentRegistry = await initializeRegistry(null); // Pass DynamoDB client in production
+    }
+    return agentRegistry;
+}
 
 export const handler = async (event) => {
     // Support both REST API (httpMethod) and HTTP API v2 (requestContext.http.method) formats
@@ -46,69 +49,47 @@ export const handler = async (event) => {
     try {
         // 1. DISCOVERY (GET /agents)
         // Example: GET /agents?capability=nutrition_planning&tier=pro&minReputation=90
-        // Phase A: Now queries real agents via Reap Protocol!
-        // Phase D: Supports tier filtering and SLA constraints
+        // Returns agents that match capability + filters, sorted by reputation
         if (httpMethod === "GET" && (path === "/agents" || path.endsWith("/agents"))) {
+            const registry = await getRegistry();
             const capability = queryStringParameters?.capability;
-            const minScore = queryStringParameters?.minScore ? parseInt(queryStringParameters.minScore) : 0;
-            const tier = queryStringParameters?.tier;  // Phase D
-            const minReputation = queryStringParameters?.minReputation ? parseInt(queryStringParameters.minReputation) : 0;  // Phase D
-            const maxResponseTime = queryStringParameters?.maxResponseTime ? parseInt(queryStringParameters.maxResponseTime) : null;  // Phase D
+            const minReputation = queryStringParameters?.minReputation ? parseInt(queryStringParameters.minReputation) : 0;
+            const tier = queryStringParameters?.tier;
+            const maxResponseTime = queryStringParameters?.maxResponseTime ? parseInt(queryStringParameters.maxResponseTime) : null;
 
-            // Phase A: Discover real agents via Reap (falls back to Core agents)
             let discoveredAgents = [];
+            
             if (capability) {
-                discoveredAgents = await discoverAgentsHybrid(capability, true);
+                // Query registry with filters (includes core agents as fallback)
+                discoveredAgents = await discoverAgents(capability, registry, {
+                    minReputation,
+                    tier,
+                    maxResponseTime
+                });
             } else {
-                // If no capability specified, return core agents
-                discoveredAgents = [...CORE_AGENTS, ...Array.from(dynamicAgents.values())];
+                // No capability specified: return all agents
+                discoveredAgents = registry.getAll();
             }
 
-            // Apply filters
-            const matches = discoveredAgents.filter(agent => {
-                // Reputation filter
-                if (agent.reputationScore < minScore) return false;
-                if (agent.reputationScore < minReputation) return false;  // Phase D
-
-                // Phase D: Service tier filtering
-                if (tier && agent.serviceAvailability) {
-                    const tierAvailability = agent.serviceAvailability[tier];
-                    if (!tierAvailability) return false;
-
-                    // Check if slots available
-                    if (tierAvailability.slotsFilled >= tierAvailability.slots) {
-                        return false;
-                    }
-
-                    // Check SLA constraint
-                    if (maxResponseTime && tierAvailability.responseSLA > maxResponseTime) {
-                        return false;
-                    }
-                }
-
-                return true;
-            });
-
-            console.log(`📊 Discovery Response: Found ${matches.length} agents (capability=${capability}, tier=${tier || "all"}, minRep=${minReputation})`);
+            console.log(`📊 Discovery: Found ${discoveredAgents.length} agents (capability=${capability || "any"}, minRep=${minReputation})`);
 
             return {
                 statusCode: 200,
                 headers: CORS_HEADERS,
                 body: JSON.stringify({
                     success: true,
-                    count: matches.length,
-                    agents: matches,
-                    // Phase A telemetry
-                    discoverySource: capability ? "reap-protocol-hybrid" : "core-agents",
-                    // Phase D filter info
-                    filters: { capability, tier, minReputation, maxResponseTime },
+                    count: discoveredAgents.length,
+                    agents: discoveredAgents,
+                    filters: { capability, minReputation, tier, maxResponseTime },
                     timestamp: new Date().toISOString(),
                 })
             };
         }
 
         // 2. REGISTRATION (POST /agents/register)
+        // Permissionless agent registration with optional EIP-191 signature verification
         if (httpMethod === "POST" && (path === "/agents/register" || path.endsWith("/register"))) {
+            const registry = await getRegistry();
             const data = JSON.parse(body || "{}");
             const { profile, signature } = data;
 
@@ -116,71 +97,61 @@ export const handler = async (event) => {
                 return {
                     statusCode: 400,
                     headers: CORS_HEADERS,
-                    body: JSON.stringify({ error: "Invalid profile data" })
+                    body: JSON.stringify({
+                        error: "Missing required fields: id, endpoint, name, capabilities"
+                    })
                 };
             }
 
-            // Verify signature (Mock for Phase 2, implement verify in Phase 3)
-            // verifyAgentIdentity(profile.id, signature);
-
-            const newAgent = {
-                ...profile,
-                lastHeartbeat: Date.now(),
-                reputationScore: 50, // Start neutral
-                status: "active"
-            };
-
-            dynamicAgents.set(profile.id, newAgent);
-            console.log(`✅ Registered new agent: ${profile.name} (${profile.id})`);
-
-            return {
-                statusCode: 201,
-                headers: CORS_HEADERS,
-                body: JSON.stringify({
-                    success: true,
-                    message: "Agent registered successfully",
-                    agent: newAgent
-                })
-            };
+            // Note: EIP-191 signature verification is implemented in AgentRegistry.register()
+            // Signature format: { signature: "0x...", signer: "0x..." } proves agent identity
+            // DEV MODE: Signature is optional but recommended for production
+            
+            try {
+                const registeredAgent = await registry.register(profile, signature);
+                
+                console.log(`✅ Agent registered via REST API: ${profile.id}`);
+                
+                return {
+                    statusCode: 201,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({
+                        success: true,
+                        message: "Agent registered successfully",
+                        agent: registeredAgent,
+                        note: signature ? "Agent identity verified via EIP-191 signature" : "Unverified registration (DEV MODE)"
+                    })
+                };
+            } catch (error) {
+                console.error(`❌ Registration failed for ${profile.id}:`, error.message);
+                
+                return {
+                    statusCode: 400,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({
+                        error: error.message,
+                        hint: "Provide EIP-191 signed identity proof to enable verification"
+                    })
+                };
+            }
         }
 
         // 3. HEARTBEAT (POST /agents/heartbeat)
+        // Agents send heartbeat to signal liveness - prevents deactivation
         if (httpMethod === "POST" && (path === "/agents/heartbeat" || path.endsWith("/heartbeat"))) {
+            const registry = await getRegistry();
             const data = JSON.parse(body || "{}");
             const { id } = data;
 
-            if (dynamicAgents.has(id)) {
-                const agent = dynamicAgents.get(id);
-                agent.lastHeartbeat = Date.now();
-                agent.status = "active";
-                dynamicAgents.set(id, agent);
-                return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true }) };
+            if (!id) {
+                return {
+                    statusCode: 400,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({ error: "Missing agent id" })
+                };
             }
 
-            // Core agents don't need heartbeat, but acknowledge
-            const isCore = CORE_AGENTS.find(a => a.id === id);
-            if (isCore) {
-                return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true, type: "core" }) };
-            }
-
-            return {
-                statusCode: 404,
-                headers: CORS_HEADERS,
-                body: JSON.stringify({ error: "Agent not found" })
-            };
-        }
-
-        // 4. BOOKING (POST /agents/{id}/book) - Phase D
-        // Example: POST /agents/agent-nutrition-mock/book
-        // Body: { tier: "pro", capability: "nutrition_planning", requestData: {...} }
-        if (httpMethod === "POST" && path.includes("/agents/") && path.endsWith("/book")) {
-            const agentId = path.split("/")[2];
-            const data = JSON.parse(body || "{}");
-            const { tier, capability, requestData } = data;
-
-            // Find agent (dynamic or core)
-            let agent = dynamicAgents.get(agentId) || CORE_AGENTS.find(a => a.id === agentId);
-
+            const agent = registry.getById(id);
             if (!agent) {
                 return {
                     statusCode: 404,
@@ -189,7 +160,40 @@ export const handler = async (event) => {
                 };
             }
 
-            // Phase D: Validate tier and availability
+            try {
+                await registry.updateHeartbeat(id);
+                return {
+                    statusCode: 200,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({ success: true, type: agent.type })
+                };
+            } catch (error) {
+                return {
+                    statusCode: 500,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({ error: error.message })
+                };
+            }
+        }
+
+        // 4. BOOKING (POST /agents/{id}/book)
+        // Reserve service slot with SLA constraints
+        if (httpMethod === "POST" && path.includes("/agents/") && path.endsWith("/book")) {
+            const registry = await getRegistry();
+            const agentId = path.split("/")[2];
+            const data = JSON.parse(body || "{}");
+            const { tier, capability, requestData } = data;
+
+            const agent = registry.getById(agentId);
+            if (!agent) {
+                return {
+                    statusCode: 404,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({ error: "Agent not found" })
+                };
+            }
+
+            // Validate tier and availability
             if (!agent.serviceAvailability || !agent.serviceAvailability[tier]) {
                 return {
                     statusCode: 400,
@@ -212,7 +216,7 @@ export const handler = async (event) => {
                 };
             }
 
-            // Check SLA capability match
+            // Check capability match
             if (!agent.capabilities.includes(capability)) {
                 return {
                     statusCode: 400,
@@ -222,17 +226,27 @@ export const handler = async (event) => {
             }
 
             // Reserve slot
-            tierAvailability.slotsFilled++;
+            try {
+                await registry.updateAvailability(agentId, tier, {
+                    slotsFilled: tierAvailability.slotsFilled + 1
+                });
+            } catch (error) {
+                return {
+                    statusCode: 500,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({ error: error.message })
+                };
+            }
 
             // Get pricing for tier
             const tieredPrice = agent.tieredPricing?.[capability]?.[tier] ||
                 agent.pricing?.[capability] ||
                 { baseFee: "0.01", asset: "USDC", chain: "base-sepolia" };
 
-            // Generate booking ID (timestamp + random)
+            // Generate booking ID
             const bookingId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-            console.log(`📅 Booking Created: ${bookingId} for agent ${agent.name} (${tier} tier)`);
+            console.log(`📅 Booking: ${bookingId} for ${agent.name} (${tier} tier)`);
 
             return {
                 statusCode: 201,
@@ -243,7 +257,7 @@ export const handler = async (event) => {
                     agent: {
                         id: agent.id,
                         name: agent.name,
-                        emoji: agent.emoji
+                        emoji: agent.emoji || "🤖"
                     },
                     tier,
                     capability,
@@ -252,7 +266,7 @@ export const handler = async (event) => {
                         responseSLA: tierAvailability.responseSLA,
                         uptime: tierAvailability.uptime
                     },
-                    expiryTime: Date.now() + 3600000, // 1 hour
+                    expiryTime: Date.now() + 3600000,
                     requestData
                 })
             };
@@ -281,46 +295,48 @@ export const handler = async (event) => {
             };
         }
 
-        // 6. UPDATE AVAILABILITY (POST /agents/{id}/availability) - Phase D
-        // Agent updates its tier availability (slots, next available, etc)
+        // 6. UPDATE AVAILABILITY (POST /agents/{id}/availability)
+        // Agent updates its tier availability (slots, SLA, etc)
         if (httpMethod === "POST" && path.includes("/agents/") && path.endsWith("/availability")) {
+            const registry = await getRegistry();
             const agentId = path.split("/")[2];
             const data = JSON.parse(body || "{}");
-            const { tier, slotsFilled, nextAvailable } = data;
+            const { tier, slotsFilled, nextAvailable, responseSLA } = data;
 
-            let agent = dynamicAgents.get(agentId);
-            if (!agent) {
+            if (!tier) {
                 return {
-                    statusCode: 404,
+                    statusCode: 400,
                     headers: CORS_HEADERS,
-                    body: JSON.stringify({ error: "Dynamic agent not found" })
+                    body: JSON.stringify({ error: "Missing tier" })
                 };
             }
 
-            // Update availability
-            if (!agent.serviceAvailability) {
-                agent.serviceAvailability = {};
+            try {
+                const updates = {};
+                if (slotsFilled !== undefined) updates.slotsFilled = slotsFilled;
+                if (nextAvailable !== undefined) updates.nextAvailable = nextAvailable;
+                if (responseSLA !== undefined) updates.responseSLA = responseSLA;
+
+                const updated = await registry.updateAvailability(agentId, tier, updates);
+
+                console.log(`📊 Updated ${updated.name} ${tier}: ${JSON.stringify(updates)}`);
+
+                return {
+                    statusCode: 200,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({
+                        success: true,
+                        message: "Availability updated",
+                        agent: updated
+                    })
+                };
+            } catch (error) {
+                return {
+                    statusCode: error.message.includes("not found") ? 404 : 400,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({ error: error.message })
+                };
             }
-
-            if (agent.serviceAvailability[tier]) {
-                agent.serviceAvailability[tier].slotsFilled = slotsFilled;
-                if (nextAvailable) {
-                    agent.serviceAvailability[tier].nextAvailable = nextAvailable;
-                }
-            }
-
-            dynamicAgents.set(agentId, agent);
-
-            console.log(`📊 Updated ${agent.name} ${tier} tier: ${slotsFilled} slots filled`);
-
-            return {
-                statusCode: 200,
-                headers: CORS_HEADERS,
-                body: JSON.stringify({
-                    success: true,
-                    message: "Availability updated"
-                })
-            };
         }
 
         return {

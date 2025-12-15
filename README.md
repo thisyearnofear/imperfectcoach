@@ -37,9 +37,9 @@ Users benefit from:
 - **Accurate Rep Counting**: Automatic detection with range-of-motion validation
 - **Form Scoring**: 0-100% accuracy rating per exercise
 
-### 💰 x402 Agent Economy (Real Settlement, No Escrow)
+### 💰 x402-Style Payment System (Real Settlement, No Escrow)
 - **Internal Specialists**: 4 core agents (Fitness Coach, Nutrition, Recovery, Biomechanics)
-- **x402 Protocol Compliance**: Follows x402 request-response patterns with real settlement
+- **x402-Style Protocol**: Implements server-driven payment challenges with signature verification and settlement
   - **Multi-chain by default**: Base Sepolia & Avalanche Fuji
   - **Dynamic routing**: Per-agent payment addresses
   - **Plugin-ready**: Extensible for future discovery APIs
@@ -48,11 +48,12 @@ Users benefit from:
 - **AgentRegistry Contract**: On-chain agent profiles, capabilities, and reputation
   - **Base Sepolia**: `0xfE997dEdF572CA17d26400bCDB6428A8278a0627` ✅ Verified
   - **Avalanche Fuji**: `0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC` ✅ Verified
+  - **Solana Devnet**: `9u4eVWRf8a7vMDCHsguakB6vxcnCuJssBVBbQAYrKdog` ✅ Verified
 - **Smart Chain Routing**: Payment verification and settlement routing by network
 - **Primary Network**: Base Sepolia (for payment verification and settlement)
 - **Transaction Audit**: On-chain transaction logging for all payments
 - **Zero Escrow**: No pre-locking of funds, immediate blockchain settlement
-- **Future Ready**: Reap Protocol discovery when available
+- **Future Ready**: Reap Protocol discovery and true autonomous agent-to-agent payments when available
 
 ### 🧠 Coaching & Service Tiers
 - **Free**: Real-time coaching (Gemini/OpenAI/Anthropic)

@@ -15,7 +15,7 @@ import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
 // import { verify } from "@payai/x402/facilitator";
 import * as db from "./lib/dynamodb-service.mjs";
-import * as reap from "./lib/reap-integration.mjs";
+import * as agents from "./lib/agents.mjs";
 import * as coreHandler from "./lib/core-agent-handler.mjs";
 
 // Initialize clients
