@@ -424,21 +424,26 @@ const useENSName = (address?: string) => {
 /**
  * Display name resolution with chain-aware preferences
  * - Base: Prefer Basename
- * - Avalanche: Prefer ENS
+ * - Avalanche: Prefer ENS  
  * - Solana: Prefer SNS
  * - Fallback: Social identity → Address
- * 
- * All hooks are called unconditionally to comply with React's rules of hooks
  */
 export const useDisplayName = (address?: string, chain?: 'solana' | 'base' | 'avalanche') => {
-  // Call all hooks unconditionally (React rules)
+  // Resolve in priority order based on chain
   const { basename, isLoading: basenameLoading } = useBasename(address);
-  const { ensName, isLoading: ensLoading } = useENSName(address);
-  const { solName, isLoading: snsLoading } = useSolanaNameService(address);
-  const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address);
-  
+  const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
+    enabled: !basenameLoading && !basename,
+  });
   const social = getPrimarySocialIdentity();
-  const isLoading = basenameLoading || ensLoading || snsLoading || identityLoading;
+  
+  // Conditional ENS/SNS based on chain preference
+  const shouldRunENS = !social && !basename && chain === 'avalanche';
+  const { ensName, isLoading: ensLoading } = useENSName(shouldRunENS ? address : undefined);
+  
+  const shouldRunSNS = !social && !basename && chain === 'solana';
+  const { solName, isLoading: snsLoading } = useSolanaNameService(shouldRunSNS ? address : undefined);
+
+  const isLoading = basenameLoading || identityLoading || ensLoading || snsLoading;
 
   let displayName: string;
   let source: 'social' | 'basename' | 'sol' | 'ens' | 'address';
@@ -446,73 +451,24 @@ export const useDisplayName = (address?: string, chain?: 'solana' | 'base' | 'av
   if (isLoading) {
     displayName = 'Loading...';
     source = 'address';
+  } else if (basename) {
+    displayName = basename;
+    source = 'basename';
+  } else if (social) {
+    displayName = social.username || social.id;
+    source = 'social';
+  } else if (chain === 'avalanche' && ensName) {
+    displayName = ensName;
+    source = 'ens';
+  } else if (chain === 'solana' && solName) {
+    displayName = solName;
+    source = 'sol';
+  } else if (address) {
+    displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+    source = 'address';
   } else {
-    // Chain-aware resolution order
-    switch (chain) {
-      case 'base':
-        if (basename) {
-          displayName = basename;
-          source = 'basename';
-        } else if (social) {
-          displayName = social.username || social.id;
-          source = 'social';
-        } else if (address) {
-          displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
-          source = 'address';
-        } else {
-          displayName = '';
-          source = 'address';
-        }
-        break;
-
-      case 'avalanche':
-        if (ensName) {
-          displayName = ensName;
-          source = 'ens';
-        } else if (social) {
-          displayName = social.username || social.id;
-          source = 'social';
-        } else if (address) {
-          displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
-          source = 'address';
-        } else {
-          displayName = '';
-          source = 'address';
-        }
-        break;
-
-      case 'solana':
-        if (solName) {
-          displayName = solName;
-          source = 'sol';
-        } else if (social) {
-          displayName = social.username || social.id;
-          source = 'social';
-        } else if (address) {
-          displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
-          source = 'address';
-        } else {
-          displayName = '';
-          source = 'address';
-        }
-        break;
-
-      default:
-        // Default: Basename → Social → Address
-        if (basename) {
-          displayName = basename;
-          source = 'basename';
-        } else if (social) {
-          displayName = social.username || social.id;
-          source = 'social';
-        } else if (address) {
-          displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
-          source = 'address';
-        } else {
-          displayName = '';
-          source = 'address';
-        }
-    }
+    displayName = '';
+    source = 'address';
   }
 
   return { displayName, source, isLoading };

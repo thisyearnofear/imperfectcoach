@@ -1,5 +1,5 @@
 import { http } from "wagmi";
-import { base, baseSepolia, avalanche, avalancheFuji } from "wagmi/chains";
+import { baseSepolia, avalancheFuji } from "wagmi/chains";
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 
 // App logo URL - use production URL if available, otherwise localhost with common dev port
@@ -12,28 +12,19 @@ const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID |
 
 // Unified config using RainbowKit's getDefaultConfig
 // This handles connectors (including Coinbase Wallet) and client configuration automatically
-// Chains: Active testnets (baseSepolia, avalancheFuji) + Mainnet chains for future deployment
 export const config = getDefaultConfig({
   appName: "Imperfect Coach - AI Fitness Tracker",
   projectId: WALLETCONNECT_PROJECT_ID,
-  chains: [baseSepolia, base, avalancheFuji, avalanche],
+  chains: [baseSepolia, avalancheFuji],
   ssr: false,
   transports: {
     [baseSepolia.id]: http(
       import.meta.env.VITE_BASE_SEPOLIA_RPC_URL ||
       "https://sepolia.base.org"
     ),
-    [base.id]: http(
-      import.meta.env.VITE_BASE_MAINNET_RPC_URL ||
-      "https://mainnet.base.org"
-    ),
     [avalancheFuji.id]: http(
       import.meta.env.VITE_AVALANCHE_FUJI_RPC_URL ||
       "https://api.avax-test.network/ext/bc/C/rpc"
-    ),
-    [avalanche.id]: http(
-      import.meta.env.VITE_AVALANCHE_MAINNET_RPC_URL ||
-      "https://api.avax.network/ext/bc/C/rpc"
     ),
   },
 });
