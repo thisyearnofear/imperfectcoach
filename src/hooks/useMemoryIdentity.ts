@@ -361,11 +361,12 @@ export const useSolanaNameService = (walletAddress?: string) => {
   return { solName, isLoading, error };
 };
 
-// ENS name resolution hook
+// ENS name resolution hook via web3.bio (more reliable than direct viem calls)
 const useENSName = (address?: string) => {
   const [ensName, setEnsName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!address || !address.startsWith('0x')) {
@@ -374,76 +375,146 @@ const useENSName = (address?: string) => {
       return;
     }
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     setIsLoading(true);
     setError(null);
 
     const resolveENS = async () => {
       try {
-        // Import viem's getEnsName directly
-        const { getEnsName } = await import('viem/ens');
-        const { createPublicClient, http } = await import('viem');
-        const { mainnet } = await import('viem/chains');
-
-        const client = createPublicClient({
-          chain: mainnet,
-          transport: http(),
+        const response = await fetch(`https://api.web3.bio/ns/ens/${address}`, {
+          signal: abortControllerRef.current?.signal,
         });
 
-        const name = await getEnsName(client, { address: address as `0x${string}` });
+        if (!response.ok) {
+          setEnsName(null);
+          setIsLoading(false);
+          return;
+        }
+
+        const data = await response.json();
+        const name = data.identity || null;
         setEnsName(name);
         setIsLoading(false);
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'ENS lookup failed';
-        setError(errorMsg);
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
         setEnsName(null);
+        setError(null);
         setIsLoading(false);
       }
     };
 
     resolveENS();
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [address]);
 
   return { ensName, isLoading, error };
 };
 
+/**
+ * Display name resolution with chain-aware preferences
+ * - Base: Prefer Basename
+ * - Avalanche: Prefer ENS
+ * - Solana: Prefer SNS
+ * - Fallback: Social identity → Address
+ */
 export const useDisplayName = (address?: string, chain?: 'solana' | 'base' | 'avalanche') => {
-  const { basename, isLoading: basenameLoading } = useBasename(address);
-  const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
-    enabled: !basenameLoading && !basename,
-  });
-  const social = getPrimarySocialIdentity();
-  const shouldRunSNS = !social && !basename && chain === 'solana';
-  const { solName, isLoading: snsLoading } = useSolanaNameService(shouldRunSNS ? address : undefined);
-  const shouldRunENS = !social && !basename && chain === 'avalanche';
-  const { ensName, isLoading: ensLoading } = useENSName(shouldRunENS ? address : undefined);
+  // Chain-based resolution order
+  const resolveForBase = () => {
+    const { basename, isLoading: basenameLoading } = useBasename(address);
+    const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
+      enabled: !basenameLoading && !basename,
+    });
+    
+    return {
+      primary: basename,
+      social: getPrimarySocialIdentity(),
+      isLoadingPrimary: basenameLoading,
+      isLoadingSocial: identityLoading,
+      source: 'basename' as const,
+    };
+  };
 
-  const isLoading = basenameLoading || identityLoading || snsLoading || ensLoading;
+  const resolveForAvalanche = () => {
+    const { ensName, isLoading: ensLoading } = useENSName(address);
+    const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
+      enabled: !ensLoading && !ensName,
+    });
+
+    return {
+      primary: ensName,
+      social: getPrimarySocialIdentity(),
+      isLoadingPrimary: ensLoading,
+      isLoadingSocial: identityLoading,
+      source: 'ens' as const,
+    };
+  };
+
+  const resolveForSolana = () => {
+    const shouldRunSNS = !!address;
+    const { solName, isLoading: snsLoading } = useSolanaNameService(shouldRunSNS ? address : undefined);
+    const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
+      enabled: !snsLoading && !solName,
+    });
+
+    return {
+      primary: solName,
+      social: getPrimarySocialIdentity(),
+      isLoadingPrimary: snsLoading,
+      isLoadingSocial: identityLoading,
+      source: 'sol' as const,
+    };
+  };
+
+  // Select resolution strategy based on chain
+  let resolution;
+  switch (chain) {
+    case 'base':
+      resolution = resolveForBase();
+      break;
+    case 'avalanche':
+      resolution = resolveForAvalanche();
+      break;
+    case 'solana':
+      resolution = resolveForSolana();
+      break;
+    default:
+      // Default to Base/Basename if no chain specified
+      resolution = resolveForBase();
+  }
+
+  const { primary, social, isLoadingPrimary, isLoadingSocial, source } = resolution;
+  const isLoading = isLoadingPrimary || isLoadingSocial;
 
   let displayName: string;
-  let source: 'social' | 'basename' | 'sol' | 'ens' | 'address';
+  let resolvedSource: 'social' | 'basename' | 'sol' | 'ens' | 'address';
 
   if (isLoading) {
     displayName = 'Loading...';
-    source = 'address';
+    resolvedSource = 'address';
+  } else if (primary) {
+    displayName = primary;
+    resolvedSource = source;
   } else if (social) {
     displayName = social.username || social.id;
-    source = 'social';
-  } else if (basename) {
-    displayName = basename;
-    source = 'basename';
-  } else if (solName) {
-    displayName = solName;
-    source = 'sol';
-  } else if (ensName) {
-    displayName = ensName;
-    source = 'ens';
+    resolvedSource = 'social';
   } else if (address) {
     displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
-    source = 'address';
+    resolvedSource = 'address';
   } else {
     displayName = '';
-    source = 'address';
+    resolvedSource = 'address';
   }
 
-  return { displayName, source, isLoading };
+  return { displayName, source: resolvedSource, isLoading };
 };
