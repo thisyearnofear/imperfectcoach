@@ -289,6 +289,28 @@ const getSnsReverseCache = (): Map<string, { name: string | null; timestamp: num
   return new Map();
 };
 
+// Singleton mainnet connection with skip if not configured
+let mainnetConnection: Connection | null = null;
+function getMainnetConnection(): Connection | null {
+  const endpoint = import.meta.env.VITE_SOLANA_MAINNET_RPC_URL;
+  if (!endpoint) return null; // Skip SNS if mainnet RPC not configured
+  
+  if (!mainnetConnection) {
+    mainnetConnection = new Connection(endpoint, 'confirmed');
+  }
+  return mainnetConnection;
+}
+
+// Timeout wrapper for SNS calls (prevent hanging)
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error('SNS lookup timeout')), timeoutMs)
+    )
+  ]);
+}
+
 export const useSolanaNameService = (walletAddress?: string) => {
   const [solName, setSolName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -321,6 +343,14 @@ export const useSolanaNameService = (walletAddress?: string) => {
       setIsLoading(true);
       setError(null);
       try {
+        // Skip SNS if mainnet RPC not configured (graceful fallback)
+        const connection = getMainnetConnection();
+        if (!connection) {
+          setSolName(null);
+          setIsLoading(false);
+          return;
+        }
+
         let pubkey: PublicKey;
         try {
           pubkey = new PublicKey(walletAddress);
@@ -328,12 +358,12 @@ export const useSolanaNameService = (walletAddress?: string) => {
           cache.set(walletAddress, { name: null, timestamp: now, error: 'Invalid address' });
           setSolName(null);
           setError('Invalid address');
+          setIsLoading(false);
           return;
         }
 
-        const endpoint = import.meta.env.VITE_SOLANA_MAINNET_RPC_URL || clusterApiUrl('mainnet-beta');
-        const connection = new Connection(endpoint, 'confirmed');
-        const domainKeys = await getAllDomains(connection, pubkey);
+        // Timeout 5s to prevent hanging, reduce API load
+        const domainKeys = await withTimeout(getAllDomains(connection, pubkey), 5000);
         if (!domainKeys || domainKeys.length === 0) {
           cache.set(walletAddress, { name: null, timestamp: now, error: null });
           setSolName(null);
@@ -346,9 +376,9 @@ export const useSolanaNameService = (walletAddress?: string) => {
         cache.set(walletAddress, { name: finalName, timestamp: now, error: null });
         setSolName(finalName);
       } catch (e: any) {
-        const msg = e?.message || 'SNS lookup failed';
-        getSnsReverseCache().set(walletAddress, { name: null, timestamp: Date.now(), error: msg });
-        setError(msg);
+        // Cache error to prevent repeated failed requests
+        cache.set(walletAddress, { name: null, timestamp: Date.now(), error: e?.message || 'SNS lookup failed' });
+        // Don't show error to user - SNS is optional, just skip display
         setSolName(null);
       } finally {
         setIsLoading(false);
