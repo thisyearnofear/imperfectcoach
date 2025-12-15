@@ -43,6 +43,7 @@ export const NetworkStatus = ({
 }: NetworkStatusProps) => {
   const { isConnected } = useAccount();
   const chainId = useChainId();
+  const [viewPreference, setViewPreference] = useState<"auto" | "evm" | "solana">("auto");
   const [solanaConnected, setSolanaConnected] = useState(false);
 
   // Monitor Solana wallet connection
@@ -61,12 +62,46 @@ export const NetworkStatus = ({
     return null;
   }
 
-  // Determine which network is active
-  const isSolanaActive = solanaConnected && !isConnected;
-  
+  // Determine effective active network based on connection, support, and preference
+  const evmIsSupported = isNetworkSupported(chainId);
+  // Assume Solana is supported if connected (Devnet)
+  const solanaIsSupported = true;
+
+  let isSolanaActive = false;
+
+  if (solanaConnected && isConnected) {
+    // Both connected - Complex logic
+    if (viewPreference === "solana") {
+      isSolanaActive = true;
+    } else if (viewPreference === "evm") {
+      isSolanaActive = false;
+    } else {
+      // Auto: Prefer the supported network, or default to EVM if both/neither supported
+      if (solanaIsSupported && !evmIsSupported) {
+        isSolanaActive = true;
+      } else {
+        isSolanaActive = false;
+      }
+    }
+  } else {
+    // Single connection
+    isSolanaActive = solanaConnected;
+  }
+
+  const isDualConnection = solanaConnected && isConnected;
+
+  const toggleNetworkView = () => {
+    if (!isDualConnection) return;
+    setViewPreference(prev => {
+      // If currently auto, determine current actual and flip
+      const currentIsSolana = isSolanaActive;
+      return currentIsSolana ? "evm" : "solana";
+    });
+  };
+
   let displayInfo;
   let isSupported = true; // Default to true, will be updated for EVM
-  
+
   if (isSolanaActive) {
     // Solana is the active network
     displayInfo = {
@@ -79,7 +114,7 @@ export const NetworkStatus = ({
     // EVM network is active
     const networkConfig = getNetworkConfig(chainId);
     isSupported = isNetworkSupported(chainId);
-    
+
     displayInfo = networkConfig || {
       name: `Unknown Network (${chainId})`,
       status: "unsupported" as const,
@@ -90,22 +125,64 @@ export const NetworkStatus = ({
 
   // Compact variant for headers/toolbars
   if (variant === "compact") {
-    const badgeVariant = displayInfo.status === "supported" ? "default" : displayInfo.status === "coming_soon" ? "secondary" : "destructive";
-    const iconComponent = displayInfo.status === "supported" ? CheckCircle : displayInfo.status === "coming_soon" ? Clock : AlertTriangle;
+    // If Solana is active and connecting via Phantom, it should be green/supported
+    if (isSolanaActive) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn("flex items-center gap-2", className, isDualConnection && "cursor-pointer")}
+                onClick={toggleNetworkView}
+              >
+                <Badge
+                  variant="default"
+                  className="text-xs bg-green-100 text-green-800 border-green-200"
+                >
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Solana Devnet
+                </Badge>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs">Solana devnet - agent services available</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Features: agents, payments
+              </p>
+              {isDualConnection && (
+                <p className="text-xs font-medium text-blue-600 mt-1 pt-1 border-t border-blue-100">
+                  Click to view EVM status
+                </p>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    // EVM Logic
+    // Force unsupported state if not in our supported list, regardless of "coming soon" flag in config
+    const isActuallySupported = displayInfo.status === "supported";
+
+    const badgeVariant = isActuallySupported ? "default" : "destructive";
+    const iconComponent = isActuallySupported ? CheckCircle : AlertTriangle;
     const Icon = iconComponent;
 
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className={cn("flex items-center gap-2", className)}>
+            <div
+              className={cn("flex items-center gap-2", className, isDualConnection && "cursor-pointer")}
+              onClick={toggleNetworkView}
+            >
               <Badge
                 variant={badgeVariant}
                 className={cn(
                   "text-xs",
-                  displayInfo.status === "supported" && "bg-green-100 text-green-800 border-green-200",
-                  displayInfo.status === "coming_soon" && "bg-blue-100 text-blue-800 border-blue-200",
-                  displayInfo.status === "unsupported" && "bg-red-100 text-red-800 border-red-200"
+                  isActuallySupported
+                    ? "bg-green-100 text-green-800 border-green-200"
+                    : "bg-red-100 text-red-800 border-red-200"
                 )}
               >
                 <Icon className="h-3 w-3 mr-1" />
@@ -114,15 +191,20 @@ export const NetworkStatus = ({
             </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p className="text-xs">{displayInfo.description}</p>
-            {"features" in displayInfo && displayInfo.features && displayInfo.features.length > 0 && (
+            <p className="text-xs">{isActuallySupported ? displayInfo.description : "Unsupported network"}</p>
+            {isActuallySupported && "features" in displayInfo && displayInfo.features && displayInfo.features.length > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
                 Features: {displayInfo.features.join(", ")}
               </p>
             )}
-            {!isSupported && (
+            {isDualConnection && (
+              <p className="text-xs font-medium text-blue-600 mt-1 pt-1 border-t border-blue-100">
+                Click to view Solana status
+              </p>
+            )}
+            {!isActuallySupported && !isDualConnection && (
               <p className="text-xs font-medium text-orange-600 mt-1">
-                Switch to a supported network in your wallet
+                Switch to a supported network in your wallet (Base Sepolia or Avalanche Fuji)
               </p>
             )}
           </TooltipContent>

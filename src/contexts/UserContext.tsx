@@ -29,6 +29,9 @@ export interface UserState {
   chainId?: number;
   chainName?: string;
 
+  // UX Preferences
+  preferredChain: 'auto' | 'evm' | 'solana';
+
   // Solana wallet state
   isSolanaConnected: boolean;
   isSolanaConnecting: boolean;
@@ -85,6 +88,7 @@ export interface UserActions {
   connectAndSignIn: (connectorName?: string) => Promise<void>;
   resetAuth: () => Promise<void>; // Alias for disconnectWallet
   switchToChain: (chainName: 'base' | 'avalanche') => Promise<void>;
+  setPreferredChain: (chain: 'auto' | 'evm' | 'solana') => void;
 
   // Solana Wallet actions
   connectSolanaWallet: () => Promise<void>;
@@ -139,6 +143,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
     staleness: 0,
     pendingUpdates: false,
   });
+
+  // UX Preferences State
+  const [preferredChain, setPreferredChain] = useState<'auto' | 'evm' | 'solana'>('auto');
 
   // Leaderboard refresh function
   const refreshLeaderboard = useCallback(async () => {
@@ -215,6 +222,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
     copied: evmWallet.copied,
     chainId: evmWallet.chainId,
     chainName,
+    preferredChain,
 
     // Solana wallet state
     isSolanaConnected: solanaWallet.isSolanaConnected,
@@ -281,6 +289,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
     basename,
     scoreSubmission.submitError,
     refreshState,
+    preferredChain,
   ]);
 
   // Alias functions for compatibility with existing components
@@ -433,6 +442,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
     getDisplayName: evmWallet.getDisplayName,
     copyAddress: evmWallet.copyAddress,
     getCDPFeatures,
+    setPreferredChain,
   };
 
   const contextValue: UserContextType = useMemo(

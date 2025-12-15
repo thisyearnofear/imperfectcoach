@@ -18,7 +18,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAccount } from "wagmi";
-import { useUserAuth, useUserBlockchain } from "@/hooks/useUserHooks";
+import { useUser, useUserAuth, useUserBlockchain } from "@/hooks/useUserHooks";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { InlineWallet } from "./UnifiedWallet";
 import { NetworkStatus } from "./NetworkStatus";
@@ -51,7 +51,7 @@ export const BlockchainScoreSubmission = ({
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [selectedChain, setSelectedChain] = useState<ChainType | null>(null);
   const [showChainSelector, setShowChainSelector] = useState(false);
-  
+
   // Base chain hooks
   const { isAuthenticated, isConnected, signInWithEthereum } = useUserAuth();
   const { chain } = useAccount();
@@ -61,15 +61,17 @@ export const BlockchainScoreSubmission = ({
     canSubmit,
     timeUntilNextSubmission,
     currentTxHash,
+    preferredChain,
   } = useUserBlockchain();
 
-  // Unified wallet connection
+  // Unified wallet connection & Solana actions
   const {
+    // Solana State
     solanaAddress,
     isSolanaConnected,
+    isSolanaLoading,
     submitScoreToSolanaContract,
-    isLoading: isSolanaLoading,
-  } = useWalletConnection();
+  } = useUser();
 
   const [error, setError] = useState<string>();
 
@@ -109,7 +111,7 @@ export const BlockchainScoreSubmission = ({
       } else if (chain === "solana") {
         // Validate Solana contracts are deployed
         const { getLeaderboardAddress, areAddressesConfigured } = await import("@/lib/solana/config");
-        
+
         if (!areAddressesConfigured()) {
           throw new Error("Solana contracts not yet deployed. Try Base Sepolia or Avalanche Fuji instead.");
         }
@@ -140,26 +142,39 @@ export const BlockchainScoreSubmission = ({
     if (reps === 0) return;
 
     // Determine which chain to use
-    const defaultChain = getDefaultChain({
+    let targetChain = getDefaultChain({
       baseAddress: isConnected ? "0x..." : undefined,
       solanaAddress,
       isBaseConnected: isConnected && isAuthenticated,
       isSolanaConnected,
     });
 
-    if (defaultChain === "none") {
+    // If result is null (ambiguous/both connected), check user preference from badge
+    if (targetChain === null) {
+      if (preferredChain === 'solana' && isSolanaConnected) {
+        targetChain = 'solana';
+      } else if (preferredChain === 'evm' && isConnected && isAuthenticated) {
+        // We need to know which EVM chain specifically (Base vs Avalanche)
+        // getDefaultChain would have returned 'base' or 'avalanche' if only EVM was connected
+        // Since we are here, it means BOTH are connected. 
+        // We default EVM preference to the currently active EVM chain
+        targetChain = chain?.id === 43113 ? 'avalanche' : 'base';
+      }
+    }
+
+    if (targetChain === "none") {
       setError("Please connect a wallet first");
       return;
     }
 
-    if (defaultChain === null) {
-      // Both chains connected - show selector
+    if (targetChain === null) {
+      // Still ambiguous (both connected and no specific preference set) -> show selector
       setShowChainSelector(true);
       return;
     }
 
-    // Single chain connected - submit directly
-    await handleChainSelected(defaultChain);
+    // Single chain identified -> submit directly
+    await handleChainSelected(targetChain);
   };
 
   // Don't show if no reps completed
@@ -193,156 +208,156 @@ export const BlockchainScoreSubmission = ({
             )}
           </CardDescription>
         </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Session Summary */}
-        <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-lg">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-primary">{reps}</div>
-            <div className="text-xs text-muted-foreground capitalize">
-              {exercise}
+        <CardContent className="space-y-4">
+          {/* Session Summary */}
+          <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-lg">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{reps}</div>
+              <div className="text-xs text-muted-foreground capitalize">
+                {exercise}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">
+                {Math.round(averageFormScore)}%
+              </div>
+              <div className="text-xs text-muted-foreground">Avg Form</div>
             </div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-primary">
-              {Math.round(averageFormScore)}%
-            </div>
-            <div className="text-xs text-muted-foreground">Avg Form</div>
-          </div>
-        </div>
 
-        {!isConnected && !isSolanaConnected ? (
-          <div className="space-y-3">
-            <Alert>
-              <Wallet className="h-4 w-4" />
-              <AlertDescription>
-                Connect your Coinbase Smart Wallet or Solana wallet to submit
-                scores to the blockchain leaderboard.
+          {!isConnected && !isSolanaConnected ? (
+            <div className="space-y-3">
+              <Alert>
+                <Wallet className="h-4 w-4" />
+                <AlertDescription>
+                  Connect your Coinbase Smart Wallet or Solana wallet to submit
+                  scores to the blockchain leaderboard.
+                </AlertDescription>
+              </Alert>
+              <InlineWallet showOnboarding={false} chains="all" />
+            </div>
+          ) : isConnected && !isAuthenticated ? (
+            <div className="space-y-3">
+              <Alert>
+                <Wallet className="h-4 w-4" />
+                <AlertDescription>
+                  Please sign in with your wallet to submit your score.
+                </AlertDescription>
+              </Alert>
+              <Button onClick={() => signInWithEthereum()} className="w-full">
+                Sign-In with Ethereum
+              </Button>
+            </div>
+          ) : hasSubmitted ? (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                🎉 Score successfully submitted to blockchain! Check the
+                leaderboard to see your ranking.
+                {currentTxHash && (
+                  <div className="mt-2 text-xs text-green-700">
+                    <span className="font-mono">
+                      Transaction: {currentTxHash.slice(0, 10)}...
+                      {currentTxHash.slice(-8)}
+                    </span>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 ml-2 text-green-700 hover:text-green-800"
+                      onClick={() =>
+                        window.open(
+                          getExplorerUrl(currentTxHash, chain?.id),
+                          "_blank"
+                        )
+                      }
+                    >
+                      View on Explorer ↗
+                    </Button>
+                  </div>
+                )}
               </AlertDescription>
             </Alert>
-            <InlineWallet showOnboarding={false} chains="all" />
-          </div>
-        ) : isConnected && !isAuthenticated ? (
-          <div className="space-y-3">
-            <Alert>
-              <Wallet className="h-4 w-4" />
-              <AlertDescription>
-                Please sign in with your wallet to submit your score.
+          ) : (isConnected && !isSolanaConnected && !isOnCorrectEVMNetwork) ? (
+            <div className="space-y-3">
+              <NetworkStatus variant="alert" showSwitchButton={true} />
+            </div>
+          ) : (isConnected && !canSubmit && timeUntilNextSubmission > 0) ? (
+            <Alert className="border-orange-200 bg-orange-50">
+              <Clock className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-800">
+                You can submit your next score in{" "}
+                {formatTime(timeUntilNextSubmission)}.
               </AlertDescription>
             </Alert>
-            <Button onClick={() => signInWithEthereum()} className="w-full">
-              Sign-In with Ethereum
-            </Button>
-          </div>
-        ) : hasSubmitted ? (
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
-              🎉 Score successfully submitted to blockchain! Check the
-              leaderboard to see your ranking.
-              {currentTxHash && (
-                <div className="mt-2 text-xs text-green-700">
-                  <span className="font-mono">
-                    Transaction: {currentTxHash.slice(0, 10)}...
-                    {currentTxHash.slice(-8)}
-                  </span>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 ml-2 text-green-700 hover:text-green-800"
-                    onClick={() =>
-                      window.open(
-                        getExplorerUrl(currentTxHash, chain?.id),
-                        "_blank"
-                      )
-                    }
-                  >
-                    View on Explorer ↗
-                  </Button>
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        ) : (isConnected && !isSolanaConnected && !isOnCorrectEVMNetwork) ? (
-          <div className="space-y-3">
-            <NetworkStatus variant="alert" showSwitchButton={true} />
-          </div>
-        ) : (isConnected && !canSubmit && timeUntilNextSubmission > 0) ? (
-          <Alert className="border-orange-200 bg-orange-50">
-            <Clock className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800">
-              You can submit your next score in{" "}
-              {formatTime(timeUntilNextSubmission)}.
-            </AlertDescription>
-          </Alert>
-        ) : error ? (
-          <Alert className="border-red-200 bg-red-50">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">
-              {error}
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <div className="space-y-3">
-            <Alert className="border-primary/20 bg-primary/5">
-              <Trophy className="h-4 w-4 text-primary" />
-              <AlertDescription className="text-primary/90">
-                {availableChains.length > 1
-                  ? "🚀 Both wallets connected! Choose your chain when submitting."
-                  : isSolanaConnected
-                    ? "🚀 Solana connected! Ready to submit your score to Solana Devnet."
-                    : chain?.id === 43113
-                      ? "🚀 Avalanche Fuji connected! Ready to submit your score."
-                      : "🚀 Base Sepolia connected! Ready to submit your score."
+          ) : error ? (
+            <Alert className="border-red-200 bg-red-50">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
+                {error}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="space-y-3">
+              <Alert className="border-primary/20 bg-primary/5">
+                <Trophy className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-primary/90">
+                  {availableChains.length > 1
+                    ? "🚀 Both wallets connected! Choose your chain when submitting."
+                    : isSolanaConnected
+                      ? "🚀 Solana connected! Ready to submit your score to Solana Devnet."
+                      : chain?.id === 43113
+                        ? "🚀 Avalanche Fuji connected! Ready to submit your score."
+                        : "🚀 Base Sepolia connected! Ready to submit your score."
+                  }
+                </AlertDescription>
+              </Alert>
+
+              <Button
+                onClick={handleSubmitScore}
+                disabled={
+                  (isSubmitting || isSolanaLoading) ||
+                  (!isConnected && !isSolanaConnected) ||
+                  (isConnected && !isOnCorrectEVMNetwork && !isSolanaConnected) ||
+                  reps === 0
                 }
-              </AlertDescription>
-            </Alert>
+                className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 animate-pulse hover:animate-none transition-all shadow-lg hover:shadow-xl"
+                size="lg"
+              >
+                {isSubmitting || isSolanaLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting to Blockchain...
+                  </>
+                ) : (
+                  <>
+                    <Trophy className="h-4 w-4 mr-2" />
+                    Submit {reps} {exercise} to Leaderboard
+                  </>
+                )}
+              </Button>
 
-            <Button
-              onClick={handleSubmitScore}
-              disabled={
-                (isSubmitting || isSolanaLoading) ||
-                (!isConnected && !isSolanaConnected) ||
-                (isConnected && !isOnCorrectEVMNetwork && !isSolanaConnected) ||
-                reps === 0
-              }
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 animate-pulse hover:animate-none transition-all shadow-lg hover:shadow-xl"
-              size="lg"
-            >
-              {isSubmitting || isSolanaLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Submitting to Blockchain...
-                </>
-              ) : (
-                <>
-                  <Trophy className="h-4 w-4 mr-2" />
-                  Submit {reps} {exercise} to Leaderboard
-                </>
-              )}
-            </Button>
-
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground flex-wrap">
-              {availableChains.length > 0 && (
-                <>
-                  <Badge variant="outline" className="text-xs">
-                    {availableChains.includes("base") && "⛓️ Base"}
-                    {availableChains.includes("avalanche") && "🏔️ Avalanche"}
-                    {((availableChains.includes("base") || availableChains.includes("avalanche")) && availableChains.includes("solana")) && " + "}
-                    {availableChains.includes("solana") && "◎ Solana"}
-                  </Badge>
-                  <span>•</span>
-                </>
-              )}
-              <span>
-                {isSolanaConnected
-                  ? "Solana transaction fees ~0.00025 SOL"
-                  : "Gas fees covered"}
-              </span>
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground flex-wrap">
+                {availableChains.length > 0 && (
+                  <>
+                    <Badge variant="outline" className="text-xs">
+                      {availableChains.includes("base") && "⛓️ Base"}
+                      {availableChains.includes("avalanche") && "🏔️ Avalanche"}
+                      {((availableChains.includes("base") || availableChains.includes("avalanche")) && availableChains.includes("solana")) && " + "}
+                      {availableChains.includes("solana") && "◎ Solana"}
+                    </Badge>
+                    <span>•</span>
+                  </>
+                )}
+                <span>
+                  {isSolanaConnected
+                    ? "Solana transaction fees ~0.00025 SOL"
+                    : "Gas fees covered"}
+                </span>
+              </div>
             </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          )}
+        </CardContent>
+      </Card>
     </>
   );
 };

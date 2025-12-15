@@ -29,6 +29,9 @@ export const useUserAuth = () => {
     isSolanaLoading,
     connectSolanaWallet,
     disconnectSolanaWallet,
+    // Preferences
+    preferredChain,
+    setPreferredChain,
   } = useUser();
 
   return {
@@ -49,6 +52,9 @@ export const useUserAuth = () => {
     isSolanaLoading,
     connectSolanaWallet,
     disconnectSolanaWallet,
+    // Preferences
+    preferredChain,
+    setPreferredChain,
   };
 };
 
@@ -60,7 +66,6 @@ export const useUserBlockchain = () => {
     timeUntilNextSubmission,
     isSubmitting,
     lastRefresh,
-    isRefreshing,
     dataStale,
     staleness,
     pendingUpdates,
@@ -70,6 +75,9 @@ export const useUserBlockchain = () => {
     refreshLeaderboard,
     switchToChain,
     hasSubmittedScore,
+    // Preferences
+    preferredChain,
+    setPreferredChain,
   } = useUser();
 
   return {
@@ -79,7 +87,6 @@ export const useUserBlockchain = () => {
     timeUntilNextSubmission,
     isSubmitting,
     lastRefresh,
-    isRefreshing,
     dataStale,
     staleness,
     pendingUpdates,
@@ -89,6 +96,9 @@ export const useUserBlockchain = () => {
     refetch: refreshLeaderboard,
     switchToChain,
     hasSubmittedScore,
+    // Preferences
+    preferredChain,
+    setPreferredChain,
   };
 };
 
