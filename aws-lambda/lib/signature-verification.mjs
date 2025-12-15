@@ -10,8 +10,8 @@
  *   const isValid = await verifySignature(message, signature, signer, 'solana');
  */
 
-import { verifyMessage, toBytes } from 'viem';
-import { nacl } from '@solana/web3.js';
+import { recoverMessageAddress, toBytes } from 'viem';
+import nacl from 'tweetnacl';
 import bs58 from 'bs58';
 
 /**
@@ -28,18 +28,20 @@ export async function verifyEVMSignature(message, signature, expectedSigner) {
             return false;
         }
 
-        const recovered = await verifyMessage({
+        // Recover the address that signed the message
+        const recoveredAddress = await recoverMessageAddress({
             message,
-            signature,
-            address: expectedSigner
+            signature
         });
 
-        const isValid = recovered === expectedSigner.toLowerCase();
+        const isValid = recoveredAddress.toLowerCase() === expectedSigner.toLowerCase();
         
         if (isValid) {
             console.log(`✅ EVM signature verified: ${expectedSigner.slice(0, 6)}...`);
         } else {
             console.warn(`❌ EVM signature verification failed: signer mismatch`);
+            console.warn(`   Expected: ${expectedSigner.toLowerCase()}`);
+            console.warn(`   Got: ${recoveredAddress.toLowerCase()}`);
         }
         
         return isValid;
