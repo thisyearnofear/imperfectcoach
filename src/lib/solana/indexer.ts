@@ -5,12 +5,38 @@ import { SOLANA_LEADERBOARD_ADDRESSES, SOLANA_RPC_URL } from "./config";
 // RPC endpoints for Solana devnet with fallbacks - only using CORS-enabled endpoints
 const ALCHEMY_DEVNET_RPC = import.meta.env.VITE_SOLANA_DEVNET_RPC_URL;
 const HELIUS_API_KEY = import.meta.env.VITE_HELIUS_API_KEY;
+
+function normalizeHeliusKey(value?: string | null): string | null {
+  if (!value) return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("http")) {
+    try {
+      const url = new URL(trimmed);
+      const keyFromParam = url.searchParams.get("api-key");
+      if (keyFromParam) {
+        return keyFromParam;
+      }
+    } catch (error) {
+      console.warn("Failed to parse HELIUS_API_KEY URL", error);
+    }
+  }
+
+  return trimmed;
+}
+
+const NORMALIZED_HELIUS_KEY = normalizeHeliusKey(HELIUS_API_KEY);
+const HELIUS_DEVNET_RPC = NORMALIZED_HELIUS_KEY
+  ? `https://devnet.helius-rpc.com/?api-key=${NORMALIZED_HELIUS_KEY}`
+  : null;
+
 const FALLBACK_DEVNET_RPCS = [
-  SOLANA_RPC_URL, // Primary centralized (Helius) endpoint
+  SOLANA_RPC_URL, // Primary configured endpoint (env)
+  HELIUS_DEVNET_RPC, // Guaranteed-clean Helius endpoint
   ALCHEMY_DEVNET_RPC,
   "https://api.devnet.solana.com",  // Official Solana endpoint (CORS-enabled)
-  HELIUS_API_KEY ? `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}` : null,  // Helius endpoint with API key
-  "https://devnet.sonic.game",      // Sonic devnet as additional fallback
 ].filter(Boolean); // Remove null entries
 
 // Cache for leaderboard data (5 min TTL)

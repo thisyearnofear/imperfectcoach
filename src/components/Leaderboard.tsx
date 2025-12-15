@@ -267,6 +267,7 @@ const Leaderboard = ({
   const { friendAddresses } = useSocialContext();
   const previousLeaderboardLength = useRef(leaderboard.length);
   const hasCompletedInitialLoad = useRef(false);
+  const hasRecordedInitialData = useRef(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'all' | 'friends'>('all');
   const [chainFilterView, setChainFilterView] = useState<ChainFilter>(chainFilter);
@@ -332,13 +333,26 @@ const Leaderboard = ({
     if (!isLoading && !hasCompletedInitialLoad.current) {
       hasCompletedInitialLoad.current = true;
       previousLeaderboardLength.current = leaderboard.length;
+      hasRecordedInitialData.current = leaderboard.length > 0;
     }
   }, [isLoading, leaderboard.length]);
 
-  // Check for new entries and show notification (skip initial load)
+  // Check for new entries and show notification (skip initial load and empty data)
   useEffect(() => {
+    if (!hasCompletedInitialLoad.current) {
+      previousLeaderboardLength.current = leaderboard.length;
+      return;
+    }
+
+    if (!hasRecordedInitialData.current) {
+      if (leaderboard.length > 0) {
+        hasRecordedInitialData.current = true;
+        previousLeaderboardLength.current = leaderboard.length;
+      }
+      return;
+    }
+
     if (
-      hasCompletedInitialLoad.current &&
       leaderboard.length > previousLeaderboardLength.current &&
       previousLeaderboardLength.current > 0
     ) {
