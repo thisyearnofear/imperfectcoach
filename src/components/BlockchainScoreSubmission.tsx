@@ -236,7 +236,7 @@ export const BlockchainScoreSubmission = ({
               </Alert>
               <InlineWallet showOnboarding={false} chains="all" />
             </div>
-          ) : isConnected && !isAuthenticated ? (
+          ) : isConnected && !isAuthenticated && (!isSolanaConnected || preferredChain === 'evm') ? (
             <div className="space-y-3">
               <Alert>
                 <Wallet className="h-4 w-4" />
