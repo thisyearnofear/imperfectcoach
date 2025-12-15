@@ -65,6 +65,7 @@ export const NetworkStatus = ({
   const isSolanaActive = solanaConnected && !isConnected;
   
   let displayInfo;
+  let isSupported = true; // Default to true, will be updated for EVM
   
   if (isSolanaActive) {
     // Solana is the active network
@@ -77,7 +78,7 @@ export const NetworkStatus = ({
   } else {
     // EVM network is active
     const networkConfig = getNetworkConfig(chainId);
-    const isSupported = isNetworkSupported(chainId);
+    isSupported = isNetworkSupported(chainId);
     
     displayInfo = networkConfig || {
       name: `Unknown Network (${chainId})`,
