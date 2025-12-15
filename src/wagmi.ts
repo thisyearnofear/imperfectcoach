@@ -16,7 +16,7 @@ export const config = getDefaultConfig({
   appName: "Imperfect Coach - AI Fitness Tracker",
   projectId: WALLETCONNECT_PROJECT_ID,
   chains: [baseSepolia, avalancheFuji],
-  ssr: true,
+  ssr: false,
   transports: {
     [baseSepolia.id]: http(
       import.meta.env.VITE_BASE_SEPOLIA_RPC_URL ||
