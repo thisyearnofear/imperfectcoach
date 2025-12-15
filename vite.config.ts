@@ -94,6 +94,7 @@ export default defineConfig(({ mode }) => ({
     exclude: [
       'ox', // Exclude ox from pre-bundling to avoid parsing errors
       'viem', // Exclude viem since it depends on ox subpaths
+      '@rainbow-me/rainbowkit', // Exclude rainbowkit to avoid version conflicts
       '@tensorflow/tfjs-core',
       '@tensorflow/tfjs-backend-webgl',
       '@tensorflow/tfjs-backend-cpu',
