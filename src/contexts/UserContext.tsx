@@ -205,7 +205,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
   }, [evmWallet.chainId]);
 
   // Combined state
-  const state: UserState = {
+  const state: UserState = useMemo(() => ({
     // EVM wallet state (Base, Avalanche, etc.)
     isConnected: evmWallet.isConnected,
     isAuthenticated: evmWallet.isAuthenticated,
@@ -255,7 +255,33 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
     staleness: refreshState.staleness,
     pendingUpdates: refreshState.pendingUpdates,
     lastUserRefresh: refreshState.lastUserRefresh,
-  };
+  }), [
+    evmWallet.isConnected,
+    evmWallet.isAuthenticated,
+    evmWallet.address,
+    evmWallet.isLoading,
+    evmWallet.error,
+    evmWallet.copied,
+    evmWallet.chainId,
+    chainName,
+    solanaWallet.isSolanaConnected,
+    solanaWallet.isSolanaConnecting,
+    solanaWallet.solanaPublicKey,
+    solanaWallet.connection,
+    contracts.leaderboard,
+    contracts.isJumpsLoading,
+    contracts.isPullupsLoading,
+    contracts.cooldownData,
+    combinedLeaderboard,
+    isCombinedLeaderboardLoading,
+    combinedLeaderboardError,
+    scoreSubmission.isSubmittingScore,
+    scoreSubmission.lastHash,
+    displayName,
+    basename,
+    scoreSubmission.submitError,
+    refreshState,
+  ]);
 
   // Alias functions for compatibility with existing components
   const signOut = useCallback(async () => {
@@ -409,10 +435,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children, options = 
     getCDPFeatures,
   };
 
-  const contextValue: UserContextType = {
-    ...state,
-    ...actions,
-  };
+  const contextValue: UserContextType = useMemo(
+    () => ({
+      ...state,
+      ...actions,
+    }),
+    [
+      state,
+      actions,
+    ]
+  );
 
   return (
     <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>

@@ -50,6 +50,17 @@ export function useWalletConnection(): WalletConnectionState & WalletConnectionA
     disconnectWallet,
   } = useUser();
 
+  // Debug wallet connection state
+  if (process.env.NODE_ENV === "development") {
+    console.log("🔌 useWalletConnection state:", {
+      evmAddress: address,
+      isConnected,
+      solanaAddress,
+      isSolanaConnected,
+      hasAnyWallet: isConnected || isSolanaConnected,
+    });
+  }
+
   const state: WalletConnectionState = {
     evmAddress: address || null,
     isEVMConnected: isConnected,

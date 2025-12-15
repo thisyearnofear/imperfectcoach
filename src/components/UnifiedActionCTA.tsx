@@ -70,6 +70,15 @@ export const UnifiedActionCTA = ({
       solanaAddress,
       isAuthenticated,
       baseAddress: address,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Also check if we're getting the right values from hooks
+    console.log("🎯 Hook values:", {
+      solanaConnected: isSolanaConnected,
+      solanaAddr: solanaAddress,
+      authd: isAuthenticated,
+      baseAddr: address,
     });
   }, [tier, isSolanaConnected, solanaAddress, isAuthenticated, address]);
 

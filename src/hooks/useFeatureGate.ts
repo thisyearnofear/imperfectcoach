@@ -36,23 +36,33 @@ export function useFeatureGate(feature: Feature): boolean {
 }
 
 export function useUserTier(): UserTier {
-  const { isAuthenticated } = useUserAuth();
+  const { isAuthenticated, isSolanaConnected: solanaConnectedFromAuth } = useUserAuth();
   const { hasSubmittedScore } = useUserBlockchain();
   const { basename } = useUserDisplay();
   const { hasPremiumAccess } = usePremiumAccess();
   const { isSolanaConnected } = useWalletConnection();
 
+  // Determine tier
+  let resultingTier: UserTier = "free";
   if (hasPremiumAccess) {
-    return "premium";
+    resultingTier = "premium";
+  } else if (isAuthenticated || isSolanaConnected) {
+    resultingTier = "connected";
   }
 
-  // Users with connected wallet (Base or Solana) are "connected" tier
-  // This allows them to see and use the blockchain submission feature
-  if (isAuthenticated || isSolanaConnected) {
-    return "connected";
+  // Debug: Log tier determination
+  if (process.env.NODE_ENV === "development") {
+    console.log("🎯 useUserTier calculation:", {
+      hasPremiumAccess,
+      isAuthenticated,
+      solanaConnectedFromAuth,
+      isSolanaConnected,
+      resultingTier,
+      timestamp: Date.now(),
+    });
   }
 
-  return "free";
+  return resultingTier;
 }
 
 // Utility hook for checking if features should be shown as disabled

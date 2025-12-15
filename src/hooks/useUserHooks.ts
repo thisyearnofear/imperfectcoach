@@ -28,7 +28,7 @@ export const useUserAuth = () => {
     isSolanaConnected,
     isSolanaLoading,
     connectSolanaWallet,
-    disconnectSolana,
+    disconnectSolanaWallet,
   } = useUser();
 
   return {
@@ -48,7 +48,7 @@ export const useUserAuth = () => {
     isSolanaConnected,
     isSolanaLoading,
     connectSolanaWallet,
-    disconnectSolana,
+    disconnectSolanaWallet,
   };
 };
 
