@@ -72,7 +72,7 @@ export const UnifiedActionCTA = ({
       baseAddress: address,
       timestamp: new Date().toISOString(),
     });
-    
+
     // Also check if we're getting the right values from hooks
     console.log("🎯 Hook values:", {
       solanaConnected: isSolanaConnected,
@@ -218,10 +218,14 @@ export const UnifiedActionCTA = ({
                 🚀 Multi-Chain Coaching Platform
               </CardTitle>
             </div>
-            <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="flex items-center justify-center gap-2 mb-2 flex-wrap">
               <Badge variant="outline" className="bg-blue-100 text-blue-800">
                 <Zap className="h-3 w-3 mr-1" />
                 Base Sepolia
+              </Badge>
+              <Badge variant="outline" className="bg-red-100 text-red-800">
+                <Zap className="h-3 w-3 mr-1" />
+                Avalanche Fuji
               </Badge>
               <Badge variant="outline" className="bg-orange-100 text-orange-800">
                 <Zap className="h-3 w-3 mr-1" />
@@ -243,26 +247,23 @@ export const UnifiedActionCTA = ({
               {benefits.map((benefit, index) => (
                 <div
                   key={index}
-                  className={`flex items-start gap-4 p-4 rounded-lg transition-all ${
-                    benefit.highlight
+                  className={`flex items-start gap-4 p-4 rounded-lg transition-all ${benefit.highlight
                       ? "bg-gradient-to-r from-purple-100 to-blue-100 border border-purple-200"
                       : "bg-white border border-gray-100"
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`p-2 rounded-lg ${
-                      benefit.highlight
+                    className={`p-2 rounded-lg ${benefit.highlight
                         ? "bg-purple-200 text-purple-700"
                         : "bg-blue-100 text-blue-600"
-                    }`}
+                      }`}
                   >
                     <benefit.icon className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p
-                      className={`font-medium text-sm ${
-                        benefit.highlight ? "text-purple-800" : "text-gray-800"
-                      }`}
+                      className={`font-medium text-sm ${benefit.highlight ? "text-purple-800" : "text-gray-800"
+                        }`}
                     >
                       {benefit.title}
                     </p>
@@ -294,7 +295,7 @@ export const UnifiedActionCTA = ({
 
               <div className="text-center pt-2 border-t border-gray-200">
                 <p className="text-xs text-gray-500">
-                  <span className="font-medium">Powered by Base Sepolia + Solana Devnet</span> •{" "}
+                  <span className="font-medium">Powered by Base Sepolia + Avalanche Fuji + Solana Devnet</span> •{" "}
                   <span className="font-medium">
                     Professional AI Coaching Platform
                   </span>
