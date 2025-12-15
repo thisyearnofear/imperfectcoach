@@ -3,8 +3,21 @@
  * Update these addresses after deploying the exercise-specific contracts
  */
 
-import { PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import type { ExerciseType } from "./leaderboard";
+
+// RPC Configuration - CENTRALIZED (DRY Principle)
+// 1. Try VITE env var (custom RPC)
+// 2. Fallback to public devnet
+export const SOLANA_RPC_URL = import.meta.env.VITE_SOLANA_DEVNET_RPC_URL || "https://api.devnet.solana.com";
+
+// Shared singleton connection (PERFORMANT Principle)
+export const solanaConnection = new Connection(SOLANA_RPC_URL, {
+  commitment: "confirmed",
+  // 429 Retry logic is handled at the application layer (fetchWithRetry), 
+  // but we set a reasonable timeout here
+  confirmTransactionInitialTimeout: 60000,
+});
 
 // Leaderboard addresses for each exercise (initialized on devnet)
 export const SOLANA_LEADERBOARD_ADDRESSES = {
@@ -35,7 +48,7 @@ export function areAddressesConfigured(): boolean {
  */
 export const DEPLOYMENT_CHECKLIST = {
   "1. Deploy SolanaPullupsLeaderboard contract": "✅ Complete - GDSkDgf6Q5mMN5kHZiKTXaAs2CLAkopDRDkSCM1tpcQa",
-  "2. Deploy SolanaJumpsLeaderboard contract": "✅ Complete - 7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd", 
+  "2. Deploy SolanaJumpsLeaderboard contract": "✅ Complete - 7ugCR1KLjHNgUjbW1pZGCadeCHKvUu7NwXsXDTTFypUd",
   "3. Initialize pullups leaderboard account": "✅ Complete - 7ohw3tXESGWNNsJwJ2CoNwbgGz9ygjDbUFP23yMeNs76",
   "4. Initialize jumps leaderboard account": "✅ Complete - 6djmqGnS67Am52V2aEhw9qkNZBMrgCxTf198DjX7KccC",
   "5. Update SOLANA_LEADERBOARD_ADDRESSES.pullups": "✅ Complete - 7ohw3tXESGWNNsJwJ2CoNwbgGz9ygjDbUFP23yMeNs76",

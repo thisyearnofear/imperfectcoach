@@ -323,10 +323,15 @@ export const BlockchainScoreSubmission = ({
                 className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 animate-pulse hover:animate-none transition-all shadow-lg hover:shadow-xl"
                 size="lg"
               >
-                {isSubmitting || isSolanaLoading ? (
+                {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Submitting to Blockchain...
+                  </>
+                ) : isSolanaLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Connecting Wallet...
                   </>
                 ) : (
                   <>

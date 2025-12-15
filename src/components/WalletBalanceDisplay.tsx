@@ -41,6 +41,21 @@ const getChainConfig = (chainId: number | undefined): { chain: Chain; usdcAddres
   return { chain: baseSepolia, usdcAddress: USDC_ADDRESS_BASE, name: "Base Sepolia" };
 };
 
+// Helper for RPC retries
+async function fetchWithRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
+  try {
+    return await fn();
+  } catch (error: any) {
+    if (retries > 0 && (error?.message?.includes('429') || error?.toString().includes('429'))) {
+      await new Promise(r => setTimeout(r, delay));
+      return fetchWithRetry(fn, retries - 1, delay * 2);
+    }
+    throw error;
+  }
+}
+
+import { solanaConnection } from "@/lib/solana/config";
+
 export function WalletBalanceDisplay({
   requiredAmount = "0.05",
   currency = "USDC",
@@ -51,7 +66,6 @@ export function WalletBalanceDisplay({
   const { address: baseAddress, isConnected: isBaseConnected } = useAccount();
   const chainId = useChainId();
   const { isSolanaConnected, solanaAddress } = useWalletConnection();
-  const solanaConnection = new Connection('https://api.devnet.solana.com');
 
   // Get the current chain config based on connected chain
   const { chain: currentChain, usdcAddress: currentUsdcAddress, name: currentChainName } = getChainConfig(chainId);
@@ -149,23 +163,27 @@ export function WalletBalanceDisplay({
       try {
         const publicKey = new PublicKey(solanaAddress);
 
-        // Parallel fetch for Native SOL and SPL USDC
-        const [solBalance, tokenAccounts] = await Promise.all([
-          solanaConnection.getBalance(publicKey),
+        // Sequential fetch with retry to handle 429s (Rate Limits)
+
+        // 1. Get SOL Balance
+        const solBalance = await fetchWithRetry(() => solanaConnection.getBalance(publicKey));
+        const solAmount = solBalance / 1e9; // Convert lamports to SOL
+
+        // 2. Get USDC Balance (SPL Token)
+        const tokenAccounts = await fetchWithRetry(() =>
           solanaConnection.getParsedTokenAccountsByOwner(publicKey, {
             mint: new PublicKey(USDC_MINT_SOLANA)
           })
-        ]);
-
-        const solAmount = solBalance / 1e9; // Convert lamports to SOL
+        );
 
         // Parse USDC balance from token accounts
         let usdcAmount = 0;
         if (tokenAccounts.value.length > 0) {
           // Sum up all accounts (in case of multiple ATAs, though rare for USDC)
           usdcAmount = tokenAccounts.value.reduce((acc, account) => {
-            const parsedInfo = account.account.data.parsed.info;
-            return acc + (parsedInfo.tokenAmount.uiAmount || 0);
+            // Safe access to parsed data
+            const parsedInfo = (account.account.data as any).parsed?.info;
+            return acc + (parsedInfo?.tokenAmount?.uiAmount || 0);
           }, 0);
         }
 
@@ -187,7 +205,7 @@ export function WalletBalanceDisplay({
     };
 
     fetchSolanaBalances();
-  }, [isSolanaConnected, solanaAddress, solanaConnection, required]);
+  }, [isSolanaConnected, solanaAddress, required]);
 
   const refresh = () => {
     if (isBaseConnected) {

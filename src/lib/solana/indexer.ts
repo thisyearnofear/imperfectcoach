@@ -78,7 +78,7 @@ function deserializeUserScore(
 
     // Use DataView for browser-compatible u64 reading (little-endian)
     const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-    
+
     const totalScore = view.getBigUint64(offset, true); // true = little-endian
     offset += 8;
 
@@ -117,7 +117,7 @@ function deserializeUserScore(
  */
 function combineRawScores(rawScores: RawUserScore[]): UserScoreOnChain[] {
   const userMap = new Map<string, UserScoreOnChain>();
-  
+
   for (const score of rawScores) {
     // Get or create a unified entry for this user
     let userEntry = userMap.get(score.user);
@@ -134,27 +134,27 @@ function combineRawScores(rawScores: RawUserScore[]): UserScoreOnChain[] {
         firstSubmissionTime: 0n,
       };
     }
-    
+
     // Update the unified entry based on the exercise type
     if (score.exerciseType === 'pullups') {
       userEntry.pullups = score.totalScore; // Assuming totalScore represents pullup count
     } else if (score.exerciseType === 'jumps') {
       userEntry.jumps = score.totalScore; // Assuming totalScore represents jump count
     }
-    
+
     // Update other fields as appropriate
     userEntry.totalScore = userEntry.pullups + userEntry.jumps;
     userEntry.submissionCount += score.submissionCount;
-    userEntry.bestSingleScore = score.bestSingleScore > userEntry.bestSingleScore ? 
-                                score.bestSingleScore : userEntry.bestSingleScore;
-    userEntry.lastSubmissionTime = score.lastSubmissionTime > userEntry.lastSubmissionTime ? 
-                                   score.lastSubmissionTime : userEntry.lastSubmissionTime;
-    userEntry.firstSubmissionTime = userEntry.firstSubmissionTime === 0n ? 
-                                    score.firstSubmissionTime : userEntry.firstSubmissionTime;
-    
+    userEntry.bestSingleScore = score.bestSingleScore > userEntry.bestSingleScore ?
+      score.bestSingleScore : userEntry.bestSingleScore;
+    userEntry.lastSubmissionTime = score.lastSubmissionTime > userEntry.lastSubmissionTime ?
+      score.lastSubmissionTime : userEntry.lastSubmissionTime;
+    userEntry.firstSubmissionTime = userEntry.firstSubmissionTime === 0n ?
+      score.firstSubmissionTime : userEntry.firstSubmissionTime;
+
     userMap.set(score.user, userEntry);
   }
-  
+
   return Array.from(userMap.values());
 }
 
@@ -166,29 +166,61 @@ async function fetchWithFallback(endpoint: string, params: any[]): Promise<any> 
   // Use getProgramAccountsV2 for Helius to handle large datasets
   const isHelius = endpoint.includes('helius');
   const method = isHelius ? "getProgramAccountsV2" : "getProgramAccounts";
-  
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method,
-      params,
-    }),
-  });
 
-  if (!response.ok) {
-    throw new Error(`RPC call failed: ${response.statusText}`);
+  let attempts = 0;
+  const maxAttempts = 3;
+
+  while (attempts < maxAttempts) {
+    attempts++;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method,
+          params,
+        }),
+      });
+
+      if (response.status === 429) {
+        console.warn(`RPC 429 Rate Limit on ${endpoint}. Retrying... (${attempts}/${maxAttempts})`);
+        // Exponential backoff: 1s, 2s, 4s
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempts - 1)));
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`RPC call failed: ${response.statusText}`);
+      }
+
+      const json = await response.json();
+
+      if (json.error) {
+        // If error is related to rate limiting (some RPCs return 200 with error body)
+        if (json.error.code === 429 || json.error.message?.includes('429') || json.error.message?.includes('Too many requests')) {
+          console.warn(`RPC JSON 429 on ${endpoint}. Retrying... (${attempts}/${maxAttempts})`);
+          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempts - 1)));
+          continue;
+        }
+        throw new Error(`RPC error: ${json.error.message}`);
+      }
+
+      return json;
+
+    } catch (error: any) {
+      // If network error, maybe retry? For now only retry explicit rate limits or just fail to next endpoint
+      if (attempts >= maxAttempts) throw error;
+      // If it's a rate limit error caught, retry
+      if (error.message?.includes('429')) {
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempts - 1)));
+        continue;
+      }
+      throw error; // Other errors fail immediately to try next endpoint
+    }
   }
-
-  const json = await response.json();
-
-  if (json.error) {
-    throw new Error(`RPC error: ${json.error.message}`);
-  }
-
-  return json;
 }
 
 /**
@@ -201,16 +233,16 @@ async function fetchAllUserScoresFromSolanaPrograms(): Promise<UserScoreOnChain[
     { programId: SOLANA_JUMPS_PROGRAM_ID, exerciseType: 'jumps' },
     { programId: SOLANA_PULLUPS_PROGRAM_ID, exerciseType: 'pullups' }
   ];
-  
+
   const allRawAccounts: RawUserScore[] = [];
   const rpcEndpoints = ALCHEMY_DEVNET_RPC ? [ALCHEMY_DEVNET_RPC, ...FALLBACK_DEVNET_RPCS] : FALLBACK_DEVNET_RPCS;
 
   for (const endpoint of rpcEndpoints) {
     let hasAnySuccess = false;
-    
+
     for (const config of programConfigs) {
       let pageKey: string | undefined;
-      
+
       try {
         const endpointName = endpoint.includes('alchemy') ? 'Alchemy' :
           endpoint.includes('helius') ? 'Helius' :
@@ -240,14 +272,14 @@ async function fetchAllUserScoresFromSolanaPrograms(): Promise<UserScoreOnChain[
           // Process accounts - add them to our unified structure
           for (const account of result.value) {
             // Skip the leaderboard accounts themselves (they have different structure)
-            const isLeaderboardAccount = 
+            const isLeaderboardAccount =
               account.pubkey === SOLANA_LEADERBOARD_ADDRESSES.jumps.toString() ||
               account.pubkey === SOLANA_LEADERBOARD_ADDRESSES.pullups.toString();
-            
+
             if (isLeaderboardAccount) {
               continue; // Skip leaderboard accounts, only process user score PDAs
             }
-            
+
             // Use browser-compatible base64 decoding
             const base64String = account.account.data[0];
             const binaryString = atob(base64String);
@@ -268,14 +300,14 @@ async function fetchAllUserScoresFromSolanaPrograms(): Promise<UserScoreOnChain[
             break;
           }
         }
-        
+
         hasAnySuccess = true;
         const successEndpointName = endpoint.includes('alchemy') ? 'Alchemy' :
           endpoint.includes('helius') ? 'Helius' :
             endpoint.includes('solana') ? 'Solana Devnet' :
               endpoint.includes('sonic') ? 'Sonic' : 'Custom RPC';
         console.log(`✅ Successfully fetched accounts from ${config.exerciseType} program on ${successEndpointName}`);
-        
+
       } catch (error) {
         const errorEndpointName = endpoint.includes('alchemy') ? 'Alchemy' :
           endpoint.includes('helius') ? 'Helius' :
@@ -286,7 +318,7 @@ async function fetchAllUserScoresFromSolanaPrograms(): Promise<UserScoreOnChain[
         continue;
       }
     }
-    
+
     if (hasAnySuccess) {
       // If we successfully fetched from at least one program on this endpoint, combine and return results
       const combinedAccounts = combineRawScores(allRawAccounts);
