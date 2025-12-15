@@ -427,94 +427,93 @@ const useENSName = (address?: string) => {
  * - Avalanche: Prefer ENS
  * - Solana: Prefer SNS
  * - Fallback: Social identity → Address
+ * 
+ * All hooks are called unconditionally to comply with React's rules of hooks
  */
 export const useDisplayName = (address?: string, chain?: 'solana' | 'base' | 'avalanche') => {
-  // Chain-based resolution order
-  const resolveForBase = () => {
-    const { basename, isLoading: basenameLoading } = useBasename(address);
-    const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
-      enabled: !basenameLoading && !basename,
-    });
-    
-    return {
-      primary: basename,
-      social: getPrimarySocialIdentity(),
-      isLoadingPrimary: basenameLoading,
-      isLoadingSocial: identityLoading,
-      source: 'basename' as const,
-    };
-  };
-
-  const resolveForAvalanche = () => {
-    const { ensName, isLoading: ensLoading } = useENSName(address);
-    const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
-      enabled: !ensLoading && !ensName,
-    });
-
-    return {
-      primary: ensName,
-      social: getPrimarySocialIdentity(),
-      isLoadingPrimary: ensLoading,
-      isLoadingSocial: identityLoading,
-      source: 'ens' as const,
-    };
-  };
-
-  const resolveForSolana = () => {
-    const shouldRunSNS = !!address;
-    const { solName, isLoading: snsLoading } = useSolanaNameService(shouldRunSNS ? address : undefined);
-    const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
-      enabled: !snsLoading && !solName,
-    });
-
-    return {
-      primary: solName,
-      social: getPrimarySocialIdentity(),
-      isLoadingPrimary: snsLoading,
-      isLoadingSocial: identityLoading,
-      source: 'sol' as const,
-    };
-  };
-
-  // Select resolution strategy based on chain
-  let resolution;
-  switch (chain) {
-    case 'base':
-      resolution = resolveForBase();
-      break;
-    case 'avalanche':
-      resolution = resolveForAvalanche();
-      break;
-    case 'solana':
-      resolution = resolveForSolana();
-      break;
-    default:
-      // Default to Base/Basename if no chain specified
-      resolution = resolveForBase();
-  }
-
-  const { primary, social, isLoadingPrimary, isLoadingSocial, source } = resolution;
-  const isLoading = isLoadingPrimary || isLoadingSocial;
+  // Call all hooks unconditionally (React rules)
+  const { basename, isLoading: basenameLoading } = useBasename(address);
+  const { ensName, isLoading: ensLoading } = useENSName(address);
+  const { solName, isLoading: snsLoading } = useSolanaNameService(address);
+  const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address);
+  
+  const social = getPrimarySocialIdentity();
+  const isLoading = basenameLoading || ensLoading || snsLoading || identityLoading;
 
   let displayName: string;
-  let resolvedSource: 'social' | 'basename' | 'sol' | 'ens' | 'address';
+  let source: 'social' | 'basename' | 'sol' | 'ens' | 'address';
 
   if (isLoading) {
     displayName = 'Loading...';
-    resolvedSource = 'address';
-  } else if (primary) {
-    displayName = primary;
-    resolvedSource = source;
-  } else if (social) {
-    displayName = social.username || social.id;
-    resolvedSource = 'social';
-  } else if (address) {
-    displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
-    resolvedSource = 'address';
+    source = 'address';
   } else {
-    displayName = '';
-    resolvedSource = 'address';
+    // Chain-aware resolution order
+    switch (chain) {
+      case 'base':
+        if (basename) {
+          displayName = basename;
+          source = 'basename';
+        } else if (social) {
+          displayName = social.username || social.id;
+          source = 'social';
+        } else if (address) {
+          displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+          source = 'address';
+        } else {
+          displayName = '';
+          source = 'address';
+        }
+        break;
+
+      case 'avalanche':
+        if (ensName) {
+          displayName = ensName;
+          source = 'ens';
+        } else if (social) {
+          displayName = social.username || social.id;
+          source = 'social';
+        } else if (address) {
+          displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+          source = 'address';
+        } else {
+          displayName = '';
+          source = 'address';
+        }
+        break;
+
+      case 'solana':
+        if (solName) {
+          displayName = solName;
+          source = 'sol';
+        } else if (social) {
+          displayName = social.username || social.id;
+          source = 'social';
+        } else if (address) {
+          displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+          source = 'address';
+        } else {
+          displayName = '';
+          source = 'address';
+        }
+        break;
+
+      default:
+        // Default: Basename → Social → Address
+        if (basename) {
+          displayName = basename;
+          source = 'basename';
+        } else if (social) {
+          displayName = social.username || social.id;
+          source = 'social';
+        } else if (address) {
+          displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+          source = 'address';
+        } else {
+          displayName = '';
+          source = 'address';
+        }
+    }
   }
 
-  return { displayName, source: resolvedSource, isLoading };
+  return { displayName, source, isLoading };
 };
