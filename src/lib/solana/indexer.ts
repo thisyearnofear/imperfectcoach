@@ -1,11 +1,13 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { SOLANA_JUMPS_PROGRAM_ID, SOLANA_PULLUPS_PROGRAM_ID } from "./leaderboard";
-import { SOLANA_LEADERBOARD_ADDRESSES } from "./config";
+import { SOLANA_LEADERBOARD_ADDRESSES, SOLANA_RPC_URL } from "./config";
 
 // RPC endpoints for Solana devnet with fallbacks - only using CORS-enabled endpoints
 const ALCHEMY_DEVNET_RPC = import.meta.env.VITE_SOLANA_DEVNET_RPC_URL;
 const HELIUS_API_KEY = import.meta.env.VITE_HELIUS_API_KEY;
 const FALLBACK_DEVNET_RPCS = [
+  SOLANA_RPC_URL, // Primary centralized (Helius) endpoint
+  ALCHEMY_DEVNET_RPC,
   "https://api.devnet.solana.com",  // Official Solana endpoint (CORS-enabled)
   HELIUS_API_KEY ? `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}` : null,  // Helius endpoint with API key
   "https://devnet.sonic.game",      // Sonic devnet as additional fallback
