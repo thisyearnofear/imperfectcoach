@@ -14,6 +14,7 @@ import { base } from "viem/chains";
 import { Agentkit } from "@0xgasless/agentkit";
 import { verify, settle } from "@payai/x402/facilitator";
 import * as db from "./lib/dynamodb-service.mjs";
+import { verifyX402Signature } from "./lib/core-agent-handler.mjs";
 
 
 
@@ -400,35 +401,30 @@ export const handler = async (event) => {
       };
     }
 
-    // Step 2: Decode and verify payment
+    // Step 2: Verify payment using Core Agent Handler (supports EVM + Solana)
     console.log("✅ Payment header found - verifying signature...");
 
-    let signedPayment;
-    try {
-      // Decode base64 payment header
-      const decodedPayment = Buffer.from(paymentHeader, "base64").toString();
-      signedPayment = JSON.parse(decodedPayment);
+    const verification = await verifyX402Signature(
+      paymentHeader,
+      REQUIRED_AMOUNT,
+      networkHeader
+    );
 
-      // Validate Amount MATCHES the service requested
-      if (BigInt(signedPayment.amount) < BigInt(REQUIRED_AMOUNT)) {
-        throw new Error(`Insufficient payment amount. Required: ${REQUIRED_AMOUNT}, Received: ${signedPayment.amount}`);
-      }
-
-    } catch (error) {
-      console.error("❌ Invalid payment payload:", error);
-      return createErrorResponse(error.message || "Invalid payment format", 400);
+    if (!verification.verified) {
+      console.error("❌ Invalid signature:", verification.reason);
+      return createErrorResponse(
+        `Invalid payment: ${verification.reason}`,
+        401
+      );
     }
 
-    // Verify signature & Settle via PayAI
-    // Note: We bypass 'verifyAndSettlePayment' purely for the Phase 3 mocked local test since we don't have a real signer connected in this context yet.
-    // In production, we uncomment:
-    // const isValidSignature = await verifyAndSettlePayment(signedPayment, networkHeader);
-    const isValidSignature = true; // MOCKED for Phase 3 velocity
+    const signedPayment = {
+      payer: verification.payerAddress,
+      amount: verification.amount,
+      network: networkHeader,
+    }; // Normalized payment object for downstream use
 
-    if (!isValidSignature) {
-      console.error("❌ Invalid signature");
-      return createErrorResponse("Invalid payment signature", 401);
-    }
+    console.log("✅ Signature verified - processing request");
 
     console.log("✅ Signature verified - processing request");
 

@@ -50,8 +50,8 @@ if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION 2>/de
         --function-name $FUNCTION_NAME \
         --timeout 60 \
         --memory-size 1024 \
-        --region $REGION \
-        --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v1:0}"
+        --region $REGION
+        # --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v1:0}"
 else
     echo -e "${YELLOW}🆕 Creating new Lambda function...${NC}"
     

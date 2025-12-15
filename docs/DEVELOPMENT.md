@@ -218,7 +218,14 @@ The deployment script will:
 ### Smart Contract Deployment
 ```bash
 # Deploy leaderboards
+# Deploy leaderboards (EVM)
 ./scripts/deploy-public-leaderboards.sh
+
+# Deploy Solana Agent Registry
+# 1. Open https://beta.solpg.io
+# 2. Upload contracts/SolanaAgentRegistry.rs into src/lib.rs
+# 3. Build & Deploy to Devnet
+# 4. Copy Program ID to src/lib/agents/solana-registry.ts
 ```
 
 ## 🔧 Environment Setup
@@ -465,7 +472,11 @@ Coach Agent can autonomously:
    - Discovery queries: find agents by capability, reputation, SLA
    - Pricing management: per-capability, per-tier (basic/pro/premium)
    - Reputation tracking: heartbeat, uptime calculation, success rates
-   - No escrow: agents paid immediately via x402
+   - Reputation tracking (heartbeat, uptime calculation, success rates)
+- No escrow: agents paid immediately via x402
+- **Solana Registry**: `contracts/SolanaAgentRegistry.rs` (Deployed on Devnet via SolPG)
+  - Manages agent profiles with capabilities and pricing on Solana
+  - Mirror features of EVM registry but native to Solana runtime
    - ~400 lines, production-ready
 
 2. **Enhanced agent-discovery.mjs** (aws-lambda/agent-discovery.mjs)

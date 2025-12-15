@@ -10,7 +10,12 @@
  * - Maintains local core agents as fallback
  */
 
-// import { ReapClient } from "@reap-protocol/sdk"; // Temporarily disabled to prevent import crashes if SDK missing
+// import { ReapClient } from "@reap-protocol/sdk"; // Temporarily disabled
+import nacl from "tweetnacl";
+import bs58 from "bs58";
+import { createWalletClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Reap Protocol Configuration
@@ -417,16 +422,11 @@ export async function negotiatePaymentWithAgent(paymentRequirement, agentIdentit
  * 
  * Used when specialist agent challenges us for payment
  */
-export async function signPaymentChallenge(challenge, agentPrivateKey) {
-    if (!agentPrivateKey) {
-        console.warn("⚠️ Agent private key not available");
-        return null;
-    }
-
+export async function signPaymentChallenge(challenge, evmPrivateKey = process.env.AGENT_PRIVATE_KEY, solanaPrivateKey = process.env.AGENT_SOLANA_PRIVATE_KEY) {
     try {
-        console.log(`🔐 Signing payment challenge from specialist...`);
+        console.log(`🔐 Signing x402 challenge for ${challenge.network || "unknown"}...`);
 
-        // Message format for signing
+        // Standard x402 Message Construction
         const message = `x402 Payment Authorization
 Scheme: ${challenge.scheme}
 Network: ${challenge.network}
@@ -436,23 +436,67 @@ PayTo: ${challenge.payTo}
 Timestamp: ${challenge.timestamp}
 Nonce: ${challenge.nonce}`;
 
-        // In production, use ethers.js or web3.js to sign
-        // For now, we'll use a basic signing approach
-        const crypto = await import('crypto');
-        const messageHash = crypto.createHash('sha256').update(message).digest('hex');
+        // A. SOLANA SIGNING (Ed25519)
+        if (challenge.network && challenge.network.includes("solana")) {
+            if (!solanaPrivateKey) {
+                console.error("❌ AGENT_SOLANA_PRIVATE_KEY missing");
+                return null;
+            }
 
-        console.log(`✅ Challenge signed with agent identity`);
+            // Decode secret key (assume base58)
+            const secretKey = bs58.decode(solanaPrivateKey);
+            const keypair = nacl.sign.keyPair.fromSecretKey(secretKey);
+            const publicKey = bs58.encode(keypair.publicKey);
 
-        return {
-            signature: messageHash,
-            message: message,
-            signer: "coach-agent",
-            timestamp: Date.now()
-        };
+            const messageBytes = new TextEncoder().encode(message);
+            const signatureBytes = nacl.sign.detached(messageBytes, keypair.secretKey);
+            const signature = Buffer.from(signatureBytes).toString('base64');
+
+            console.log(`   ✅ Signed with Solana Identity: ${publicKey.slice(0, 8)}...`);
+
+            return {
+                signature,
+                message,
+                signer: publicKey,
+                timestamp: Date.now(),
+                scheme: "ed25519"
+            };
+        }
+
+        // B. EVM SIGNING (EIP-191) - Default
+        else {
+            if (!evmPrivateKey) {
+                console.error("❌ AGENT_PRIVATE_KEY missing");
+                return null;
+            }
+
+            // Setup Viem Account
+            const account = privateKeyToAccount(evmPrivateKey.startsWith("0x") ? evmPrivateKey : `0x${evmPrivateKey}`);
+
+            const wallet = createWalletClient({
+                account,
+                chain: baseSepolia, // Chain doesn't matter for signing, just context
+                transport: http()
+            });
+
+            const signature = await wallet.signMessage({
+                message
+            });
+
+            console.log(`   ✅ Signed with EVM Identity: ${account.address.slice(0, 10)}...`);
+
+            return {
+                signature,
+                message,
+                signer: account.address,
+                timestamp: Date.now(),
+                scheme: "eip-191"
+            };
+        }
 
     } catch (error) {
         console.error(`❌ Signing failed: ${error.message}`);
-        return null;
+        return null; // Return null prevents sending invalid signatures
     }
 }
 

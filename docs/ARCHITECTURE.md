@@ -65,6 +65,9 @@ Production deployments on testnet chains:
   - Verified: https://base-sepolia.blockscout.com/address/0xfE997dEdF572CA17d26400bCDB6428A8278a0627?tab=contract
 - **Avalanche Fuji**: `0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC`
   - Verified: https://repo.sourcify.dev/43113/0x1c2127562C52f2cfDd74e23A227A2ece6dFb42DC/
+- **Solana Devnet**: `9u4eVWRf8a7vMDCHsguakB6vxcnCuJssBVBbQAYrKdog`
+  - Verified: https://explorer.solana.com/address/9u4eVWRf8a7vMDCHsguakB6vxcnCuJssBVBbQAYrKdog?cluster=devnet
+  - **Registered Agent PDA**: `HFdmXsaRj1oMKhqMTeZwKqZToAtFk5qwdhq1RLPnRfuw` (Imperfect Coach Core)
 
 **Smart Contract Features:**
 - Agent registration (name, endpoint, capabilities, pricing)

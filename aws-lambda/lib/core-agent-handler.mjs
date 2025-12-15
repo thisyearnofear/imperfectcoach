@@ -10,6 +10,8 @@
 import { CORE_AGENTS } from "./reap-integration.mjs";
 import { verifyMessage, formatUnits } from "viem";
 import { base, baseSepolia, avalancheFuji } from "viem/chains";
+import nacl from "tweetnacl";
+import bs58 from "bs58";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Agent Discovery & Selection
@@ -66,6 +68,10 @@ const NETWORK_CONFIGS = {
     usdcAddress: "0x5425890298aed601595a70AB815c96711a31Bc65",
     explorerUrl: "https://testnet.snowtrace.io",
   },
+  "solana-devnet": {
+    usdcAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    explorerUrl: "https://explorer.solana.com?cluster=devnet",
+  }
 };
 
 /**
@@ -93,12 +99,29 @@ export async function verifyX402Signature(paymentHeader, expectedAmount, network
       return { verified: false, reason: "Missing signature, message, or payer address" };
     }
 
-    // Verify signature recovers to claimed payer address
-    const isValid = await verifyMessage({
-      address: decoded.payerAddress,
-      message: decoded.message,
-      signature: decoded.signature,
-    });
+    let isValid = false;
+
+    // A. Solana Verification (Ed25519)
+    if (network.includes("solana")) {
+      try {
+        const signatureBytes = new Uint8Array(Buffer.from(decoded.signature, 'base64'));
+        const messageBytes = new TextEncoder().encode(decoded.message);
+        const publicKeyBytes = bs58.decode(decoded.payerAddress);
+
+        isValid = nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes);
+      } catch (e) {
+        console.error("Solana verification failed:", e);
+        isValid = false;
+      }
+    }
+    // B. EVM Verification (EIP-191)
+    else {
+      isValid = await verifyMessage({
+        address: decoded.payerAddress,
+        message: decoded.message,
+        signature: decoded.signature,
+      });
+    }
 
     if (!isValid) {
       console.warn(`⚠️ Signature verification failed - does not recover to payer`);
