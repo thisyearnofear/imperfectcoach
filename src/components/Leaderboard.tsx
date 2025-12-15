@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { SmartRefresh, RefreshButton } from "./SmartRefresh";
 import { Badge } from "@/components/ui/badge";
 import { useBasename } from "@/hooks/useBasename";
-import { useMemoryIdentity, useSolanaNameService } from "@/hooks/useMemoryIdentity";
+import { useMemoryIdentity, useSolanaNameService, useDisplayName } from "@/hooks/useMemoryIdentity";
 import { useSocialContext } from "@/contexts/SocialContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,38 +75,26 @@ const ChainBadge = ({ chain }: { chain?: "base" | "avalanche" | "solana" }) => {
 
 // Enhanced user display component with social identity support
 const UserDisplay = ({ address, chain, showActions = false }: { address: string; chain?: "base" | "avalanche" | "solana"; showActions?: boolean }) => {
-  const { basename, isLoading: basenameLoading } = useBasename(address);
-  const { getPrimarySocialIdentity, isLoading: identityLoading } = useMemoryIdentity(address, {
-    enabled: !basenameLoading && !basename // Only fetch if no basename
-  });
-  const { solName, isLoading: snsLoading } = useSolanaNameService(chain === "solana" ? address : undefined);
-
+  // Use chain-aware display name resolution
+  const { displayName: chainAwareDisplayName, isLoading: nameLoading, source } = useDisplayName(address, chain);
+  
   const { getFriendActivity, addSocialActivity } = useSocialContext();
   const [isChallenging, setIsChallenging] = useState(false);
   const [challengeTarget, setChallengeTarget] = useState<number>(10); // Default challenge target
   const [challengeExercise, setChallengeExercise] = useState<Exercise>('jumps');
-  
-  const socialIdentity = getPrimarySocialIdentity();
 
   let displayName: string;
   let displayIcon: string | null = null;
 
-  if (basenameLoading || identityLoading || snsLoading) {
+  if (nameLoading) {
     displayName = "Loading...";
-  } else if (socialIdentity) {
-    displayName = socialIdentity.username || socialIdentity.id;
-    // Add platform indicator
-    if (socialIdentity.platform === 'farcaster') {
-      displayIcon = '🟣'; // Purple circle for Farcaster
-    } else if (socialIdentity.platform === 'twitter') {
-      displayIcon = '🐦'; // Bird for Twitter
-    }
-  } else if (basename) {
-    displayName = basename;
-  } else if (solName) {
-    displayName = solName;
+  } else if (source === 'social') {
+    displayName = chainAwareDisplayName;
+    // Add platform indicator based on identity source
+    // Note: useDisplayName doesn't return platform info, so we can enhance this if needed
+    displayIcon = '🟣'; // Placeholder for social
   } else {
-    displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+    displayName = chainAwareDisplayName;
   }
 
   const handleChallengeFriend = () => {
@@ -130,11 +118,11 @@ const UserDisplay = ({ address, chain, showActions = false }: { address: string;
   return (
     <div className="flex items-center justify-between w-full gap-2">
       <span className="truncate font-medium flex items-center gap-1" title={address}>
-        {displayIcon && <span className="text-xs">{displayIcon}</span>}
-        <span className={basenameLoading || identityLoading ? "text-muted-foreground" : ""}>
-          {displayName}
-        </span>
-      </span>
+         {displayIcon && <span className="text-xs">{displayIcon}</span>}
+         <span className={nameLoading ? "text-muted-foreground" : ""}>
+           {displayName}
+         </span>
+       </span>
       <ChainBadge chain={chain} />
       
       {showActions && (
