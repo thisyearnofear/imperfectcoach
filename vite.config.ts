@@ -51,8 +51,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Force eventemitter3 to use the ESM version instead of CommonJS
-      "eventemitter3": path.resolve(__dirname, "./node_modules/eventemitter3/index.mjs"),
     },
     dedupe: ['react', 'react-dom'],
   },
@@ -106,6 +104,8 @@ export default defineConfig(({ mode }) => ({
       '@solana/web3.js', // Exclude Solana web3 to avoid eventemitter3 ESM issues
       '@solana/wallet-adapter-base',
       '@solana/wallet-adapter-react',
+      '@solflare-wallet/sdk', // Exclude Solflare to avoid eventemitter3 issues
+      'eventemitter3', // Explicitly exclude to use ESM version
       // ML/Pose packages
       '@tensorflow/tfjs-core',
       '@tensorflow/tfjs-backend-webgl',
