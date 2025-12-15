@@ -51,6 +51,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Force eventemitter3 to use the ESM version instead of CommonJS
+      "eventemitter3": path.resolve(__dirname, "./node_modules/eventemitter3/index.mjs"),
     },
     dedupe: ['react', 'react-dom'],
   },
