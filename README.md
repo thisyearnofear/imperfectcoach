@@ -125,8 +125,13 @@ pnpm run dev
 
 ## 📚 Documentation
 
-### Phase 2-3 Agent Discovery (Latest)
-- **[Agent Discovery Service](aws-lambda/DYNAMODB_INTEGRATION.md)** - REST API for permissionless agent discovery, registration, and booking (✅ Phase 2 complete, ✅ Phase 3 complete with DynamoDB)
+### Phase 2-3 Agent Discovery (Latest - Live)
+- **[Agent Discovery Service](aws-lambda/DYNAMODB_INTEGRATION.md)** - Permissionless agent discovery, registration, and booking
+  - ✅ Phase 2: Core agent discovery service deployed
+  - ✅ Phase 3: DynamoDB persistence enabled
+  - ✅ API Gateway: Live endpoint for user testing
+  - 📍 Live URL: `https://r03m1wznai.execute-api.eu-north-1.amazonaws.com/prod/agents`
+  - 🔗 Multi-chain: Base, Avalanche, Solana support
 
 ### Technical Documentation
 - **[Core Architecture](docs/CORE_ARCHITECTURE.md)** - Complete system design and x402 implementation
