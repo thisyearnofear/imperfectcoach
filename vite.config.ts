@@ -117,25 +117,20 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: [
-      // Web3 packages - exclude to avoid ox subpath resolution issues
+      // Core web3 packages with complex dependencies
       'ox',
       'viem',
       'wagmi',
-      'ethers',
-      '@rainbow-me/rainbowkit',
-      'thirdweb',
-      '@thirdweb-dev/react',
-      '@thirdweb-dev/sdk',
-      '@solana/web3.js', // Exclude Solana web3 to avoid eventemitter3 ESM issues
+      // Solana ecosystem
+      '@solana/web3.js',
       '@solana/wallet-adapter-base',
       '@solana/wallet-adapter-react',
-      '@solflare-wallet/sdk', // Exclude Solflare to avoid eventemitter3 issues
-      'eventemitter3', // Explicitly exclude to use ESM version
+      '@solflare-wallet/sdk',
+      'eventemitter3',
       // ML/Pose packages
       '@tensorflow/tfjs-core',
       '@tensorflow/tfjs-backend-webgl',
       '@tensorflow/tfjs-backend-cpu',
-      '@tensorflow/tfjs-backend-webgpu',
       '@tensorflow/tfjs-converter',
       '@tensorflow-models/pose-detection',
       '@mediapipe/pose'
