@@ -266,6 +266,7 @@ const Leaderboard = ({
   });
   const { friendAddresses } = useSocialContext();
   const previousLeaderboardLength = useRef(leaderboard.length);
+  const hasCompletedInitialLoad = useRef(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'all' | 'friends'>('all');
   const [chainFilterView, setChainFilterView] = useState<ChainFilter>(chainFilter);
@@ -326,9 +327,18 @@ const Leaderboard = ({
   //   }
   // }, [stableAddresses, resolver]);
 
-  // Check for new entries and show notification
+  // Track when the initial multi-chain load has fully completed
+  useEffect(() => {
+    if (!isLoading && !hasCompletedInitialLoad.current) {
+      hasCompletedInitialLoad.current = true;
+      previousLeaderboardLength.current = leaderboard.length;
+    }
+  }, [isLoading, leaderboard.length]);
+
+  // Check for new entries and show notification (skip initial load)
   useEffect(() => {
     if (
+      hasCompletedInitialLoad.current &&
       leaderboard.length > previousLeaderboardLength.current &&
       previousLeaderboardLength.current > 0
     ) {

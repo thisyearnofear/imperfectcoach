@@ -22,6 +22,8 @@ export class SolanaWalletManager {
   private state: SolanaWalletState;
   private availableAdapters: WalletAdapter[];
   private listeners: Map<WalletEventType, Set<WalletEventListener>> = new Map();
+  private balanceCache: { value: number; ts: number } | null = null;
+  private balanceInFlight: Promise<number> | null = null;
 
   constructor() {
     this.availableAdapters = [
@@ -112,6 +114,10 @@ export class SolanaWalletManager {
         this.emit('connect');
         this.emit('change');
 
+        // Reset balance cache on new connection
+        this.balanceCache = null;
+        this.balanceInFlight = null;
+
         this.state.connecting = false;
         return true;
 
@@ -142,12 +148,16 @@ export class SolanaWalletManager {
       await this.state.adapter.disconnect();
     }
 
-    this.state = {
-      ...this.state,
-      adapter: null,
-      connected: false,
-      publicKey: null
-    };
+   this.state = {
+     ...this.state,
+     adapter: null,
+     connected: false,
+     publicKey: null
+   };
+
+   // Reset balance cache
+   this.balanceCache = null;
+   this.balanceInFlight = null;
 
     // Emit disconnect event
     this.emit('disconnect');
@@ -237,16 +247,47 @@ export class SolanaWalletManager {
    */
   async getBalance(): Promise<number> {
     if (!this.state.publicKey) {
+      this.balanceCache = null;
       return 0;
     }
 
-    try {
-      const lamports = await this.state.connection.getBalance(this.state.publicKey);
-      return lamports / 1e9; // Convert to SOL
-    } catch (error) {
-      console.error('Failed to get balance:', error);
-      return 0;
+    const now = Date.now();
+    const TTL = 5000; // 5 seconds
+
+    // Serve from cache if fresh
+    if (this.balanceCache && now - this.balanceCache.ts < TTL) {
+      return this.balanceCache.value;
     }
+
+    // Deduplicate in-flight balance requests
+    if (this.balanceInFlight) {
+      try {
+        const val = await this.balanceInFlight;
+        return val;
+      } catch {
+        // fall through to refetch
+      }
+    }
+
+    // Fetch fresh balance
+    this.balanceInFlight = (async () => {
+      try {
+        const lamports = await this.state.connection.getBalance(this.state.publicKey!);
+        const value = lamports / 1e9;
+        this.balanceCache = { value, ts: Date.now() };
+        return value;
+      } catch (error) {
+        console.error('Failed to get balance:', error);
+        return this.balanceCache?.value ?? 0;
+      } finally {
+        // Clear in-flight after a short tick to allow concurrent awaiters to resolve
+        setTimeout(() => {
+          this.balanceInFlight = null;
+        }, 0);
+      }
+    })();
+
+    return this.balanceInFlight;
   }
 
   formatPublicKey(): string {
@@ -273,6 +314,14 @@ export class SolanaWalletManager {
         eventListeners.delete(listener);
       }
     };
+  }
+
+  /**
+   * Compatibility helper – mirrors the on()/off() semantics but matches
+   * the subscribe() naming the React components expect.
+   */
+  subscribe(event: WalletEventType, listener: WalletEventListener): () => void {
+    return this.on(event, listener);
   }
 
   private emit(event: WalletEventType): void {

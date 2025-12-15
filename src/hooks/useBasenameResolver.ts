@@ -290,7 +290,12 @@ export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
 
   // Update cache with new result
   const updateCache = useCallback(
-    (address: string, basename: string | null, success: boolean) => {
+    (
+      address: string,
+      basename: string | null,
+      success: boolean,
+      provider?: 'CDP' | 'Thirdweb'
+    ) => {
       const normalized = address.toLowerCase();
 
       setCache((prev) => ({
@@ -306,18 +311,18 @@ export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
         ...prev,
         totalRequests: prev.totalRequests + 1,
         cdpSuccesses:
-          success && basename && config.enableCDP
+          success && basename && provider === 'CDP'
             ? prev.cdpSuccesses + 1
             : prev.cdpSuccesses,
         thirdwebSuccesses:
-          success && basename && config.enableThirdweb
+          success && basename && provider === 'Thirdweb'
             ? prev.thirdwebSuccesses + 1
             : prev.thirdwebSuccesses,
         failures: !success ? prev.failures + 1 : prev.failures,
         lastUpdate: Date.now(),
       }));
     },
-    [config.enableCDP, config.enableThirdweb]
+    []
   );
 
   // Resolve single basename with fallbacks
@@ -339,26 +344,38 @@ export const useBasenameResolver = (options: BasenameResolverOptions = {}) => {
       resolutionQueue.current.add(normalized);
 
       try {
-        let basename: string | null = null;
+        const providerPromises: Promise<{ provider: 'CDP' | 'Thirdweb'; name: string }>[] = [];
 
-        // Try CDP first (if enabled and configured)
         if (config.enableCDP) {
-          basename = await resolveCDPBasename(normalized);
-          if (basename) {
-            updateCache(normalized, basename, true);
-            resolutionQueue.current.delete(normalized);
-            return basename;
+          providerPromises.push(
+            resolveCDPBasename(normalized).then((name) => {
+              if (name) return { provider: 'CDP', name } as const;
+              return Promise.reject('CDP no result');
+            })
+          );
+        }
+        if (config.enableThirdweb) {
+          providerPromises.push(
+            resolveThirdwebBasename(normalized).then((name) => {
+              if (name) return { provider: 'Thirdweb', name } as const;
+              return Promise.reject('Thirdweb no result');
+            })
+          );
+        }
+
+        let winner: { provider: 'CDP' | 'Thirdweb'; name: string } | null = null;
+        if (providerPromises.length > 0) {
+          try {
+            winner = await Promise.any(providerPromises);
+          } catch {
+            winner = null;
           }
         }
 
-        // Fallback to Thirdweb (if enabled)
-        if (config.enableThirdweb) {
-          basename = await resolveThirdwebBasename(normalized);
-          if (basename) {
-            updateCache(normalized, basename, true);
-            resolutionQueue.current.delete(normalized);
-            return basename;
-          }
+        if (winner) {
+          updateCache(normalized, winner.name, true, winner.provider);
+          resolutionQueue.current.delete(normalized);
+          return winner.name;
         }
 
         // No basename found, cache the null result
