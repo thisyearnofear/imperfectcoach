@@ -8,8 +8,8 @@ import type { ExerciseType } from "./leaderboard";
 
 // RPC Configuration - CENTRALIZED (DRY Principle)
 // 1. Try VITE env var (custom RPC)
-// 2. Fallback to public devnet
-export const SOLANA_RPC_URL = import.meta.env.VITE_SOLANA_DEVNET_RPC_URL || "https://api.devnet.solana.com";
+// 2. Fallback to Helius Devnet (Hardcoded for immediate stability)
+export const SOLANA_RPC_URL = import.meta.env.VITE_SOLANA_DEVNET_RPC_URL || "https://devnet.helius-rpc.com/?api-key=e96c1161-caae-409e-bd32-f536c1d354ef";
 
 // Shared singleton connection (PERFORMANT Principle)
 export const solanaConnection = new Connection(SOLANA_RPC_URL, {

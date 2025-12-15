@@ -328,7 +328,7 @@ export const BlockchainScoreSubmission = ({
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Submitting to Blockchain...
                   </>
-                ) : isSolanaLoading ? (
+                ) : (isSolanaLoading && !isSolanaConnected) ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Connecting Wallet...
