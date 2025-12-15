@@ -67,13 +67,12 @@ const getSummaryPrompt = (data) => {
   const systemPrompt = systemPrompts[personality] || systemPrompts.competitive;
   const exerciseContext = getExerciseDataContext(exercise);
 
-  // Handle case where repHistory might be undefined or not an array
+  // Transform rep history to detailed format (single pass)
   const safeRepHistory = Array.isArray(repHistory) ? repHistory : [];
-  const detailedRepHistory = safeRepHistory.map((r) => {
-    return r && r.details
-      ? { score: r.score, details: r.details }
-      : { score: r?.score || 0 };
-  });
+  const detailedRepHistory = safeRepHistory.map((r) => ({
+    score: r?.score || 0,
+    ...(r?.details && { details: r.details }),
+  }));
 
   const safeReps = reps || 0;
   const safeAverageFormScore = averageFormScore || 0;
@@ -123,11 +122,11 @@ const getChatPrompt = (data) => {
   const systemPrompt = systemPrompts[personality] || systemPrompts.competitive;
   const exerciseContext = getExerciseDataContext(exercise);
 
-  const detailedRepHistory = repHistory.map((r) => {
-    return r.details
-      ? { score: r.score, details: r.details }
-      : { score: r.score };
-  });
+  // Transform rep history to detailed format (reuse same logic as above)
+  const detailedRepHistory = repHistory.map((r) => ({
+    score: r?.score || 0,
+    ...(r?.details && { details: r.details }),
+  }));
   const userQuestion =
     chatHistory[chatHistory.length - 1]?.content || "What should I focus on?";
 

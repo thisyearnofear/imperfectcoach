@@ -14,6 +14,7 @@ import {
 } from "@/lib/solana/leaderboard";
 import { useReadContract } from "wagmi";
 import { CHAIN_IDS } from "@/lib/config";
+import { mergeExerciseData } from "@/lib/leaderboard/utils";
 
 export interface UnifiedLeaderboardEntry {
   user: string; // 0x... (Base/Avalanche) or Solana pubkey string
@@ -177,66 +178,24 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
       setIsAvalancheLoading(true);
       setAvalancheError(null);
 
-      const avalancheLeaderboardData: UnifiedLeaderboardEntry[] = [];
+      // Merge jumps and pullups using utility function (O(n) instead of O(n²))
+      const userMap = mergeExerciseData(
+        avalancheJumpsLeaderboardData as any,
+        avalanchePullupsLeaderboardData as any
+      );
 
-      // Process avalanche jumps data
-      if (avalancheJumpsLeaderboardData && Array.isArray(avalancheJumpsLeaderboardData)) {
-        avalancheJumpsLeaderboardData.forEach(
-          (entry: {
-            user: `0x${string}`;
-            totalScore: bigint;
-            bestSingleScore: bigint;
-            submissionCount: bigint;
-            lastSubmissionTime: bigint;
-          }) => {
-            avalancheLeaderboardData.push({
-              user: entry.user,
-              chain: "avalanche",
-              pullups: 0,
-              jumps: Number(entry.totalScore),
-              totalScore: Number(entry.totalScore),
-              submissionCount: Number(entry.submissionCount), // Convert to number
-              lastSubmissionTime: Number(entry.lastSubmissionTime),
-            });
-          }
-        );
-      }
-
-      // Process avalanche pullups data and merge with existing entries
-      if (avalanchePullupsLeaderboardData && Array.isArray(avalanchePullupsLeaderboardData)) {
-        avalanchePullupsLeaderboardData.forEach(
-          (entry: {
-            user: `0x${string}`;
-            totalScore: bigint;
-            bestSingleScore: bigint;
-            submissionCount: bigint;
-            lastSubmissionTime: bigint;
-          }) => {
-            // Find if user already exists in the array
-            const existingIndex = avalancheLeaderboardData.findIndex(user => user.user === entry.user);
-            if (existingIndex !== -1) {
-              // Update existing entry
-              avalancheLeaderboardData[existingIndex].pullups = Number(entry.totalScore);
-              avalancheLeaderboardData[existingIndex].totalScore += Number(entry.totalScore);
-              avalancheLeaderboardData[existingIndex].lastSubmissionTime = Math.max(
-                avalancheLeaderboardData[existingIndex].lastSubmissionTime,
-                Number(entry.lastSubmissionTime)
-              );
-            } else {
-              // Add new entry
-              avalancheLeaderboardData.push({
-                user: entry.user,
-                chain: "avalanche",
-                pullups: Number(entry.totalScore),
-                jumps: 0,
-                totalScore: Number(entry.totalScore),
-                submissionCount: Number(entry.submissionCount), // Convert to number
-                lastSubmissionTime: Number(entry.lastSubmissionTime),
-              });
-            }
-          }
-        );
-      }
+      // Convert to unified format with submission count
+      const avalancheLeaderboardData: UnifiedLeaderboardEntry[] = Array.from(userMap).map(
+        ([user, data]) => ({
+          user,
+          chain: "avalanche",
+          pullups: data.pullups,
+          jumps: data.jumps,
+          totalScore: data.pullups + data.jumps,
+          submissionCount: 1, // Avalanche contracts don't expose this
+          lastSubmissionTime: data.lastSubmissionTime,
+        })
+      );
 
       setAvalancheLeaderboard(avalancheLeaderboardData);
       setIsAvalancheLoading(false);
@@ -259,59 +218,12 @@ export function useLeaderboardParallel(options: UseLeaderboardParallelOptions = 
 
     // Process Base leaderboard
     if (chain === "all" || chain === "base") {
-      const userMap = new Map<
-        string,
-        {
-          pullups: number;
-          jumps: number;
-          lastSubmissionTime: number;
-        }
-      >();
+      const userMap = mergeExerciseData(
+        jumpsLeaderboardData as any,
+        pullupsLeaderboardData as any
+      );
 
-      // Process jumps data
-      if (jumpsLeaderboardData && Array.isArray(jumpsLeaderboardData)) {
-        jumpsLeaderboardData.forEach(
-          (entry: {
-            user: string;
-            totalScore: bigint;
-            lastSubmissionTime: bigint;
-          }) => {
-            userMap.set(entry.user, {
-              pullups: 0,
-              jumps: Number(entry.totalScore),
-              lastSubmissionTime: Number(entry.lastSubmissionTime),
-            });
-          }
-        );
-      }
-
-      // Process pullups data and merge
-      if (pullupsLeaderboardData && Array.isArray(pullupsLeaderboardData)) {
-        pullupsLeaderboardData.forEach(
-          (entry: {
-            user: string;
-            totalScore: bigint;
-            lastSubmissionTime: bigint;
-          }) => {
-            const existing = userMap.get(entry.user);
-            if (existing) {
-              existing.pullups = Number(entry.totalScore);
-              existing.lastSubmissionTime = Math.max(
-                existing.lastSubmissionTime,
-                Number(entry.lastSubmissionTime)
-              );
-            } else {
-              userMap.set(entry.user, {
-                pullups: Number(entry.totalScore),
-                jumps: 0,
-                lastSubmissionTime: Number(entry.lastSubmissionTime),
-              });
-            }
-          }
-        );
-      }
-
-      // Convert map to unified format
+      // Convert to unified format
       userMap.forEach((data, user) => {
         combined.push({
           user,

@@ -46,25 +46,31 @@ const getGlobalCache = (): Map<string, { data: IdentityGraph | null; timestamp: 
 // Global in-flight request tracker to prevent concurrent API calls for the same address
 const inFlightRequests = new Map<string, Promise<IdentityGraph | null>>();
 
-// Cache cleanup function to remove expired entries
-const cleanupExpiredCacheEntries = () => {
-  const identityCache = getGlobalCache();
-  const now = Date.now();
+const MAX_CACHE_AGE = 5 * 60 * 1000; // 5 minutes
+const FAILED_CACHE_AGE = 5 * 60 * 1000; // 5 minutes for failed requests
+const DEBOUNCE_DELAY = 2000; // 2 second debounce to prevent rapid calls
+const REQUEST_COOLDOWN = 1000; // Additional cooldown between requests
+const CLEANUP_INTERVAL = 10 * 60 * 1000; // Clean cache every 10 minutes, not on every fetch
 
+// Cache cleanup - runs on interval, not on every fetch (performance optimization)
+let lastCleanupTime = 0;
+const cleanupExpiredCacheEntries = () => {
+  const now = Date.now();
+  // Only cleanup if 10+ minutes since last cleanup
+  if (now - lastCleanupTime < CLEANUP_INTERVAL) {
+    return;
+  }
+  lastCleanupTime = now;
+
+  const identityCache = getGlobalCache();
   for (const [walletAddress, cacheEntry] of identityCache.entries()) {
     const cacheAge = now - cacheEntry.timestamp;
     const maxAge = cacheEntry.error ? FAILED_CACHE_AGE : MAX_CACHE_AGE;
-
     if (cacheAge >= maxAge) {
       identityCache.delete(walletAddress);
     }
   }
 };
-
-const MAX_CACHE_AGE = 5 * 60 * 1000; // 5 minutes
-const FAILED_CACHE_AGE = 5 * 60 * 1000; // 5 minutes for failed requests (increased to reduce API calls)
-const DEBOUNCE_DELAY = 2000; // 2 second debounce to prevent rapid calls
-const REQUEST_COOLDOWN = 1000; // Additional cooldown between requests
 
 export const useMemoryIdentity = (
   walletAddress: string | undefined,
