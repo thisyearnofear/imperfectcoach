@@ -30,7 +30,7 @@ interface ChainBalance {
 // USDC contract addresses for supported chains
 const USDC_ADDRESS_BASE = getAddress("0x036CbD53842c5426634e7929541eC2318f3dCF7e");
 const USDC_ADDRESS_AVALANCHE = getAddress("0x5425890298aed601595a70AB815c96711a31Bc65");
-const USDC_MINT_SOLANA = "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr";
+const USDC_MINT_SOLANA = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
 // Helper to get chain config based on chainId
 const getChainConfig = (chainId: number | undefined): { chain: Chain; usdcAddress: `0x${string}`; name: string } => {
@@ -147,21 +147,26 @@ export function WalletBalanceDisplay({
 
     const fetchSolanaBalances = async () => {
       try {
-        // Get SOL balance
         const publicKey = new PublicKey(solanaAddress);
-        const solBalance = await solanaConnection.getBalance(publicKey);
+
+        // Parallel fetch for Native SOL and SPL USDC
+        const [solBalance, tokenAccounts] = await Promise.all([
+          solanaConnection.getBalance(publicKey),
+          solanaConnection.getParsedTokenAccountsByOwner(publicKey, {
+            mint: new PublicKey(USDC_MINT_SOLANA)
+          })
+        ]);
+
         const solAmount = solBalance / 1e9; // Convert lamports to SOL
 
-        // Get USDC balance (SPL token)
-        // This is simplified - in production you'd use getTokenAccountsByOwner
+        // Parse USDC balance from token accounts
         let usdcAmount = 0;
-        try {
-          const usdcMint = new PublicKey(USDC_MINT_SOLANA);
-          // For MVP, we'll skip USDC balance check on Solana
-          // In production, implement proper SPL token balance fetching
-          usdcAmount = 0;
-        } catch (err) {
-          console.warn("USDC balance check skipped for Solana");
+        if (tokenAccounts.value.length > 0) {
+          // Sum up all accounts (in case of multiple ATAs, though rare for USDC)
+          usdcAmount = tokenAccounts.value.reduce((acc, account) => {
+            const parsedInfo = account.account.data.parsed.info;
+            return acc + (parsedInfo.tokenAmount.uiAmount || 0);
+          }, 0);
         }
 
         setSolanaBalance({
@@ -201,10 +206,11 @@ export function WalletBalanceDisplay({
   // Compact variant - inline badge style
   if (variant === "compact") {
     const activeBalance = isSolanaConnected ? solanaBalance : baseBalance;
-    // For EVM, use the dynamically detected chain name; for Solana, show "Solana"
     const displayChainName = isSolanaConnected ? "Solana" : (chainId === avalancheFuji.id ? "Avalanche" : "Base");
-    const showCurrency = activeBalance.chain === "solana" ? "SOL" : "USDC";
-    const displayAmount = activeBalance.chain === "solana" ? activeBalance.native : activeBalance.usdc;
+
+    // Always show USDC for compact view logic, unless only native exists
+    const showCurrency = "USDC";
+    const displayAmount = activeBalance.usdc;
 
     return (
       <div className={cn("inline-flex items-center gap-2 text-xs", className)}>
@@ -218,13 +224,12 @@ export function WalletBalanceDisplay({
               variant="outline"
               className={cn(
                 "font-mono",
-                (activeBalance.chain === "solana" && activeBalance.native > 0.001) ||
-                  (activeBalance.chain === "base" && activeBalance.hasEnough)
+                activeBalance.hasEnough
                   ? "bg-green-50 text-green-700 border-green-200"
                   : "bg-orange-50 text-orange-700 border-orange-200"
               )}
             >
-              {displayAmount.toFixed(activeBalance.chain === "solana" ? 3 : 2)} {showCurrency}
+              {displayAmount.toFixed(2)} {showCurrency}
             </Badge>
             <span className="text-gray-400">on {displayChainName}</span>
           </>
@@ -322,10 +327,10 @@ export function WalletBalanceDisplay({
               ) : (
                 <>
                   <div className="text-sm font-mono font-bold text-gray-800">
-                    {solanaBalance.native.toFixed(4)} SOL
+                    {solanaBalance.usdc.toFixed(2)} USDC
                   </div>
                   <div className="text-[10px] text-gray-500">
-                    {solanaBalance.usdc > 0 ? `${solanaBalance.usdc.toFixed(2)} USDC` : 'Pays with SOL'}
+                    {solanaBalance.native.toFixed(4)} SOL
                   </div>
                 </>
               )}
@@ -336,11 +341,8 @@ export function WalletBalanceDisplay({
         {/* Payment Affordability Status */}
         <div className="pt-2 border-t border-purple-100">
           {(() => {
-            // For Solana: Check SOL balance (since we accept SOL payments)
-            // For Base: Check USDC balance (traditional flow)
-            const solanaCanAfford = isSolanaConnected && solanaBalance.native >= (required * 0.002); // ~$0.05 = 0.0001 SOL
-            const baseCanAfford = isBaseConnected && baseBalance.hasEnough;
-            const hasAnyEnough = solanaCanAfford || baseCanAfford;
+            const hasAnyEnough = (isSolanaConnected && solanaBalance.hasEnough) ||
+              (isBaseConnected && baseBalance.hasEnough);
 
             const bothLoading = (isBaseConnected && baseBalance.isLoading) ||
               (isSolanaConnected && solanaBalance.isLoading);
@@ -354,7 +356,7 @@ export function WalletBalanceDisplay({
             }
 
             if (hasAnyEnough) {
-              const paymentMethod = isSolanaConnected ? "SOL" : "USDC";
+              const paymentMethod = "USDC";
               return (
                 <div className="flex items-center justify-center gap-1 text-xs text-green-700">
                   <CheckCircle2 className="h-3 w-3" />
@@ -364,15 +366,15 @@ export function WalletBalanceDisplay({
             }
 
             // Show appropriate insufficient funds message
-            if (isSolanaConnected) {
+            if (isSolanaConnected && solanaBalance.usdc < required) {
               return (
                 <div className="space-y-1">
                   <div className="flex items-center justify-center gap-1 text-xs text-orange-700">
                     <AlertCircle className="h-3 w-3" />
-                    <span>Need more SOL for payment</span>
+                    <span>Insufficient Solana USDC</span>
                   </div>
                   <div className="text-[10px] text-center text-gray-500">
-                    Need ~0.0001 SOL (${required.toFixed(2)}) • Get from Solana faucet
+                    Need {required.toFixed(2)} USDC on Solana Devnet
                   </div>
                 </div>
               );
