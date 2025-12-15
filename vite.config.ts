@@ -101,6 +101,9 @@ export default defineConfig(({ mode }) => ({
       'thirdweb',
       '@thirdweb-dev/react',
       '@thirdweb-dev/sdk',
+      '@solana/web3.js', // Exclude Solana web3 to avoid eventemitter3 ESM issues
+      '@solana/wallet-adapter-base',
+      '@solana/wallet-adapter-react',
       // ML/Pose packages
       '@tensorflow/tfjs-core',
       '@tensorflow/tfjs-backend-webgl',
