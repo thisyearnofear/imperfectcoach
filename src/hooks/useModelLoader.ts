@@ -40,7 +40,16 @@ export const useModelLoader = (enabled: boolean) => {
                     await tf.setBackend('cpu');
                 }
 
-                const detectorConfig = { modelType: posedetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
+                // Configuration for the MoveNet model.
+                //SINGLEPOSE_LIGHTNING is fast and lightweight.
+                // For performance tuning, we can experiment with different runtimes and model-specific settings.
+                const detectorConfig = { 
+                  modelType: posedetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+                  // runtime: 'tfjs', // or 'mediapipe'
+                  // modelConfig: {
+                  //   enableSmoothing: false // Disable smoothing if we are doing our own.
+                  // }
+                };
                 const detector = await posedetection.createDetector(posedetection.SupportedModels.MoveNet, detectorConfig);
                 detectorRef.current = detector;
                 setModelStatus('ready');

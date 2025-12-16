@@ -178,6 +178,25 @@ Deployed on both Base Sepolia and Avalanche Fuji:
 
 ## Future Enhancements
 
+### Potential Technology Upgrades
+
+#### Exercise Detection with Roboflow
+
+To address the reliability issues with the current free, client-side jump and pull-up detection, we are considering using **Roboflow**. This would represent a significant architectural shift but could offer substantial improvements in accuracy.
+
+*   **Overview**: Roboflow is a production-ready platform for building, training, and deploying custom computer vision models. We would train a model on our own curated video data of jumps and pull-ups.
+*   **Pros**:
+    *   **Higher Accuracy**: By training on our own data, we can create a highly accurate model tuned to our specific needs.
+*   **Cons**:
+    *   **Cost**: Requires a paid subscription (starting from ~$49/month), as a production application would exceed the free tier.
+    *   **Latency**: Introduces network latency, as video frames would need to be sent to an external API. This eliminates the current real-time feedback and would require a UI/UX redesign to handle asynchronous processing.
+*   **Integration Effort (High)**:
+    1.  **Data Collection**: Requires building a labeled dataset of exercise videos.
+    2.  **Architectural Overhaul**: The current `usePoseDetection` hook and exercise processing logic would need to be replaced with API calls to Roboflow.
+    3.  **UI/UX Redesign**: The user interface must be adapted to handle the asynchronous nature of the feedback.
+
+**Recommendation**: A Proof of Concept (PoC) should be developed on the Roboflow free tier to validate the accuracy improvements before committing to a full integration.
+
 ### Phase 4: Multi-Service Marketplace
 - Calendar, Massage Booking, Nutrition agents coordination
 - Budget-based service orchestration
