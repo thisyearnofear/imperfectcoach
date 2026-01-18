@@ -15,6 +15,7 @@ import { Agentkit } from "@0xgasless/agentkit";
 import { verify, settle } from "@payai/x402/facilitator";
 import * as db from "./lib/dynamodb-service.mjs";
 import { verifyX402Signature } from "./lib/core-agent-handler.mjs";
+import { X402_NETWORKS } from "./lib/x402-config.mjs";
 
 
 
@@ -51,37 +52,7 @@ const publicClient = createPublicClient({
 });
 
 // x402 Configuration per network
-const X402_CONFIG = {
-  "base-mainnet": {
-    amount: "50000",
-    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
-    chainId: 8453,
-  },
-  "base-sepolia": {
-    amount: "50000",
-    asset: "0x036CbD53842c5426634e7929541fC2318B3d053F",
-    payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
-    chainId: 84532,
-  },
-  "avalanche-mainnet": {
-    amount: "50000",
-    asset: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
-    payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
-    chainId: 43114,
-  },
-  "avalanche-fuji": {
-    amount: "50000",
-    asset: "0x5425890298aed601595a70AB815c96711a31Bc65",
-    payTo: "0x6C9BCfF8485B12fb8bd73B77638cd6b2dD0CF9CA",
-    chainId: 43113,
-  },
-  "solana-devnet": {
-    amount: "50000",
-    asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    payTo: "CmGgLQL36Y9ubtTsy2zmE46TAxwCBm66onZmPPhUWNqv",
-  },
-};
+const X402_CONFIG = X402_NETWORKS;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",

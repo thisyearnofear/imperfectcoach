@@ -21,7 +21,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}📦 Installing dependencies...${NC}"
-npm install
+npm install --no-audit --no-fund --quiet --legacy-peer-deps
 
 echo -e "${BLUE}🔨 Bundling with esbuild...${NC}"
 # Bundle everything into a single file, excluding AWS SDK (in runtime)
@@ -50,8 +50,8 @@ if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION 2>/de
         --function-name $FUNCTION_NAME \
         --timeout 60 \
         --memory-size 1024 \
-        --region $REGION
-        # --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v1:0}"
+        --region $REGION \
+        --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v1:0,PRIVACY_FEATURES_ENABLED=true}"
 else
     echo -e "${YELLOW}🆕 Creating new Lambda function...${NC}"
     
@@ -128,7 +128,7 @@ EOF
         --timeout 60 \
         --memory-size 1024 \
         --region $REGION \
-        --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v1:0}"
+        --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v1:0,PRIVACY_FEATURES_ENABLED=true}"
 fi
 
 echo -e "${BLUE}🌐 Setting up API Gateway...${NC}"

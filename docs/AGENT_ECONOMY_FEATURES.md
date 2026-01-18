@@ -197,6 +197,44 @@ To address the reliability issues with the current free, client-side jump and pu
 
 **Recommendation**: A Proof of Concept (PoC) should be developed on the Roboflow free tier to validate the accuracy improvements before committing to a full integration.
 
+#### x402 v2 Migration Plan
+
+Our current "x402-style" integration is v1-compliant, but the recently announced x402 v2 standard offers significant improvements in security, efficiency, and interoperability. To keep our platform at the cutting edge, we should plan to migrate to v2.
+
+**Gap Analysis Summary:**
+
+*   **Major Gaps**:
+    *   **Identity**: We use raw private keys in environment variables, whereas v2 moves to formal wallet-based identity.
+    *   **Sessions**: We treat each call atomically. v2's reusable sessions would significantly improve efficiency for agent-to-agent communication.
+    *   **Standardization**: Our implementation is custom. Adopting v2 would provide access to standard libraries, tooling, and better developer experience.
+*   **Partial Gaps**:
+    *   **API Discovery**: Our discovery mechanism is bespoke. v2 will provide a standard for better interoperability.
+
+**Migration Recommendations:**
+
+1.  **Adopt a Canonical x402 v2 Library**: Replace our custom implementation in `aws-lambda/lib/reap-integration.mjs` with an official x402 v2 library (once available).
+2.  **Implement Wallet-Based Identity**: Refactor our key management to move away from raw private keys in `.env` files and towards a more secure and flexible wallet solution.
+3.  **Utilize Reusable Sessions**: Modify our agent communication logic (e.g., in `agent-coach-handler.mjs`) to leverage reusable sessions for better performance and lower costs.
+4.  **Standardize Agent Discovery**: Migrate our custom `AgentRegistry` and discovery logic to the new v2 standard to improve interoperability.
+
+#### Reap Protocol Integration Plan
+
+Our codebase includes a currently disabled integration with the Reap Protocol (`aws-lambda/lib/reap-integration.mjs`), an "Agentic Commerce Platform" designed to bridge Web2 and Web3. Properly integrating Reap will unlock advanced capabilities for our agents, such as discovering other agents and eventually purchasing goods and services autonomously.
+
+**Key Features of Reap Protocol:**
+*   **Agentic Commerce:** Allows AI agents to interact with e-commerce.
+*   **Discovery:** Standardized mechanism for finding products and other AI agents.
+*   **On-Chain Settlement:** Handles atomic purchases without needing ABI knowledge.
+*   **Multi-Chain Support:** Compatible with our existing multi-chain architecture.
+
+**Integration Steps:**
+
+1.  **Install SDK:** Add the `@reap-protocol/sdk` to the `aws-lambda` service's `package.json`.
+2.  **Enable Reap Client:** In `aws-lambda/lib/reap-integration.mjs`, enable the `ReapClient` by uncommenting the import and initialization logic. The client will be configured with the appropriate private key and middleware URLs provided by Reap.
+3.  **Implement Agent Discovery:** Replace the mock/placeholder logic in the `discoverReapAgents` function with live calls to the `client.searchAgents` method from the SDK. This will allow our system to dynamically find other x402-compatible agents.
+4.  **Implement Payment Negotiation:** Update the `negotiatePaymentWithAgent` function to use the Reap SDK for handling x402 payment challenges and settlements, removing the current mock implementation.
+5.  **Update Environment:** Add the necessary `REAP_` environment variables to `.env.example` to ensure the integration is configurable.
+
 ### Phase 4: Multi-Service Marketplace
 - Calendar, Massage Booking, Nutrition agents coordination
 - Budget-based service orchestration

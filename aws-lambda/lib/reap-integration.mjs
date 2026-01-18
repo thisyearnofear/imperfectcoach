@@ -4,18 +4,11 @@
  * Reap Protocol: Agentic Commerce Platform
  * - Enables AI agents to search real products, verify inventory, purchase autonomously
  * - Bridges Web2 shops with Web3 settlement (blockchain payment confirmation)
- * - Not for agent discovery - that's AgentRegistry contract + agent-discovery.js
  * 
- * Future use cases for Imperfect Coach:
- * - Agents booking massage/recovery services (product inventory check)
- * - Purchase supplements/equipment recommendations (autonomous commerce)
- * - Verify supplier inventory before recommending (product search)
- * 
- * Current status: Core agents managed by AgentRegistry contract + DynamoDB
- * Reap integration reserved for future agentic commerce features
+ * This service is now enabled and integrates with the @reap-protocol/sdk.
  */
 
-// import { ReapClient } from "@reap-protocol/sdk"; // Temporarily disabled
+import { ReapClient } from "@reap-protocol/sdk";
 import nacl from "tweetnacl";
 import bs58 from "bs58";
 import { createWalletClient, http, parseUnits } from "viem";
@@ -28,19 +21,14 @@ import { Connection, Keypair, Transaction, SystemProgram, PublicKey, LAMPORTS_PE
 // ─────────────────────────────────────────────────────────────────────────────
 
 const REAP_CONFIG = {
-    // Reap endpoint (will be updated based on their actual API)
-    endpoint: process.env.REAP_ENDPOINT || "https://api.reap.io",
-
-    // Supported chains that align with our stack
-    chains: {
-        "avalanche-fuji": "Avalanche Fuji Testnet",
-        "base-sepolia": "Base Sepolia Testnet",
-        "avalanche-mainnet": "Avalanche C-Chain",
-        "base-mainnet": "Base Mainnet",
-    },
-
     // Default timeout for Reap API calls (5s)
     timeout: 5000,
+    // Middleware URLs for different chains
+    middleware: {
+        "base-sepolia": "https://base2.api.reap.deals",
+        "avalanche-fuji": "https://avax2.api.reap.deals",
+        "celo-sepolia": "https://celo2.api.reap.deals",
+    }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,14 +50,15 @@ export async function getReapClient() {
     }
 
     try {
-        // Initialize with agent's private key and RPC
-        // reapClientInstance = new ReapClient(
-        //     process.env.AGENT_WALLET_KEY,
-        //     process.env.AVALANCHE_RPC || "https://api.avax-test.network/ext/bc/C/rpc"
-        // );
-
-        console.log("⚠️ Reap Protocol client disabled (missing dependency)");
-        return null; // Force fallback to core agents
+        // Initialize with agent's private key.
+        // The SDK will handle RPC and middleware URLs, but they can be overridden.
+        // e.g. new ReapClient(privateKey, rpcUrl, middlewareUrl)
+        reapClientInstance = new ReapClient(process.env.AGENT_WALLET_KEY);
+        
+        await new Promise(r => setTimeout(r, 1000)); // Allow time for client to initialize
+        console.log("🤖 Reap Protocol Agent Online");
+        
+        return reapClientInstance;
     } catch (error) {
         console.error("❌ Failed to initialize Reap client:", error);
         return null;
@@ -77,24 +66,11 @@ export async function getReapClient() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Reap Product Search Integration (Future)
+// Reap Product Search and Agent Discovery
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Reap Protocol Product Search (Reserved for Future)
- * 
- * When enabled, will search products, verify inventory, and purchase autonomously
- * via Reap Protocol's Web2/Web3 settlement bridge.
- * 
- * Agent discovery is currently handled by:
- * - AgentRegistry smart contract (on-chain profiles)
- * - agent-discovery.js (permissionless registration + DynamoDB persistence)
- * - Core agents as fallback (CORE_AGENTS array below)
- * 
- * Reap use cases for future:
- * - Agents autonomously booking recovery services (product inventory)
- * - Purchasing supplements/equipment recommendations (Web2 shop integration)
- * - Verifying supplier inventory before recommendations (product search)
+ * Discovers agents via Reap Protocol.
  */
 export async function discoverReapAgents(capability, paymentProtocol = "x402") {
     const client = await getReapClient();
@@ -118,9 +94,6 @@ export async function discoverReapAgents(capability, paymentProtocol = "x402") {
 
         const reapCapability = capabilityMap[capability] || capability;
 
-        // Search via Reap's registry
-        // x402 = Payment-per-request agents
-        // a2a = Agent-to-agent settlement
         const agents = await Promise.race([
             client.searchAgents(reapCapability, paymentProtocol),
             new Promise((_, reject) =>
@@ -130,7 +103,6 @@ export async function discoverReapAgents(capability, paymentProtocol = "x402") {
 
         console.log(`✅ Reap discovered ${agents.length} agents for ${capability}`);
 
-        // Normalize Reap agent format to our internal format
         return agents.map(normalizeReapAgent);
 
     } catch (error) {
@@ -138,6 +110,22 @@ export async function discoverReapAgents(capability, paymentProtocol = "x402") {
         return [];
     }
 }
+
+/**
+ * Searches for products using Reap Protocol. (Future)
+ */
+export async function searchReapProducts(query) {
+    const client = await getReapClient();
+    if (!client) {
+        console.warn("⚠️ Reap client unavailable - cannot search for products.");
+        return [];
+    }
+    // const result = await client.stockShelf(query, true); // dryRun = true
+    // return result.items || [];
+    console.log("📦 Product search with Reap is a future enhancement.");
+    return [];
+}
+
 
 /**
  * Normalize Reap agent format to internal AgentProfile format
@@ -148,8 +136,6 @@ function normalizeReapAgent(reapAgent) {
         name: reapAgent.name || "Reap Agent",
         description: reapAgent.description || "Agent discovered via Reap Protocol",
         capabilities: reapAgent.capabilities || [],
-
-        // Pricing from Reap
         pricing: reapAgent.pricing || {
             default: {
                 baseFee: reapAgent.baseFee || "0.01",
@@ -157,14 +143,11 @@ function normalizeReapAgent(reapAgent) {
                 chain: "avalanche-fuji"
             }
         },
-
         endpoint: reapAgent.endpoint,
         status: "active",
         reputationScore: reapAgent.reputationScore || 80,
         tags: [...(reapAgent.tags || []), "reap-discovered"],
-
-        // Reap-specific metadata
-        protocol: reapAgent.protocol || "x402", // x402 or a2a
+        protocol: reapAgent.protocol || "x402",
         discoveredAt: Date.now(),
     };
 }
@@ -335,21 +318,13 @@ const CORE_AGENTS = [
 /**
  * Agent Discovery: AgentRegistry + Core Agents
  * 
- * Prioritizes: AgentRegistry (DynamoDB) > Core agents (fallback)
- * Deduplicates based on capability
- * 
- * Note: Reap Protocol is reserved for future agentic commerce features
- * (product search, inventory verification, autonomous purchasing)
+ * Prioritizes: Reap Protocol > AgentRegistry (DynamoDB) > Core agents (fallback)
  */
-export async function discoverAgentsHybrid(capability, prioritizeReap = false) {
+export async function discoverAgentsHybrid(capability, prioritizeReap = true) {
     let agents = [];
 
-    // NOTE: Reap prioritization disabled - Reap is for commerce, not agent discovery
-    // Agent discovery uses AgentRegistry (deployed to DynamoDB)
-    // See agent-discovery.js for implementation
-    
     if (prioritizeReap) {
-        console.log("🌐 Attempting Reap Protocol integration (future feature)...");
+        console.log("🌐 Attempting Reap Protocol agent discovery...");
         const reapAgents = await discoverReapAgents(capability, "x402");
         agents = agents.concat(reapAgents);
 
@@ -358,14 +333,16 @@ export async function discoverAgentsHybrid(capability, prioritizeReap = false) {
         }
     }
 
+    // TODO: Add AgentRegistry (DynamoDB) lookup here
+
     // Core agents (always included as fallback)
     const coreMatches = CORE_AGENTS.filter(a => a.capabilities.includes(capability));
 
     if (agents.length === 0 && coreMatches.length > 0) {
-        console.log(`📦 Using ${coreMatches.length} core agents`);
+        console.log(`📦 Using ${coreMatches.length} core agents as fallback`);
         agents = agents.concat(coreMatches);
     } else if (coreMatches.length > 0) {
-        // Also include core agents as backup options (sorted by reputation)
+        // Also include core agents as backup options
         agents = agents.concat(coreMatches);
     }
 
@@ -387,19 +364,13 @@ export async function discoverAgentsHybrid(capability, prioritizeReap = false) {
 
 /**
  * Execute x402 negotiation with another agent via Reap
- * 
- * Flow:
- * 1. Generate payment challenge
- * 2. Sign with agent private key
- * 3. Get settlement proof
- * 4. Return proof for inter-agent call
  */
 export async function negotiatePaymentWithAgent(paymentRequirement, agentIdentity) {
     const client = await getReapClient();
 
     if (!client) {
-        console.warn("⚠️ Reap client unavailable - returning mock settlement");
-        return createMockSettlement(paymentRequirement);
+        console.warn("⚠️ Reap client unavailable - cannot negotiate payment.");
+        return null;
     }
 
     try {
@@ -407,11 +378,7 @@ export async function negotiatePaymentWithAgent(paymentRequirement, agentIdentit
         console.log(`   Amount: ${paymentRequirement.amount} ${paymentRequirement.asset}`);
         console.log(`   Network: ${paymentRequirement.network}`);
 
-        // Reap's negotiation flow:
-        // 1. Challenge generation
-        // 2. Signature creation (EIP-191)
-        // 3. Settlement coordination
-
+        // The Reap SDK handles the challenge, signature, and settlement coordination.
         const settlement = await client.negotiatePayment({
             from: agentIdentity.address || agentIdentity,
             requirement: paymentRequirement,
@@ -422,140 +389,15 @@ export async function negotiatePaymentWithAgent(paymentRequirement, agentIdentit
 
         return {
             success: true,
-            signature: settlement.signature,
-            message: settlement.message,
-            nonce: settlement.nonce,
-            amount: paymentRequirement.amount,
-            asset: paymentRequirement.asset,
-            chain: paymentRequirement.network,
-            protocol: "x402",
-            timestamp: Date.now()
+            ...settlement
         };
 
     } catch (error) {
         console.error(`❌ Negotiation failed: ${error.message}`);
-        // Fallback to mock for demo
-        return createMockSettlement(paymentRequirement);
+        return null;
     }
 }
 
-/**
- * Sign a payment challenge from another agent
- * 
- * Used when specialist agent challenges us for payment
- */
-export async function signPaymentChallenge(challenge, evmPrivateKey = process.env.AGENT_PRIVATE_KEY, solanaPrivateKey = process.env.AGENT_SOLANA_PRIVATE_KEY) {
-    try {
-        console.log(`🔐 Signing x402 challenge for ${challenge.network || "unknown"}...`);
-
-        // Standard x402 Message Construction
-        const message = `x402 Payment Authorization
-Scheme: ${challenge.scheme}
-Network: ${challenge.network}
-Asset: ${challenge.asset}
-Amount: ${challenge.amount}
-PayTo: ${challenge.payTo}
-Timestamp: ${challenge.timestamp}
-Nonce: ${challenge.nonce}`;
-
-        // A. SOLANA SIGNING (Ed25519)
-        if (challenge.network && challenge.network.includes("solana")) {
-            if (!solanaPrivateKey) {
-                console.error("❌ AGENT_SOLANA_PRIVATE_KEY missing");
-                return null;
-            }
-
-            // Decode secret key (assume base58)
-            const secretKey = bs58.decode(solanaPrivateKey);
-            const keypair = nacl.sign.keyPair.fromSecretKey(secretKey);
-            const publicKey = bs58.encode(keypair.publicKey);
-
-            const messageBytes = new TextEncoder().encode(message);
-            const signatureBytes = nacl.sign.detached(messageBytes, keypair.secretKey);
-            const signature = Buffer.from(signatureBytes).toString('base64');
-
-            console.log(`   ✅ Signed with Solana Identity: ${publicKey.slice(0, 8)}...`);
-
-            return {
-                signature,
-                message,
-                signer: publicKey,
-                timestamp: Date.now(),
-                scheme: "ed25519"
-            };
-        }
-
-        // B. EVM SIGNING (EIP-191) - Default
-        else {
-            if (!evmPrivateKey) {
-                console.error("❌ AGENT_PRIVATE_KEY missing");
-                return null;
-            }
-
-            // Setup Viem Account
-            const account = privateKeyToAccount(evmPrivateKey.startsWith("0x") ? evmPrivateKey : `0x${evmPrivateKey}`);
-
-            const wallet = createWalletClient({
-                account,
-                chain: baseSepolia, // Chain doesn't matter for signing, just context
-                transport: http()
-            });
-
-            const signature = await wallet.signMessage({
-                message
-            });
-
-            console.log(`   ✅ Signed with EVM Identity: ${account.address.slice(0, 10)}...`);
-
-            return {
-                signature,
-                message,
-                signer: account.address,
-                timestamp: Date.now(),
-                scheme: "eip-191"
-            };
-        }
-
-    } catch (error) {
-        console.error(`❌ Signing failed: ${error.message}`);
-        return null; // Return null prevents sending invalid signatures
-    }
-}
-
-/**
- * Verify a Reap settlement proof
- * 
- * Validates that payment was properly negotiated and signed
- */
-export async function verifyReapSettlement(proof, expectedAmount, expectedRecipient) {
-    if (!proof || !proof.signature) {
-        console.warn("⚠️ Invalid proof - missing signature");
-        return false;
-    }
-
-    try {
-        console.log(`✓ Verifying settlement proof...`);
-
-        // In Phase B, this is signature verification
-        // In Phase C, this will check on-chain transaction
-
-        const isValid = proof.signature &&
-            proof.amount === expectedAmount &&
-            proof.chain;
-
-        if (isValid) {
-            console.log(`✅ Settlement verified`);
-            return true;
-        }
-
-        console.warn(`⚠️ Settlement verification failed`);
-        return false;
-
-    } catch (error) {
-        console.error(`❌ Verification error: ${error.message}`);
-        return false;
-    }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PHASE C: Real Blockchain Settlement
@@ -565,17 +407,18 @@ export async function verifyReapSettlement(proof, expectedAmount, expectedRecipi
  * Execute real USDC transfer on blockchain
  * 
  * Transfers actual stablecoin from agent wallet to specialist
+ * NOTE: This is a simplified implementation. The Reap SDK's `buyProduct`
+ * would be used for a full agentic commerce flow. This function is for
+ * direct agent-to-agent payments.
  */
 export async function executeRealPayment(settlement) {
-    const client = await getReapClient();
-
-    if (!client || !process.env.AGENT_WALLET_KEY) {
-        console.warn("⚠️ Cannot execute real payment - wallet not configured");
-        return createMockTransaction(settlement);
+    if (!settlement || !settlement.recipientAddress) {
+        console.error("❌ Invalid settlement object for payment.");
+        return null;
     }
 
     try {
-        console.log(`💸 Executing real USDC transfer...`);
+        console.log(`💸 Executing real payment...`);
         console.log(`   To: ${settlement.recipientAddress}`);
         console.log(`   Amount: ${settlement.amount} ${settlement.asset}`);
         console.log(`   Network: ${settlement.chain}`);
@@ -585,30 +428,23 @@ export async function executeRealPayment(settlement) {
             if (!process.env.AGENT_SOLANA_PRIVATE_KEY) throw new Error("AGENT_SOLANA_PRIVATE_KEY missing");
 
             const connection = new Connection("https://api.devnet.solana.com", "confirmed");
-
-            // Decode Key
-            const secretKey = new Uint8Array(JSON.parse(process.env.AGENT_SOLANA_PRIVATE_KEY));
+            const secretKey = bs58.decode(process.env.AGENT_SOLANA_PRIVATE_KEY);
             const payer = Keypair.fromSecretKey(secretKey);
 
-            // Create Transfer Instruction (Native SOL for now as simplified generic asset)
-            // In prod, this would use spl-token transfer for USDC
             const transaction = new Transaction().add(
                 SystemProgram.transfer({
                     fromPubkey: payer.publicKey,
                     toPubkey: new PublicKey(settlement.recipientAddress),
-                    lamports: Math.floor(parseFloat(settlement.amount) * LAMPORTS_PER_SOL), // Using SOL for devnet demo
+                    lamports: Math.floor(parseFloat(settlement.amount) * LAMPORTS_PER_SOL),
                 })
             );
 
             const signature = await connection.sendTransaction(transaction, [payer]);
-            // await connection.confirmTransaction(signature, "confirmed"); // Optional wait
-
             console.log(`✅ Solana Transfer confirmed: ${signature}`);
 
             return {
                 success: true,
                 transactionHash: signature,
-                blockNumber: 0, // Pending
                 from: payer.publicKey.toBase58(),
                 to: settlement.recipientAddress,
                 amount: settlement.amount,
@@ -633,12 +469,10 @@ export async function executeRealPayment(settlement) {
                 transport: http()
             });
 
-            // Native ETH/AVAX Transfer (Simplified for Demo)
-            // In prod, use writeContract for USDC ERC20 transfer
             const hash = await wallet.sendTransaction({
                 account,
                 to: settlement.recipientAddress,
-                value: parseUnits(settlement.amount, 18), // assuming native currency 18 decimals
+                value: parseUnits(settlement.amount, 18),
             });
 
             console.log(`✅ EVM Transfer confirmed: ${hash}`);
@@ -646,7 +480,6 @@ export async function executeRealPayment(settlement) {
             return {
                 success: true,
                 transactionHash: hash,
-                blockNumber: 0,
                 from: account.address,
                 to: settlement.recipientAddress,
                 amount: settlement.amount,
@@ -660,7 +493,7 @@ export async function executeRealPayment(settlement) {
 
     } catch (error) {
         console.error(`❌ Settlement execution failed: ${error.message}`);
-        return createMockTransaction(settlement);
+        return null;
     }
 }
 
@@ -731,43 +564,6 @@ export async function splitRevenue(settlementTx, platformFeePercent = 97) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper Functions
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Create mock settlement for demo/testing
- */
-function createMockSettlement(paymentRequirement) {
-    const nonce = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36);
-    return {
-        success: true,
-        signature: `mock_sig_${nonce}`,
-        amount: paymentRequirement.amount,
-        asset: paymentRequirement.asset,
-        chain: paymentRequirement.network,
-        protocol: "x402",
-        isSimulated: true,
-        timestamp: Date.now()
-    };
-}
-
-/**
- * Create mock transaction for demo/testing
- */
-function createMockTransaction(settlement) {
-    const mockHash = `0x${Math.random().toString(16).slice(2)}`;
-    return {
-        success: true,
-        transactionHash: mockHash,
-        blockNumber: Math.floor(Math.random() * 1000000),
-        from: "coach-agent",
-        to: settlement.recipientAddress,
-        amount: settlement.amount,
-        asset: settlement.asset,
-        chain: settlement.chain,
-        status: "simulated",
-        timestamp: Date.now(),
-        url: `https://explorer.${settlement.chain}.io/tx/${mockHash}`
-    };
-}
 
 /**
  * Get block explorer URL for transaction

@@ -1,5 +1,6 @@
 import { WalletClient } from "viem";
 import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
+import { privacyCashService } from "@/lib/payments/privacy-cash-service";
 import { CHAIN_IDS } from "@/lib/config";
 
 // Types
@@ -33,6 +34,7 @@ export interface RoutingContext {
     evmWallet?: any; // WalletClient type is tricky with wagmi versions sometimes, keeping flexible or typed if possible
     evmAddress?: string;
     preferredChain?: "base" | "solana" | "avalanche";
+    privacyMode?: boolean;
 }
 
 export interface PaymentResult {
@@ -96,6 +98,15 @@ export class PaymentRouter {
             } else if (preferredChain === "avalanche" && isEvmAvailable) {
                 chainHeader = "avalanche-fuji";
             }
+        }
+
+        // Privacy Mode Override
+        if (context.privacyMode) {
+            if (!isSolanaAvailable) {
+                throw new Error("Privacy Mode requires Solana wallet.");
+            }
+            chainHeader = "solana-devnet";
+            console.log("🔒 Privacy Mode Enabled: Enforcing Solana Devnet");
         }
 
         console.log(`🚀 PaymentRouter: Starting request to ${apiUrl} [Preferred: ${chainHeader}]`);
@@ -163,9 +174,7 @@ export class PaymentRouter {
         }
     }
 
-    // DEPRECATED METHODS REMOVED: executeBookingPayment, createEscrowBooking, cancelBookingPayment, completeBookingPayment
-    // Phase D (escrow) functionality removed—agent payments are immediate via x402
-    // For SLA enforcement, agents report completion to Reap Protocol reputation service
+
 
     /**
      * Processes a 402 Challenge: Selects scheme, generates signature, returns header.
@@ -246,6 +255,34 @@ PayTo: ${selectedRequirement.payTo}
 Payer: ${payerAddress}
 Timestamp: ${timestamp}
 Nonce: ${nonce}`;
+
+            // PRIVACY MODE: Execute real private payment FIRST
+            if (context.privacyMode) {
+                console.log("🔒 Executing Private Payment via Privacy Cash...");
+                try {
+                    // Check balance and deposit if needed (simplified auto-deposit)
+                    const currentPrivateBalance = await privacyCashService.getPrivateBalanceSOL();
+                    const requiredAmount = parseFloat(selectedRequirement.amount);
+
+                    if (currentPrivateBalance < requiredAmount) {
+                        const deficit = requiredAmount - currentPrivateBalance;
+                        // Add buffer for gas/fees if needed, here exact
+                        console.log(`🔒 Insufficient private balance. Auto-depositing ${deficit} SOL...`);
+                        await privacyCashService.depositSOL(deficit + 0.01); // simplistic buffer
+                    }
+
+                    // Withdraw to Target (Pay)
+                    // We assume 'payTo' is the destination address
+                    const txSignature = await privacyCashService.withdrawSOL(requiredAmount, selectedRequirement.payTo);
+
+                    // Append Privacy Metadata to message for server awareness
+                    message += `\nPrivacyProtocol: privacy-cash\nTxHash: ${txSignature}`;
+
+                } catch (e) {
+                    console.error("🔒 Privacy Payment Failed:", e);
+                    throw new Error("Privacy Payment Failed: " + (e as any).message);
+                }
+            }
 
             const messageBytes = new TextEncoder().encode(message);
             const signatureBytes = await solanaWalletManager.signMessage(messageBytes);

@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { solanaWalletManager } from "@/lib/payments/solana-wallet-adapter";
 import { WalletBalanceDisplay } from "./WalletBalanceDisplay";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 // Agent Economy Components & Types
 import {
@@ -55,6 +57,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   const [progress, setProgress] = useState(0);
   const [activeTools, setActiveTools] = useState<string[]>([]);
   const [error, setError] = useState<{ title: string, message: string } | null>(null);
+  const [privacyMode, setPrivacyMode] = useState(false);
   const { toast } = useToast();
 
   // Agent Economy State - tracks multi-agent coordination
@@ -72,7 +75,7 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
   // Determine which wallet is connected and the actual chain
   const walletAddress = address || solanaAddress;
   const walletConnected = isConnected || isSolanaConnected;
-  
+
   // Detect actual chain for EVM wallets
   let walletChain = isSolanaConnected ? "solana" : undefined;
   if (isConnected && walletClient?.chain) {
@@ -246,7 +249,8 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
         },
         evmWallet: walletClient,
         evmAddress: address, // 'address' from wagmi
-        preferredChain: walletChain === 'solana' ? 'solana' : walletChain === 'avalanche' ? 'avalanche' : 'base'
+        preferredChain: privacyMode ? 'solana' : (walletChain === 'solana' ? 'solana' : walletChain === 'avalanche' ? 'avalanche' : 'base'),
+        privacyMode: privacyMode
       });
 
       // Stop the simulation once real result (or error) comes back
@@ -544,6 +548,29 @@ export function AgentCoachUpsell({ workoutData, onSuccess }: AgentCoachUpsellPro
           showNetwork={true}
           network={preferredNetwork}
         />
+
+        {/* Privacy Mode Toggle */}
+        {isSolanaConnected && (
+          <div className="flex items-center justify-between p-3 rounded-lg bg-purple-950/20 border border-purple-500/20">
+            <div className="flex items-center gap-2">
+              {privacyMode ? <Lock className="h-4 w-4 text-purple-400" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+              <div className="flex flex-col">
+                <Label htmlFor="privacy-mode-upsell" className="text-sm font-medium cursor-pointer text-purple-100">
+                  {privacyMode ? "Privacy Mode Enabled" : "Enable Privacy Mode"}
+                </Label>
+                <span className="text-xs text-muted-foreground">
+                  {privacyMode ? "Payments hidden via Privacy Cash" : "Standard transparent payments"}
+                </span>
+              </div>
+            </div>
+            <Switch
+              id="privacy-mode-upsell"
+              checked={privacyMode}
+              onCheckedChange={setPrivacyMode}
+              className="data-[state=checked]:bg-purple-600"
+            />
+          </div>
+        )}
 
         {/* Balance Display */}
         <WalletBalanceDisplay
