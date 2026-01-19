@@ -13,8 +13,8 @@ pnpm install --shamefully-hoist
 echo ""
 echo "📦 Bundling with esbuild..."
 
-# Build each handler
-npx esbuild index.mjs \
+# Build each handler from src/handlers directory
+npx esbuild src/handlers/index.mjs \
   --bundle \
   --platform=node \
   --target=node18 \
@@ -22,7 +22,7 @@ npx esbuild index.mjs \
   '--external:@aws-sdk/*' \
   --outfile=dist/index.js
 
-npx esbuild agent-discovery.js \
+npx esbuild src/handlers/agent-discovery.js \
   --bundle \
   --platform=node \
   --target=node18 \
@@ -30,7 +30,7 @@ npx esbuild agent-discovery.js \
   '--external:@aws-sdk/*' \
   --outfile=dist/agent-discovery.js
 
-npx esbuild agent-coach-handler.mjs \
+npx esbuild src/handlers/agent-coach-handler.mjs \
   --bundle \
   --platform=node \
   --target=node18 \

@@ -7,8 +7,9 @@ COPY package*.json ${LAMBDA_TASK_ROOT}/
 RUN npm ci --omit=dev
 
 # Copy function code
-COPY *.mjs ${LAMBDA_TASK_ROOT}/
-COPY lib/ ${LAMBDA_TASK_ROOT}/lib/
+COPY src/handlers/*.mjs ${LAMBDA_TASK_ROOT}/
+COPY src/handlers/*.js ${LAMBDA_TASK_ROOT}/
+COPY src/lib/ ${LAMBDA_TASK_ROOT}/src/lib/
 
 # Set handler
-CMD [ "agent-coach-handler.handler" ]
+CMD [ "agent-coach.handler" ]

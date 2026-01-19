@@ -20,12 +20,12 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}📦 Installing dependencies...${NC}"
-npm install --no-audit --no-fund --quiet --legacy-peer-deps
+echo -e "${BLUE}📦 Using existing dependencies...${NC}"
+# Dependencies already installed in project root
 
 echo -e "${BLUE}🔨 Bundling with esbuild...${NC}"
 # Bundle everything into a single file, excluding AWS SDK (in runtime)
-npx esbuild index.mjs \
+npx esbuild src/handlers/index.mjs \
   --bundle \
   --platform=node \
   --target=node18 \

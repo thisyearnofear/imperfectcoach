@@ -10,21 +10,16 @@ echo "🤖 Deploying Agent Core..."
 # Configuration
 FUNCTION_NAME="imperfect-coach-agent-core"
 REGION="eu-north-1"
-HANDLER="agent-coach-handler.handler"
+HANDLER="agent-coach.handler"
 
 # Colors
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}📦 Bundling agent-coach-handler.mjs...${NC}"
-# Bundle with esbuild
-npx esbuild agent-coach-handler.mjs \
-  --bundle \
-  --platform=node \
-  --target=node18 \
-  --outfile=dist/agent-core.js \
-  --external:@aws-sdk/* 
+echo -e "${BLUE}📦 Using pre-built agent-coach.js...${NC}"
+# Copy the pre-built file to the expected name
+cp dist/agent-coach.js dist/agent-core.js 
 
 echo -e "${BLUE}🗜️  Zipping...${NC}"
 cd dist
@@ -44,7 +39,7 @@ if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION 2>/de
     aws lambda update-function-configuration \
         --function-name $FUNCTION_NAME \
         --timeout 60 \
-        --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v1:0}" \
+        --environment "Variables={BEDROCK_MODEL_ID=amazon.nova-lite-v1:0,PRIVACY_FEATURES_ENABLED=true}" \
         --region $REGION
 else
     echo -e "${YELLOW}🆕 Creating new Lambda function with privacy features...${NC}"
@@ -123,7 +118,7 @@ EOF
         --timeout 60 \
         --memory-size 1024 \
         --region $REGION \
-        --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v1:0}"
+        --environment "Variables={BEDROCK_MODEL_ID=amazon.nova-lite-v1:0,PRIVACY_FEATURES_ENABLED=true}"
 fi
 
 # Cleanup
