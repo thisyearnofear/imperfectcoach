@@ -675,6 +675,7 @@ async function runAgentReasoning(workoutData) {
   console.log("🤖 Starting AI Agent reasoning loop with Nova 2 Lite (Multimodal)...");
   const injuryFocus = workoutData.injuryFocus || "none";
   const repImage = workoutData.representativeImage;
+  const clinicalNote = workoutData.clinicalNote || "";
 
   const conversationHistory = [];
   const maxIterations = 5;
@@ -705,8 +706,10 @@ Form Score: ${workoutData.formScore}
 Pose Data: ${JSON.stringify(workoutData.poseData)}
 User ID: ${workoutData.userId}
 INJURY FOCUS: ${injuryFocus}
+${clinicalNote ? `USER SYMPTOM LOG: ${clinicalNote}` : ""}
 
 Provide autonomous, multi-step analysis using available tools and your extended reasoning capabilities.
+${clinicalNote ? `CRITICAL: The user reported specific symptoms: "${clinicalNote}". Prioritize this in your Extended Thinking.` : ""}
 If INJURY FOCUS is specified, prioritize checking for biomechanical stress in that area.`,
     },
   ];

@@ -16,6 +16,7 @@ import {
   Shield,
   Activity,
   Camera,
+  MessageSquare,
   CheckCircle,
   ExternalLink,
   Sparkles,
@@ -195,6 +196,8 @@ const BedrockAnalysisSection = ({
   >("idle");
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
   const [injuryFocus, setInjuryFocus] = useState<"none" | "back" | "knee">("none");
+  const [clinicalNote, setClinicalNote] = useState("");
+  const [protocolApproved, setProtocolApproved] = useState(false);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
 
@@ -289,6 +292,7 @@ const BedrockAnalysisSection = ({
               workoutData.duration?.toString() || "0"
             ),
             injuryFocus: injuryFocus,
+            clinicalNote: clinicalNote,
             representativeImage: workoutData.representativeImage,
           },
           walletInfo: {
@@ -347,6 +351,7 @@ const BedrockAnalysisSection = ({
                 workoutData.duration?.toString() || "0"
               ),
               injuryFocus: injuryFocus,
+              clinicalNote: clinicalNote,
               representativeImage: workoutData.representativeImage,
             },
             walletInfo: {
@@ -503,6 +508,23 @@ const BedrockAnalysisSection = ({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Clinical Note - NEW HACKATHON FEATURE (ag-ui inspired) */}
+          <div className="space-y-3">
+            <label className="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-2">
+              <MessageSquare className="h-3 w-3" />
+              Symptom Log / Clinical Notes
+            </label>
+            <textarea
+              value={clinicalNote}
+              onChange={(e) => setClinicalNote(e.target.value)}
+              placeholder="e.g., Sharp pinch in lower back, knee feels unstable on landing..."
+              className="w-full p-3 rounded-xl border-2 border-purple-100 bg-white text-sm text-purple-900 placeholder:text-purple-300 focus:border-purple-600 focus:ring-2 focus:ring-purple-200 transition-all outline-none min-h-[80px] resize-none"
+            />
+            <p className="text-[10px] text-purple-400 italic">
+              Nova 2 will prioritize these symptoms in its Extended Thinking phase.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
@@ -726,6 +748,31 @@ const BedrockAnalysisSection = ({
 
                 <div className="text-[10px] text-slate-400 text-center font-medium uppercase tracking-tighter pt-2 border-t border-blue-100 italic">
                   Complete before your next high-intensity session for optimal joint safety.
+                </div>
+
+                {/* HITL: Protocol Approval Step - NEW HACKATHON FEATURE */}
+                <div className="mt-4 pt-4 border-t border-blue-100">
+                  {!protocolApproved ? (
+                    <Button
+                      onClick={() => {
+                        setProtocolApproved(true);
+                        toast.success("Protocol Authorized", {
+                          description: "Your personalized recovery plan is now active.",
+                        });
+                      }}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                    >
+                      Authorize Clinical Recovery Plan
+                    </Button>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2 p-3 bg-green-50 rounded-xl border border-green-200 text-green-800 font-bold text-sm animate-in zoom-in-95 duration-300">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      Protocol Authorized & Logged
+                      <Badge variant="outline" className="ml-2 bg-white text-[10px] border-green-200 text-green-700">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
