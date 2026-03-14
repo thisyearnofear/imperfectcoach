@@ -1,6 +1,7 @@
 import { defineConfig, Plugin, transformWithEsbuild } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 /**
  * Custom Vite plugin to handle ox package's TypeScript-in-JS files
@@ -72,6 +73,14 @@ export default defineConfig(({ mode }) => ({
     stripTypeExportsPlugin(),
     fixEventEmitter3Plugin(),
     react(),
+    nodePolyfills({
+      include: ['buffer', 'process'],
+      globals: {
+        Buffer: true,
+        global: true,
+        process: true,
+      },
+    }),
   ].filter(Boolean),
   resolve: {
     alias: {
