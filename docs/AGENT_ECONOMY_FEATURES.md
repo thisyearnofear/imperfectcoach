@@ -93,6 +93,10 @@ User receives comprehensive analysis
 3. **Workout History** - Analyzes progress patterns over time.
 4. **Performance Benchmarking** - Compares stats to elite athlete data.
 
+### Interactive Agency (ag-ui standard)
+- **User Hint Injection**: Users log real-time symptoms (e.g., "Back is tight") which steer Nova 2's reasoning loop.
+- **HITL Authorization**: Clinical review step where users authorize the AI-generated treatment plan.
+
 ### Exercise Support
 - **Pull-ups**: Elbow angle, chin-over-bar, ROM tracking, asymmetry detection
 - **Jumps**: Height measurement, landing technique, power scoring, consistency

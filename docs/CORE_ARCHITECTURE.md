@@ -12,6 +12,7 @@ Imperfect Coach is an autonomous AI agent system that demonstrates x402-style pa
 - **Amazon Bedrock AgentCore** - Multi-step reasoning and tool use
 - **Amazon Nova 2 Lite** - Next-gen LLM providing **Extended Thinking** (step-by-step biomechanical reasoning)
 - **Joint-Stress Analysis** - Injury-aware coaching for Back and Knee pain prevention
+- **Interactive Agency (ag-ui)** - Advanced interaction patterns including User Hint Injection and HITL (Human-in-the-Loop) Protocol Authorization.
 - **TensorFlow.js + MediaPipe** - Pose detection for form analysis
 
 ### Multi-Chain Blockchain Infrastructure

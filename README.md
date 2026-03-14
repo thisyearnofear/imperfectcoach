@@ -16,6 +16,9 @@ We have pivoted from a basic coach to a **Digital Clinical Review** system lever
 - **Multimodal "Visual Second Opinion"**: Nova 2 analyzes high-resolution frames of your workout to detect technical flaws that raw pose data might miss.
 - **Injury-Aware Diagnostics**: Specialized analysis modes for **Back (Lumbar)** and **Knee (Patella)** safety.
 - **Autonomous Rehab Protocols**: The agent autonomously triggers a recovery specialist tool to prescribe personalized mobility flows based on your detected stress levels.
+- **Interactive Agency (ag-ui patterns)**: 
+    - **User Hint Injection**: Users can log real-time symptoms (e.g., "Back is tight") which the agent prioritizes during its reasoning loop.
+    - **Human-in-the-Loop (HITL)**: Implement a clinical "Authorization" step where users review and approve the AI-generated rehab protocol before it is active.
 
 ---
 
