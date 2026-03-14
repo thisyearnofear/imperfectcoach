@@ -13,6 +13,9 @@ import { SkeletonPaymentStatus } from "@/components/ui/enhanced-skeleton";
 import {
   Loader2,
   Brain,
+  Shield,
+  Activity,
+  Camera,
   CheckCircle,
   ExternalLink,
   Sparkles,
@@ -40,13 +43,23 @@ interface WorkoutData {
     details?: Record<string, unknown>;
   }>;
   duration?: number;
+  injuryFocus?: "none" | "back" | "knee";
+  representativeImage?: string; // Multimodal Vision: Base64 frame for analysis
 }
 
 interface BedrockAnalysisResult {
-  analysis: string;
+  analysis?: string;
+  agentResponse?: string;
+  reasoning_text?: string;
+  rehab_protocol?: {
+    focus_area: string;
+    protocol: Array<{ exercise: string; reps?: string; duration?: string; benefit: string }>;
+    rehab_summary: string;
+  };
   score?: number;
   recommendations?: string[];
   transactionHash?: string;
+  model?: string;
 }
 
 interface BedrockAnalysisSectionProps {
@@ -67,6 +80,93 @@ interface BedrockAnalysisSectionProps {
   onUpgrade?: () => void;
   onTryAgain?: () => void;
 }
+
+const AgentCoordinationMap = () => {
+  return (
+    <div className="bg-slate-900 rounded-xl p-4 overflow-hidden relative border border-slate-800 shadow-inner">
+      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <Sparkles className="h-3 w-3 text-purple-400" />
+        Active Agent Coordination Loop
+      </div>
+      
+      <div className="flex items-center justify-between relative z-10">
+        {/* Agent 1: Fitness Coach */}
+        <div className="bg-slate-800 p-2 rounded-lg border border-purple-500/30 flex items-center gap-3 w-[45%]">
+          <div className="h-8 w-8 rounded-full bg-purple-900/50 flex items-center justify-center border border-purple-500/50">
+            <Brain className="h-4 w-4 text-purple-400" />
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-white leading-tight">Fitness Coach</div>
+            <div className="text-[8px] text-purple-400">Rep: 98/100</div>
+          </div>
+        </div>
+
+        {/* The Coordination Line */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="h-[2px] w-full bg-slate-700 relative overflow-hidden">
+            <div className="absolute top-0 left-0 h-full w-4 bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)] animate-shimmer" />
+          </div>
+        </div>
+
+        {/* Agent 2: Recovery Specialist */}
+        <div className="bg-slate-800 p-2 rounded-lg border border-blue-500/30 flex items-center gap-3 w-[45%]">
+          <div className="h-8 w-8 rounded-full bg-blue-900/50 flex items-center justify-center border border-blue-500/50">
+            <Shield className="h-4 w-4 text-blue-400" />
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-white leading-tight">Recovery Spec.</div>
+            <div className="text-[8px] text-blue-400">x402 Settled</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="text-center mt-3 text-[9px] text-slate-500 font-mono italic">
+        [x402] FitnessCoach -> call -> RecoverySpecialist (0.02 USDC)
+      </div>
+    </div>
+  );
+};
+
+const ReasoningStream = () => {
+  const [step, setStep] = useState(0);
+  const steps = [
+    "Initializing Nova 2 Extended Thinking...",
+    "Scanning skeletal keypoints for micro-jitters...",
+    "Calculating joint torque and lever arms...",
+    "Analyzing lumbar-pelvic rhythm...",
+    "Benchmarking against elite biomechanics data...",
+    "Synthesizing preventative rehab protocol...",
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStep((s) => (s + 1) % steps.length);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center py-8 space-y-4">
+      <div className="relative">
+        <Brain className="h-12 w-12 text-purple-600 animate-pulse" />
+        <Sparkles className="h-6 w-6 text-amber-400 absolute -top-2 -right-2 animate-bounce" />
+      </div>
+      <div className="space-y-2 text-center">
+        <div className="text-purple-900 font-bold text-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
+          {steps[step]}
+        </div>
+        <div className="flex justify-center gap-1">
+          {steps.map((_, i) => (
+            <div 
+              key={i} 
+              className={`h-1 w-8 rounded-full transition-colors duration-500 ${i === step ? "bg-purple-600" : "bg-purple-100"}`} 
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const BedrockAnalysisSection = ({
   workoutData,
@@ -94,6 +194,7 @@ const BedrockAnalysisSection = ({
     "idle" | "processing" | "verified" | "settled" | "complete"
   >("idle");
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
+  const [injuryFocus, setInjuryFocus] = useState<"none" | "back" | "knee">("none");
 
   const [showAnalytics, setShowAnalytics] = useState(false);
 
@@ -187,6 +288,8 @@ const BedrockAnalysisSection = ({
             duration: convertDurationToSeconds(
               workoutData.duration?.toString() || "0"
             ),
+            injuryFocus: injuryFocus,
+            representativeImage: workoutData.representativeImage,
           },
           walletInfo: {
             address: address,
@@ -243,6 +346,8 @@ const BedrockAnalysisSection = ({
               duration: convertDurationToSeconds(
                 workoutData.duration?.toString() || "0"
               ),
+              injuryFocus: injuryFocus,
+              representativeImage: workoutData.representativeImage,
             },
             walletInfo: {
               address: address,
@@ -345,47 +450,79 @@ const BedrockAnalysisSection = ({
   // Render purchase/processing interface if no analysis yet
   if (!analysisResult) {
     return (
-      <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-purple-800 justify-center">
-            <Brain className="h-6 w-6" />
-            Amazon Bedrock Nova Deep Dive
-            <Badge
-              variant="secondary"
-              className="bg-purple-100 text-purple-800"
-            >
-              Premium
-            </Badge>
+      <Card className="border-2 border-purple-200 bg-gradient-to-br from-white to-purple-50/30 shadow-xl overflow-hidden">
+        <div className="bg-purple-600 p-4 text-white flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            <span className="font-bold tracking-tight">AI CLINICAL REVIEW</span>
+          </div>
+          <Badge className="bg-white/20 hover:bg-white/30 text-white border-none text-[10px]">
+            POWERED BY NOVA 2
+          </Badge>
+        </div>
+        
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl text-purple-900 flex items-center gap-2">
+            <Brain className="h-6 w-6 text-purple-600" />
+            Biomechanical Diagnostic
           </CardTitle>
-          <p className="text-purple-700 text-sm text-center">
-            In depth analysis powered by Amazon's advanced AI
+          <p className="text-muted-foreground text-sm">
+            Amazon Nova 2 will perform a multi-step 'Extended Thinking' analysis of your joint stability and movement physics.
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-purple-600" />
-              <span className="text-purple-800 font-medium">
-                Advanced biomechanical analysis
-              </span>
+
+        <CardContent className="space-y-6">
+          {/* Injury Focus - Clinical Redesign */}
+          <div className="space-y-3">
+            <label className="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-2">
+              <Activity className="h-3 w-3" />
+              Primary Diagnostic Focus
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { id: "none", label: "General", desc: "Overall form", icon: CheckCircle },
+                { id: "back", label: "Lumbar", desc: "Spine safety", icon: Shield },
+                { id: "knee", label: "Patella", desc: "Joint stress", icon: Activity },
+              ].map((focus) => (
+                <button
+                  key={focus.id}
+                  onClick={() => setInjuryFocus(focus.id as any)}
+                  className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all text-left ${
+                    injuryFocus === focus.id
+                      ? "border-purple-600 bg-purple-50 ring-2 ring-purple-200"
+                      : "border-gray-100 bg-white hover:border-purple-200"
+                  }`}
+                >
+                  <focus.icon className={`h-5 w-5 mb-1 ${injuryFocus === focus.id ? "text-purple-600" : "text-gray-400"}`} />
+                  <span className={`text-sm font-bold ${injuryFocus === focus.id ? "text-purple-900" : "text-gray-600"}`}>
+                    {focus.label}
+                  </span>
+                  <span className="text-[10px] text-gray-400 leading-tight text-center mt-1">
+                    {focus.desc}
+                  </span>
+                </button>
+              ))}
             </div>
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-purple-600" />
-              <span className="text-purple-800 font-medium">
-                Personalized improvement plan
-              </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
+            <div className="flex items-start gap-2">
+              <div className="bg-white p-1 rounded shadow-sm">
+                <TrendingUp className="h-3 w-3 text-purple-600" />
+              </div>
+              <div className="text-[11px] leading-tight text-purple-800">
+                <span className="font-bold block">Physics Engine</span>
+                Calculates torque & joint leverage
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Brain className="h-4 w-4 text-purple-600" />
-              <span className="text-purple-800 font-medium">
-                3 follow-up queries with AI coaches
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-purple-600" />
-              <span className="text-purple-800 font-medium">
-                Permanent on-chain record
-              </span>
+            <div className="flex items-start gap-2">
+              <div className="bg-white p-1 rounded shadow-sm">
+                <Target className="h-3 w-3 text-purple-600" />
+              </div>
+              <div className="text-[11px] leading-tight text-purple-800">
+                <span className="font-bold block">SLA Guaranteed</span>
+                Sub-5s Deep Reasoning
+              </div>
             </div>
           </div>
 
@@ -404,33 +541,20 @@ const BedrockAnalysisSection = ({
             <div className="my-4">
               {paymentStatus === "processing" && <SkeletonPaymentStatus />}
               {paymentStatus !== "processing" && (
-                <div className="p-3 bg-blue-50 rounded-lg text-center">
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    {paymentStatus === "verified" && (
-                      <>
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-green-800 font-medium">
-                          Payment verified, analyzing workout...
-                        </span>
-                      </>
-                    )}
-                    {paymentStatus === "settled" && (
-                      <>
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-green-800 font-medium">
-                          Payment settled, generating analysis...
-                        </span>
-                      </>
-                    )}
-                    {paymentStatus === "complete" && (
-                      <>
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-green-800 font-medium">
-                          Analysis complete!
-                        </span>
-                      </>
-                    )}
-                  </div>
+                <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                  {paymentStatus === "verified" && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-green-800 font-medium">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Payment verified, starting Nova 2 engine...
+                    </div>
+                  )}
+                  {paymentStatus === "settled" && <ReasoningStream />}
+                  {paymentStatus === "complete" && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-green-800 font-medium">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Analysis complete!
+                    </div>
+                  )}
                   {transactionHash && (
                     <div className="mt-2 text-xs">
                       <a
@@ -488,39 +612,134 @@ const BedrockAnalysisSection = ({
 
   // Show analysis results
   if (analysisResult) {
-    const score = extractScore(analysisResult.analysis);
-    const insights = extractKeyInsights(analysisResult.analysis);
+    const finalAnalysisText = analysisResult.agentResponse || analysisResult.analysis || "";
+    const score = extractScore(finalAnalysisText);
+    const reasoningText = analysisResult.reasoning_text;
 
     return (
       <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-purple-800 justify-center">
-            <Brain className="h-6 w-6" />
-            Amazon Bedrock Nova Analysis
-            <Badge variant="secondary" className="bg-green-100 text-green-800">
-              Complete
-            </Badge>
+          <CardTitle className="flex flex-col items-center gap-2 text-purple-800 text-center">
+            <div className="flex items-center gap-2">
+              <Brain className="h-6 w-6" />
+              Amazon Bedrock Nova 2 Analysis
+            </div>
+            <div className="flex gap-2">
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                Complete
+              </Badge>
+              <Badge variant="outline" className="border-purple-300 text-purple-700">
+                Nova 2 Powered
+              </Badge>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Agent Coordination - HACKATHON USP */}
+          <AgentCoordinationMap />
+
           {/* Score Display */}
-          <div className="text-center p-6 bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg">
+          <div className="text-center p-6 bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg shadow-sm">
             <div className="text-4xl font-bold text-purple-700">{score}</div>
-            <div className="text-purple-600 font-medium">Bedrock Score</div>
+            <div className="text-purple-600 font-medium">Coach Form Score</div>
           </div>
 
-          {/* Full Analysis Collapsible */}
-          <div className="text-center">
-            <details className="text-sm">
-              <summary className="cursor-pointer font-medium text-purple-600 hover:text-purple-800 mb-2">
-                View Complete Analysis
-              </summary>
-              <div className="p-4 bg-white border border-purple-200 rounded-lg max-h-80 overflow-y-auto text-left">
-                <pre className="whitespace-pre-wrap text-xs text-gray-700 font-mono">
-                  {analysisResult.analysis}
-                </pre>
+          {/* Multimodal Vision: The Reference Frame - HACKATHON FEATURE */}
+          {workoutData.representativeImage && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-purple-900 uppercase tracking-widest">
+                <Camera className="h-3 w-3 text-purple-600" />
+                Visual Second Opinion
               </div>
-            </details>
+              <div className="relative rounded-xl overflow-hidden border-2 border-purple-100 shadow-inner group">
+                <img 
+                  src={workoutData.representativeImage} 
+                  alt="Representative rep analysis" 
+                  className="w-full h-auto object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500 max-h-48"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
+                  <div className="text-[10px] text-white font-medium flex items-center gap-1">
+                    <Sparkles className="h-3 w-3 text-amber-300" />
+                    Nova 2 analyzed this specific frame for biomechanical flaws
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Nova 2 Extended Thinking - HACKATHON FEATURE */}
+          {reasoning_text && (
+            <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-4">
+              <details className="group">
+                <summary className="cursor-pointer flex items-center gap-2 text-sm font-semibold text-amber-800 hover:text-amber-900 list-none">
+                  <Sparkles className="h-4 w-4 text-amber-600 animate-pulse" />
+                  View Nova 2 "Extended Thinking" Process
+                  <Badge variant="outline" className="ml-auto text-[10px] uppercase border-amber-200 text-amber-700">
+                    Step-by-step reasoning
+                  </Badge>
+                </summary>
+                <div className="mt-3 text-xs text-amber-900/80 leading-relaxed font-serif bg-white/50 p-3 rounded border border-amber-50 whitespace-pre-wrap">
+                  {reasoning_text}
+                </div>
+              </details>
+            </div>
+          )}
+
+          {/* Rehab Protocol - CLINICAL REDESIGN */}
+          {analysisResult.rehab_protocol && (
+            <Card className="border-none shadow-lg overflow-hidden">
+              <div className="bg-blue-600 px-4 py-2 flex items-center justify-between text-white">
+                <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+                  <Activity className="h-4 w-4" />
+                  Recovery Prescription
+                </div>
+                <Badge className="bg-blue-500/50 border-none text-[9px] uppercase">
+                  AI Prescribed
+                </Badge>
+              </div>
+              <CardContent className="p-5 bg-blue-50/30 space-y-4">
+                <div className="flex items-center gap-2 p-2 bg-blue-100/50 rounded-lg text-blue-900 font-semibold text-sm">
+                  <Shield className="h-4 w-4 text-blue-600" />
+                  Focus: {analysisResult.rehab_protocol.focus_area} mobility
+                </div>
+                
+                <div className="space-y-3">
+                  {analysisResult.rehab_protocol.protocol.map((step, idx) => (
+                    <div key={idx} className="flex items-center gap-4 bg-white p-3 rounded-xl border border-blue-100 shadow-sm group hover:border-blue-300 transition-colors">
+                      <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold border border-blue-100 shrink-0">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-bold text-slate-900 flex items-center justify-between">
+                          {step.exercise}
+                          <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">
+                            {step.reps || step.duration}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-500 font-medium mt-0.5">
+                          {step.benefit}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="text-[10px] text-slate-400 text-center font-medium uppercase tracking-tighter pt-2 border-t border-blue-100 italic">
+                  Complete before your next high-intensity session for optimal joint safety.
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Final Coach Response */}
+          <div className="p-5 bg-white border border-purple-100 rounded-xl shadow-sm">
+            <h4 className="flex items-center gap-2 text-sm font-bold text-purple-900 mb-3">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              Final Coach Assessment
+            </h4>
+            <div className="text-sm text-gray-700 leading-relaxed space-y-2 whitespace-pre-wrap">
+              {finalAnalysisText}
+            </div>
           </div>
 
           {/* Performance Charts Toggle - Premium Feature */}

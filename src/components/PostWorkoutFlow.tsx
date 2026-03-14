@@ -756,6 +756,9 @@ export const PostWorkoutFlow = ({
                 })),
                 averageFormScore,
                 duration: convertDurationToSeconds(sessionDuration),
+                representativeImage: repHistory
+                  .filter(rep => !!rep.image)
+                  .sort((a, b) => a.score - b.score)[0]?.image, // Use worst rep's image for analysis
               }}
               onAnalysisComplete={(result) => {
                 setAnalysisResult(result);

@@ -37,6 +37,7 @@ export interface RepData {
   timestamp: number;
   score: number;
   details?: PullupRepDetails | JumpRepDetails;
+  image?: string; // Base64 snapshot of the representative moment (lowest/peak)
 }
 
 export interface PoseData {

@@ -51,7 +51,7 @@ if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION 2>/de
         --timeout 60 \
         --memory-size 1024 \
         --region $REGION \
-        --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v1:0,PRIVACY_FEATURES_ENABLED=true}"
+        --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v2:0,PRIVACY_FEATURES_ENABLED=true}"
 else
     echo -e "${YELLOW}🆕 Creating new Lambda function...${NC}"
     
@@ -128,7 +128,7 @@ EOF
         --timeout 60 \
         --memory-size 1024 \
         --region $REGION \
-        --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v1:0,PRIVACY_FEATURES_ENABLED=true}"
+        --environment "Variables={AWS_REGION=$REGION,BEDROCK_MODEL_ID=amazon.nova-lite-v2:0,PRIVACY_FEATURES_ENABLED=true}"
 fi
 
 echo -e "${BLUE}🌐 Setting up API Gateway...${NC}"

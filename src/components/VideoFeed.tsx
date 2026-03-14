@@ -107,6 +107,33 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     onFormFeedback(message);
   }
 
+  // Multimodal Vision: Capture frame on rep completion
+  const handleNewRepData = useCallback((data: RepData) => {
+    if (!videoRef.current) {
+      onNewRepData(data);
+      return;
+    }
+
+    try {
+      // Capture the representative frame for the "Visual Second Opinion"
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Optimize base64 size for LLM ingestion (quality 0.7)
+        const frameData = canvas.toDataURL('image/jpeg', 0.7);
+        data.image = frameData;
+      }
+    } catch (e) {
+      console.warn("Failed to capture frame for multimodal analysis:", e);
+    }
+
+    onNewRepData(data);
+  }, [onNewRepData]);
+
   const { currentJumpHeight, jumpGroundLevel, formStreak } = usePoseDetection({
     videoRef,
     cameraStatus,
@@ -117,7 +144,7 @@ const VideoFeed = ({ exercise, onRepCount, onFormFeedback, isDebugMode, onPoseDa
     isDebugMode,
     onPoseData,
     onFormScoreUpdate,
-    onNewRepData,
+    onNewRepData: handleNewRepData,
     coachPersonality,
     workoutMode,
     isWorkoutActive,

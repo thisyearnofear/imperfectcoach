@@ -8,9 +8,10 @@ Imperfect Coach is an autonomous AI agent system that demonstrates x402-style pa
 
 ## Core Components
 
-### AI Agent System
+### AI Agent System (Powered by Amazon Nova 2)
 - **Amazon Bedrock AgentCore** - Multi-step reasoning and tool use
-- **Amazon Nova Lite** - LLM decision-making for analysis
+- **Amazon Nova 2 Lite** - Next-gen LLM providing **Extended Thinking** (step-by-step biomechanical reasoning)
+- **Joint-Stress Analysis** - Injury-aware coaching for Back and Knee pain prevention
 - **TensorFlow.js + MediaPipe** - Pose detection for form analysis
 
 ### Multi-Chain Blockchain Infrastructure
@@ -37,7 +38,8 @@ Imperfect Coach is an autonomous AI agent system that demonstrates x402-style pa
 │                   AI COACHING TIERS                      │
 ├─────────────────────────────────────────────────────────┤
 │  FREE        →  Supabase Edge (Gemini/OpenAI/Claude)   │
-│  PREMIUM     →  AWS Lambda + Nova Lite ($0.05)          │
+│  PREMIUM     →  AWS Lambda + Nova 2 Lite ($0.05)       │
+│                (Joint-Stress + Extended Thinking)       │
 │  AGENT       →  AWS Lambda + Bedrock AgentCore ($0.10)  │
 └─────────────────────────────────────────────────────────┘
                           ↓
@@ -95,7 +97,7 @@ The x402 protocol enables true decentralized agent economies:
 
 ### AI & Agent System
 - Amazon Bedrock AgentCore (multi-step reasoning)
-- Amazon Nova Lite (LLM decision-making)
+- Amazon Nova 2 Lite (Extended Thinking & Joint-Stress Analysis)
 - TensorFlow.js + MediaPipe (pose detection)
 
 ### Frontend

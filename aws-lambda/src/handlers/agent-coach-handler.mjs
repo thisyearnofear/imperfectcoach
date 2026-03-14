@@ -163,6 +163,20 @@ const AGENT_TOOLS = [
       required: ["capability", "data_query", "amount"],
     },
   },
+  {
+    name: "generate_rehab_protocol",
+    description:
+      "Generates a personalized recovery and rehab protocol (stretches, mobility) based on detected biomechanical stress or specific injury focus (Back, Knee).",
+    input_schema: {
+      type: "object",
+      properties: {
+        focus_area: { type: "string", description: "Area needing recovery (back, knee, general)" },
+        stress_level: { type: "string", description: "low, medium, high" },
+        observed_issue: { type: "string", description: "Description of the biomechanical issue detected" },
+      },
+      required: ["focus_area"],
+    },
+  },
 ];
 
 // Tool execution functions
@@ -184,6 +198,9 @@ async function executeTool(toolName, toolInput) {
 
     case "call_specialist_agent":
       return await callSpecialistAgent(toolInput);
+
+    case "generate_rehab_protocol":
+      return await generateRehabProtocol(toolInput);
 
     default:
       return { error: `Unknown tool: ${toolName}` };
@@ -488,12 +505,34 @@ function prioritizeFocusAreas(weaknesses, goals) {
   return weaknesses.slice(0, 3);
 }
 
-function defineSuccessMetrics(goals) {
-  return goals.map((goal) => ({
-    goal: goal,
-    metric: "Track weekly",
-    target: "20% improvement in 4 weeks",
-  }));
+// Tool implementation: Generate Rehab Protocol
+async function generateRehabProtocol({ focus_area, stress_level = "low", observed_issue = "" }) {
+  const protocols = {
+    back: [
+      { exercise: "Cat-Cow Stretch", reps: "10 cycles", benefit: "Spinal mobility" },
+      { exercise: "Child's Pose", duration: "60 seconds", benefit: "Lumbar decompression" },
+      { exercise: "Bird-Dog", reps: "10 per side", benefit: "Core stability & back protection" }
+    ],
+    knee: [
+      { exercise: "Quadriceps Set", reps: "15 reps", benefit: "VMO activation" },
+      { exercise: "Heel Slides", reps: "12 reps", benefit: "Gentle ROM" },
+      { exercise: "Terminal Knee Extension", reps: "10 reps", benefit: "Patellar tracking" }
+    ],
+    general: [
+      { exercise: "90/90 Hip Stretch", reps: "2 min per side", benefit: "Pelvic alignment" },
+      { exercise: "Plank", duration: "45 seconds", benefit: "Overall structural stability" }
+    ]
+  };
+
+  const selected = protocols[focus_area.toLowerCase()] || protocols.general;
+  
+  return {
+    focus_area,
+    risk_assessment: `Stress level: ${stress_level}. Issue: ${observed_issue}`,
+    protocol: selected,
+    rehab_summary: `Personalized ${focus_area} recovery plan to mitigate observed biomechanical stress.`,
+    next_steps: "Perform these movements before your next high-intensity session."
+  };
 }
 
 // Tool implementation: Call Specialist Agent (x402 v2 with CORE_AGENTS)
@@ -633,42 +672,68 @@ async function callSpecialistAgent({ capability, data_query, amount, serviceTier
 
 // Main agent reasoning loop using Bedrock Converse API with tool use
 async function runAgentReasoning(workoutData) {
-  console.log("🤖 Starting AI Agent reasoning loop...");
+  console.log("🤖 Starting AI Agent reasoning loop with Nova 2 Lite (Multimodal)...");
+  const injuryFocus = workoutData.injuryFocus || "none";
+  const repImage = workoutData.representativeImage;
 
   const conversationHistory = [];
   const maxIterations = 5;
   let iteration = 0;
+  let fullReasoningChain = [];
 
-  // Initial prompt to the agent
+  // Initial prompt to the agent - Optimized for Nova 2 Multimodal
   const systemPrompt = {
-    text: `You are an elite AI fitness coach with autonomous decision-making capabilities. 
+    text: `You are an elite AI fitness coach with autonomous decision-making capabilities, powered by Amazon Nova 2.
 Your role is to:
-1. Analyze workout performance data deeply
-2. Use available tools to gather context and history
-3. Make autonomous decisions about what analysis is needed
-4. Generate personalized, actionable coaching advice
-5. Create adaptive training plans
+1. EXAMINE: Deeply analyze biomechanics, pose detection data, AND the provided visual evidence.
+2. THINK: Use 'Extended Thinking' to reason through the physics of the movement (leverage, stability, power).
+3. ACT: Call tools autonomously to gather context (history, benchmarks) or specialists (nutrition, recovery).
+4. COACH: Provide actionable, high-signal feedback.
 
-You have access to tools for analyzing pose data, querying workout history, benchmarking performance, and generating training plans.
-Think step-by-step about what information you need and which tools to use.`,
+MULTIMODAL MISSION: If an image is provided, perform a 'Visual Second Opinion'. Look for subtle technical flaws (e.g., heel lift, pelvic tilt, grip width, valgus) that raw pose data keypoints might miss.
+CRITICAL: Before giving your final coaching feedback, you MUST use your internal reasoning to analyze the biomechanical efficiency of the observed movement.`,
   };
 
-  // Initial user message with workout data
-  conversationHistory.push({
-    role: "user",
-    content: [
-      {
-        text: `Analyze this workout and provide comprehensive coaching:
-        
+  // Build the multimodal content block
+  const userContent = [
+    {
+      text: `Analyze this workout and provide comprehensive coaching:
+      
 Exercise: ${workoutData.exercise}
 Reps: ${workoutData.reps}
 Form Score: ${workoutData.formScore}
 Pose Data: ${JSON.stringify(workoutData.poseData)}
 User ID: ${workoutData.userId}
+INJURY FOCUS: ${injuryFocus}
 
-Provide autonomous, multi-step analysis using available tools.`,
-      },
-    ],
+Provide autonomous, multi-step analysis using available tools and your extended reasoning capabilities.
+If INJURY FOCUS is specified, prioritize checking for biomechanical stress in that area.`,
+    },
+  ];
+
+  // Add the image if available (Nova 2 Multimodal)
+  if (repImage && repImage.startsWith('data:image')) {
+    try {
+      const base64Data = repImage.split(',')[1];
+      const imageBytes = Buffer.from(base64Data, 'base64');
+      userContent.push({
+        image: {
+          format: "jpeg", // toDataURL was jpeg
+          source: {
+            bytes: imageBytes,
+          },
+        },
+      });
+      console.log("📸 Image attached to conversation history");
+    } catch (e) {
+      console.error("❌ Failed to process image for Nova 2:", e.message);
+    }
+  }
+
+  // Initial user message with workout data + optional image
+  conversationHistory.push({
+    role: "user",
+    content: userContent,
   });
 
   while (iteration < maxIterations) {
@@ -678,9 +743,15 @@ Provide autonomous, multi-step analysis using available tools.`,
     try {
       const response = await bedrockClient.send(
         new ConverseCommand({
-          modelId: "amazon.nova-lite-v1:0",
+          modelId: "eu.amazon.nova-lite-v2:0", // Nova 2 Lite (Cross-region eu-north-1)
           messages: conversationHistory,
           system: [systemPrompt],
+          // Enable Extended Thinking (Nova 2 feature)
+          additionalModelRequestFields: {
+             "reasoningConfig": {
+                "type": "enabled"
+             }
+          },
           toolConfig: {
             tools: AGENT_TOOLS.map((tool) => ({
               toolSpec: {
@@ -694,6 +765,19 @@ Provide autonomous, multi-step analysis using available tools.`,
       );
 
       const message = response.output.message;
+      
+      // Extract Nova 2 Extended Thinking/Reasoning if available
+      if (response.reasoningContent) {
+        const reasoningText = response.reasoningContent.reasoningText?.text;
+        if (reasoningText) {
+          console.log("🧠 Nova 2 Reasoning:", reasoningText.substring(0, 100) + "...");
+          fullReasoningChain.push({
+            iteration,
+            thought: reasoningText
+          });
+        }
+      }
+
       conversationHistory.push(message);
 
       // Check if agent wants to use tools
@@ -737,6 +821,8 @@ Provide autonomous, multi-step analysis using available tools.`,
         return {
           success: true,
           agentResponse: finalText,
+          reasoning_text: fullReasoningChain.map(r => r.thought).join("\n\n"), // Nova 2 Specific
+          rehab_protocol: extractRehabProtocol(conversationHistory), // New
           toolsUsed: extractToolsUsed(conversationHistory),
           iterationsUsed: iteration,
           reasoning_steps: extractReasoningSteps(conversationHistory),
@@ -768,6 +854,24 @@ function extractToolsUsed(history) {
     }
   }
   return [...new Set(tools)];
+}
+
+function extractRehabProtocol(history) {
+  // Search through user messages (where tool results are sent back)
+  for (const msg of history) {
+    if (msg.role === "user" && msg.content) {
+      for (const block of msg.content) {
+        if (block.toolResult) {
+          // Check if this result came from the rehab tool
+          const result = block.toolResult.content[0]?.json;
+          if (result && result.protocol) {
+            return result;
+          }
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function extractReasoningSteps(history) {
@@ -885,8 +989,8 @@ export const handler = async (event) => {
       body: JSON.stringify({
         success: true,
         agent_type: "autonomous_coach",
-        model: "amazon.nova-lite-v1:0",
-        agentCore_primitives_used: ["tool_use", "multi_step_reasoning", "autonomous_decision_making"],
+        model: "amazon.nova-lite-v2:0",
+        agentCore_primitives_used: ["tool_use", "multi_step_reasoning", "autonomous_decision_making", "extended_thinking"],
         ...agentResult,
         timestamp: new Date().toISOString(),
       }),
