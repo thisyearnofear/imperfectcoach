@@ -17,6 +17,7 @@
   "dependencies": {
     "@bonfida/spl-name-service": "^3.0.16",
     "@farcaster/miniapp-sdk": "^0.2.1",
+    "@lightprotocol/hasher.rs": "0.2.1",
     "@mediapipe/pose": "^0.5.1675469404",
     "@project-serum/anchor": "0.26.0",
     "@radix-ui/react-accordion": "^1.2.0",

@@ -76,6 +76,12 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Fix privacycash deep imports not in package exports
+      "privacycash/dist/deposit": path.resolve(__dirname, "./node_modules/privacycash/dist/deposit.js"),
+      "privacycash/dist/withdraw": path.resolve(__dirname, "./node_modules/privacycash/dist/withdraw.js"),
+      "privacycash/dist/getUtxos": path.resolve(__dirname, "./node_modules/privacycash/dist/getUtxos.js"),
+      "privacycash/dist/utils/encryption": path.resolve(__dirname, "./node_modules/privacycash/dist/utils/encryption.js"),
+      "@lightprotocol/hasher.rs": path.resolve(__dirname, "./node_modules/@lightprotocol/hasher.rs"),
     },
     dedupe: ['react', 'react-dom'],
   },

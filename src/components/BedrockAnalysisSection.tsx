@@ -122,7 +122,7 @@ const AgentCoordinationMap = () => {
       </div>
 
       <div className="text-center mt-3 text-[9px] text-slate-500 font-mono italic">
-        [x402] FitnessCoach -> call -> RecoverySpecialist (0.02 USDC)
+        [x402] FitnessCoach {'->'} call {'->'} RecoverySpecialist (0.02 USDC)
       </div>
     </div>
   );
