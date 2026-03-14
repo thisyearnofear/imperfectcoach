@@ -40,26 +40,24 @@ VITE_SUPABASE_KEY=your-supabase-key
 3. jq (for JSON processing)
 
 ### Deployment Script
-Use the provided deployment script (for large packages >70MB):
+Use the specialized hackathon deployment script:
 ```bash
 cd aws-lambda
-./deploy-s3.sh
+./deployment/scripts/deploy-agent.sh
 ```
 
 The script automatically:
-- Installs production dependencies
-- Aggressively prunes node_modules (removes .md, .map, test dirs)
-- Creates S3 bucket if needed
-- Uploads to S3 (supports up to 5GB)
-- Updates Lambda function code
-- Cleans up old versions (keeps last 5)
+- Bundles the handler with `esbuild`
+- Configures the `agent-coach-handler.handler` entry point
+- Sets the `BEDROCK_MODEL_ID` to `amazon.nova-lite-v2:0` (Nova 2 Lite)
+- Updates the Lambda to the **Node.js 22.x** runtime
 
 ### Manual Deployment
-For smaller packages (<70MB):
 ```bash
 cd aws-lambda
-npm install --production
-zip -r function.zip index.mjs node_modules/ package.json package-lock.json
+# Bundle with esbuild
+npx esbuild src/handlers/agent-coach-handler.mjs --bundle --platform=node --target=node22 --outfile=dist/agent-coach-handler.js --external:@aws-sdk/*
+cd dist && zip -r function.zip agent-coach-handler.js
 aws lambda update-function-code \
   --function-name imperfect-coach-premium-analysis \
   --zip-file fileb://function.zip \
@@ -67,17 +65,16 @@ aws lambda update-function-code \
 ```
 
 ### Environment Configuration
-Update Lambda environment variables:
+Update Lambda environment variables for Nova 2:
 ```bash
 aws lambda update-function-configuration \
   --function-name imperfect-coach-premium-analysis \
+  --handler agent-coach-handler.handler \
   --environment Variables='{
-    "SOLANA_PRIVATE_KEY":"your-key",
-    "SOLANA_TREASURY_ADDRESS":"your-address", 
-    "SOLANA_RPC_URL":"https://api.devnet.solana.com",
-    "AGENT_PRIVATE_KEY":"your-agent-evm-private-key",
-    "CX0_API_KEY":"your-0xgasless-api-key",
-    "AVALANCHE_RPC":"https://api.avax-test.network/ext/bc/C/rpc"
+    "BEDROCK_MODEL_ID":"amazon.nova-lite-v2:0",
+    "PRIVACY_FEATURES_ENABLED":"true",
+    "AGENT_PRIVATE_KEY":"your-key",
+    "AGENT_SOLANA_PRIVATE_KEY":"your-solana-key"
   }' \
   --region eu-north-1
 ```

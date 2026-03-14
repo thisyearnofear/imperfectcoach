@@ -75,19 +75,23 @@ User receives comprehensive analysis
 - Real native token transfers (ETH/AVAX/SOL) on blockchain
 - On-chain transaction audit trails
 
-## AI Coach Features
+## AI Coach Features (Powered by Amazon Nova 2)
 
-### Multi-Step Reasoning
-- Amazon Bedrock AgentCore implementation
-- Up to 5 reasoning iterations
-- Tool use and autonomous decision-making
-- Amazon Nova Lite LLM for decision-making
+### Multi-Step "Extended Thinking" Reasoning
+- **Engine**: Upgraded to **Amazon Nova 2 Lite** (`nova-lite-v2:0`).
+- **Deep Reasoning**: Uses Nova 2's internal reasoning loop to analyze the physics of movement (leverage, torque, stability) before responding.
+- **Agentic Decision-Making**: Up to 5 iterations where the agent decides which tools to invoke based on user-selected diagnostic focus.
 
-### Integrated Tools
-1. **Pose Analysis** - Real-time form evaluation
-2. **Workout History** - Performance pattern analysis
-3. **Performance Benchmarking** - Comparison to athlete database
-4. **Training Plan Generation** - Personalized 4-week programs
+### Injury-Aware Biomechanical Intelligence
+- **Diagnostic Focus**: Specialized modes for **Lumbar (Back)** and **Patella (Knee)** safety.
+- **Stress Detection**: Identifies landing mechanics (valgus) or lifting postures (rounding) that lead to chronic pain.
+- **Multimodal Visual Review**: Analyzes raw video frames alongside pose keypoints for a "Visual Second Opinion" on subtle technique flaws (e.g., heel lift).
+
+### Autonomous Tool Ecosystem
+1. **Pose Analysis** - Real-time form evaluation.
+2. **Rehab Protocol Generator** - (New) Autonomously prescribes clinical mobility flows if stress is detected.
+3. **Workout History** - Analyzes progress patterns over time.
+4. **Performance Benchmarking** - Compares stats to elite athlete data.
 
 ### Exercise Support
 - **Pull-ups**: Elbow angle, chin-over-bar, ROM tracking, asymmetry detection

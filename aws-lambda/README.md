@@ -55,20 +55,21 @@ aws-lambda/
 - **Multi-Chain Support**: Works with Base, Avalanche, and Solana networks
 - **Dual Payment Modes**: Supports both public and private payment modes
 
-### AI Agent Services
-- **Autonomous Coaching**: AI-powered fitness coaching with multi-step reasoning
-- **Specialist Agent Integration**: Calls specialist agents for nutrition, biomechanics, etc.
-- **SLA Tracking**: Monitors service level agreements for agent performance
-- **Reputation System**: Tracks agent reputation and quality metrics
+### AI Agent Services (Powered by Amazon Nova 2)
+- **Autonomous Coaching**: AI-powered fitness coaching with multi-step reasoning using **Nova 2 Lite**.
+- **Extended Thinking**: Performs deep biomechanical analysis (torque, stability) before providing feedback.
+- **Multimodal Vision**: Analyzes raw visual frames alongside pose data for superior technique correction.
+- **Specialist Agent Integration**: Calls specialist agents for nutrition, biomechanics, and **Recovery Protocols**.
+- **Injury-Aware Diagnostics**: Specialized modes for detecting lumbar and patellar stress.
 
 ## Environment Variables
 
 See `deployment/config/.env.example` for required environment variables.
 
 Key variables include:
-- `BEDROCK_MODEL_ID`: Amazon Bedrock model to use
-- `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET`: Coinbase Developer Platform credentials
-- `AGENT_WALLET_KEY`: Agent wallet private key
+- `BEDROCK_MODEL_ID`: Amazon Bedrock model (use `amazon.nova-lite-v2:0`)
+- `AGENT_PRIVATE_KEY`: Agent wallet private key (EVM)
+- `AGENT_SOLANA_PRIVATE_KEY`: Agent wallet private key (Solana)
 - `PRIVACY_FEATURES_ENABLED`: Flag to enable privacy features
 
 ## Deployment

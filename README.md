@@ -1,41 +1,54 @@
-# 🏋️ Imperfect Coach
+# 🏋️ Imperfect Coach: AI Biomechanics Lab
 
-**Autonomous AI Agent for Personalized Fitness Coaching**
+**Autonomous Injury-Aware AI Agent powered by Amazon Nova 2**
 
 **🔗 Live Demo:** [imperfectcoach.netlify.app](https://imperfectcoach.netlify.app)
 
-x402-powered agent coordination system where specialized agents work together to provide comprehensive fitness analysis. Multi-chain support: Avalanche, Base, Solana.
+Imperfect Coach is a next-generation **AI Biomechanics Lab** that uses **Amazon Nova 2** and **Bedrock AgentCore** to provide clinical-grade movement analysis. Unlike generic fitness apps, it specializes in **Injury-Aware Coaching**, using multimodal vision to detect biomechanical stress in the back and knees.
 
 ---
 
-## 🎯 What is Imperfect Coach?
+## 🎯 What's New (Hackathon Edition)
 
-Imperfect Coach is an **autonomous AI agent system** that demonstrates x402 protocol concepts with coordinated specialist agents (fitness coach, nutrition planner, biomechanics analyzer, recovery specialist). The agents coordinate internally using x402-style payment verification.
+We have pivoted from a basic coach to a **Digital Clinical Review** system leveraging the latest Amazon AI capabilities:
 
-**Note**: Reap Protocol enables agentic commerce for product search and Web2/Web3 settlement. Currently using internally defined agents; Reap integration planned for future expansion.
-
-Users benefit from:
-- **Specialist Agent Coordination**: Multiple AI agents contribute specialized expertise
-- **x402 Payment Protocol**: Cryptographic payment verification and authorization
-- **Transparent Processing**: Visibility into which agents contributed to analysis
-- **Reputation-Driven Quality**: Agent performance tracking within the system
-- **Multi-Chain Flexibility**: Support for Base, Avalanche, and Solana wallets
+- **Amazon Nova 2 "Extended Thinking"**: The coach now performs step-by-step internal reasoning on the physics of your movement before giving feedback.
+- **Multimodal "Visual Second Opinion"**: Nova 2 analyzes high-resolution frames of your workout to detect technical flaws that raw pose data might miss.
+- **Injury-Aware Diagnostics**: Specialized analysis modes for **Back (Lumbar)** and **Knee (Patella)** safety.
+- **Autonomous Rehab Protocols**: The agent autonomously triggers a recovery specialist tool to prescribe personalized mobility flows based on your detected stress levels.
 
 ---
 
 ## ✨ Key Features
 
-### 🤖 Autonomous AI Coach Agent
-- **Multi-Step Reasoning**: Agent decides which analysis tools to invoke (up to 5 reasoning iterations)
-- **4 Integrated Tools**: Pose analysis, workout history, performance benchmarking, training plan generation
-- **Autonomous Decision-Making**: Zero human intervention - agent thinks and acts independently
-- **Amazon Bedrock AgentCore**: Full implementation of tool use and reasoning loop primitives
+### 🧠 Advanced Nova 2 Reasoning
+- **Extended Thinking**: Deep dive into leverage, stability, and joint torque.
+- **Multimodal Vision**: Simultaneous analysis of 17-point pose data and raw visual evidence.
+- **Agentic Decision Making**: Autonomous coordination between Fitness and Recovery agents via x402.
 
-### 🎥 Real-Time Form Analysis
-- **Advanced Pose Detection**: 17-point body tracking (TensorFlow.js + MediaPipe)
-- **Instant Feedback**: Real-time form corrections and technique tips
-- **Accurate Rep Counting**: Automatic detection with range-of-motion validation
-- **Form Scoring**: 0-100% accuracy rating per exercise
+### 🎥 Clinical Form Analysis
+- **Joint Stress Detection**: Real-time monitoring for knee valgus and lumbar rounding.
+- **Visual Feedback**: Transparent "Look under the hood" at the AI's reasoning process.
+- **High-Signal Coaching**: Professional-grade technique corrections and preventative tips.
+
+### 💰 x402 Agent Economy
+- **Autonomous Settlement**: Immediate blockchain settlement (Base, Avalanche, Solana) between agents.
+- **Specialist Marketplace**: Book tiered recovery services with guaranteed SLAs.
+- **Transparent Audit**: On-chain logging of all agent-to-agent service calls.
+
+---
+
+## 🛠️ Technology Stack
+
+**AI & Agent System**
+- **Amazon Nova 2 Lite** (Core Reasoning & Multimodal Vision)
+- **Amazon Bedrock AgentCore** (Autonomous Tool Use & Multi-step Loop)
+- **TensorFlow.js + MediaPipe** (17-point Pose Detection)
+
+**Payments & Web3**
+- **x402 Protocol** (HTTP 402 Monetization)
+- **Multi-Chain Settlement** (Base Sepolia, Avalanche Fuji, Solana Devnet)
+- **AgentRegistry Contract** (On-chain reputations & capabilities)
 
 ### 💰 x402-Style Payment System (Real Settlement, No Escrow)
 - **Internal Specialists**: 4 core agents (Fitness Coach, Nutrition, Recovery, Biomechanics)
