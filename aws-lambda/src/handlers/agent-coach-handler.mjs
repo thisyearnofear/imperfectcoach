@@ -14,9 +14,9 @@ import { Agentkit } from "@0xgasless/agentkit";
 import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
 // import { verify } from "@payai/x402/facilitator";
-import * as db from "./lib/dynamodb-service.mjs";
-import * as agents from "./lib/agents.mjs";
-import * as coreHandler from "./lib/core-agent-handler.mjs";
+import * as db from "../lib/dynamodb-service.mjs";
+import * as agents from "../lib/agents.mjs";
+import * as coreHandler from "../lib/core-agent-handler.mjs";
 
 // Initialize clients
 const bedrockClient = new BedrockRuntimeClient({ region: "eu-north-1" });

@@ -11,7 +11,7 @@ echo "🤖 Deploying AI Coach Agent Lambda..."
 FUNCTION_NAME="imperfect-coach-premium-analysis"
 REGION="eu-north-1"
 RUNTIME="nodejs18.x"
-HANDLER="index.handler"
+HANDLER="agent-coach-handler.handler"
 ROLE_NAME="lambda-bedrock-execution-role"
 
 # Colors for output
@@ -25,16 +25,16 @@ echo -e "${BLUE}📦 Using existing dependencies...${NC}"
 
 echo -e "${BLUE}🔨 Bundling with esbuild...${NC}"
 # Bundle everything into a single file, excluding AWS SDK (in runtime)
-npx esbuild src/handlers/index.mjs \
+npx esbuild src/handlers/agent-coach-handler.mjs \
   --bundle \
   --platform=node \
   --target=node18 \
-  --outfile=dist/index.js \
+  --outfile=dist/agent-coach-handler.js \
   --external:@aws-sdk/* 
 
 echo -e "${BLUE}🗜️  Creating deployment package...${NC}"
 cd dist
-zip -r ../agent-coach-lambda.zip index.js
+zip -r ../agent-coach-lambda.zip agent-coach-handler.js
 cd ..
 
 echo -e "${BLUE}☁️  Checking if Lambda function exists...${NC}"

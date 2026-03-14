@@ -13,9 +13,9 @@ import {
 import { base } from "viem/chains";
 import { Agentkit } from "@0xgasless/agentkit";
 import { verify, settle } from "@payai/x402/facilitator";
-import * as db from "./lib/dynamodb-service.mjs";
-import { verifyX402Signature } from "./lib/core-agent-handler.mjs";
-import { X402_NETWORKS } from "./lib/x402-config.mjs";
+import * as db from "../lib/dynamodb-service.mjs";
+import { verifyX402Signature } from "../lib/core-agent-handler.mjs";
+import { X402_NETWORKS } from "../lib/x402-config.mjs";
 
 
 
