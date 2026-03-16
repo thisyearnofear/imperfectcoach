@@ -497,17 +497,17 @@ const BedrockAnalysisSection = ({
             <Brain className="h-6 w-6 text-purple-600" />
             Biomechanical Diagnostic
           </CardTitle>
-          <p className="text-muted-foreground text-sm">
-            Amazon Nova 2 will perform a multi-step 'Extended Thinking' analysis of your joint stability and movement physics.
+          <p className="text-purple-700 text-sm">
+            Get an AI-powered deep analysis of your form. Choose a focus area below, add any symptoms you're experiencing, then tap <strong>Unlock</strong> to run the analysis.
           </p>
         </CardHeader>
 
         <CardContent className="space-y-6">
           {/* Injury Focus - Clinical Redesign */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-2">
-              <Activity className="h-3 w-3" />
-              Primary Diagnostic Focus
+            <label className="text-xs font-bold text-purple-800 uppercase tracking-wider flex items-center gap-2">
+              <Activity className="h-3 w-3 text-purple-600" />
+              Step 1 — Choose Focus Area
             </label>
             <div className="grid grid-cols-3 gap-3">
               {[
@@ -528,7 +528,7 @@ const BedrockAnalysisSection = ({
                   <span className={`text-sm font-bold ${injuryFocus === focus.id ? "text-purple-900" : "text-gray-600"}`}>
                     {focus.label}
                   </span>
-                  <span className="text-[10px] text-gray-400 leading-tight text-center mt-1">
+                  <span className={`text-[10px] leading-tight text-center mt-1 ${injuryFocus === focus.id ? "text-purple-600" : "text-gray-500"}`}>
                     {focus.desc}
                   </span>
                 </button>
@@ -538,38 +538,38 @@ const BedrockAnalysisSection = ({
 
           {/* Clinical Note - NEW HACKATHON FEATURE (ag-ui inspired) */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-2">
-              <MessageSquare className="h-3 w-3" />
-              Symptom Log / Clinical Notes
+            <label className="text-xs font-bold text-purple-800 uppercase tracking-wider flex items-center gap-2">
+              <MessageSquare className="h-3 w-3 text-purple-600" />
+              Step 2 — Describe Any Symptoms (Optional)
             </label>
             <textarea
               value={clinicalNote}
               onChange={(e) => setClinicalNote(e.target.value)}
               placeholder="e.g., Sharp pinch in lower back, knee feels unstable on landing..."
-              className="w-full p-3 rounded-xl border-2 border-purple-100 bg-white text-sm text-purple-900 placeholder:text-purple-300 focus:border-purple-600 focus:ring-2 focus:ring-purple-200 transition-all outline-none min-h-[80px] resize-none"
+              className="w-full p-3 rounded-xl border-2 border-purple-200 bg-white text-sm text-purple-900 placeholder:text-purple-400 focus:border-purple-600 focus:ring-2 focus:ring-purple-200 transition-all outline-none min-h-[80px] resize-none"
             />
-            <p className="text-[10px] text-purple-400 italic">
-              Nova 2 will prioritize these symptoms in its Extended Thinking phase.
+            <p className="text-[11px] text-purple-600">
+              The AI will prioritize any symptoms you mention during its analysis.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-purple-100/60 rounded-xl border border-purple-200">
             <div className="flex items-start gap-2">
-              <div className="bg-white p-1 rounded shadow-sm">
-                <TrendingUp className="h-3 w-3 text-purple-600" />
+              <div className="bg-white p-1.5 rounded shadow-sm">
+                <TrendingUp className="h-3 w-3 text-purple-700" />
               </div>
-              <div className="text-[11px] leading-tight text-purple-800">
+              <div className="text-[11px] leading-tight text-purple-900">
                 <span className="font-bold block">Physics Engine</span>
                 Calculates torque & joint leverage
               </div>
             </div>
             <div className="flex items-start gap-2">
-              <div className="bg-white p-1 rounded shadow-sm">
-                <Target className="h-3 w-3 text-purple-600" />
+              <div className="bg-white p-1.5 rounded shadow-sm">
+                <Target className="h-3 w-3 text-purple-700" />
               </div>
-              <div className="text-[11px] leading-tight text-purple-800">
-                <span className="font-bold block">SLA Guaranteed</span>
-                Sub-5s Deep Reasoning
+              <div className="text-[11px] leading-tight text-purple-900">
+                <span className="font-bold block">Fast Deep Reasoning</span>
+                Results in under 5 seconds
               </div>
             </div>
           </div>
@@ -722,7 +722,7 @@ const BedrockAnalysisSection = ({
           )}
 
           {/* Nova 2 Extended Thinking - HACKATHON FEATURE */}
-          {reasoning_text && (
+          {reasoningText && (
             <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-4">
               <details className="group">
                 <summary className="cursor-pointer flex items-center gap-2 text-sm font-semibold text-amber-800 hover:text-amber-900 list-none">
@@ -733,7 +733,7 @@ const BedrockAnalysisSection = ({
                   </Badge>
                 </summary>
                 <div className="mt-3 text-xs text-amber-900/80 leading-relaxed font-serif bg-white/50 p-3 rounded border border-amber-50 whitespace-pre-wrap">
-                  {reasoning_text}
+                  {reasoningText}
                 </div>
               </details>
             </div>
