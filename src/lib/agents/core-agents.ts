@@ -37,7 +37,7 @@ export const CORE_AGENTS: CoreAgent[] = [
     description: "Primary fitness analysis agent using Bedrock Nova Lite.",
     location: "EU-North-1",
     capabilities: ["fitness_analysis", "benchmark_analysis"],
-    endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
+    endpoint: "/api/analyze-workout",
     reputationScore: 98,
     successRate: 0.98,
     pricing: {
@@ -60,7 +60,7 @@ export const CORE_AGENTS: CoreAgent[] = [
     description: "Specialized in post-workout nutrition plans.",
     location: "US-West-2",
     capabilities: ["nutrition_planning"],
-    endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/nutrition-agent",
+    endpoint: "/api/nutrition-agent",
     reputationScore: 95,
     successRate: 0.95,
     pricing: {
@@ -82,7 +82,7 @@ export const CORE_AGENTS: CoreAgent[] = [
     description: "Specialized in recovery optimization, sleep, and fatigue management.",
     location: "EU-West-1",
     capabilities: ["recovery_planning"],
-    endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/recovery-agent",
+    endpoint: "/api/recovery-agent",
     reputationScore: 94,
     successRate: 0.94,
     pricing: {
@@ -104,7 +104,7 @@ export const CORE_AGENTS: CoreAgent[] = [
     description: "Deep form analysis and movement quality assessment using pose data.",
     location: "US-East-1",
     capabilities: ["biomechanics_analysis"],
-    endpoint: "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/biomechanics-agent",
+    endpoint: "/api/biomechanics-agent",
     reputationScore: 96,
     successRate: 0.96,
     pricing: {

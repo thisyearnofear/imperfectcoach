@@ -135,7 +135,7 @@ export const AgentServiceBrowser = ({
                     </div>
 
                     {/* Reputation & Location */}
-                    <div className="flex items-center gap-4 text-xs text-gray-600">
+                    <div className="flex items-center gap-4 text-xs text-gray-700">
                       <div className="flex items-center gap-1">
                         <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
                         <span className="font-semibold">
@@ -152,18 +152,18 @@ export const AgentServiceBrowser = ({
 
                     {/* Tier Availability Info */}
                     {tierAvailability && (
-                      <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 rounded-lg p-2">
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-gray-100 rounded-lg p-2">
                         <div>
-                          <span className="text-gray-600">Response SLA:</span>
-                          <p className="font-semibold">
+                          <span className="text-gray-700">Response SLA:</span>
+                          <p className="font-semibold text-gray-900">
                             {tierAvailability.responseSLA < 1000
                               ? `${tierAvailability.responseSLA}ms`
                               : `${(tierAvailability.responseSLA / 1000).toFixed(1)}s`}
                           </p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Available:</span>
-                          <p className="font-semibold">
+                          <span className="text-gray-700">Available:</span>
+                          <p className="font-semibold text-gray-900">
                             {availableSlots}/{tierAvailability.slots}
                             {availableSlots === 0 && " ⚠️"}
                           </p>
@@ -174,7 +174,7 @@ export const AgentServiceBrowser = ({
                     {/* Price & Action */}
                     <div className="flex items-center justify-between pt-2">
                       <div className="text-sm">
-                        <p className="text-gray-600">Price:</p>
+                        <p className="text-gray-700">Price:</p>
                         <p className="text-lg font-bold text-blue-600">
                           ${tierPrice}
                         </p>

@@ -4,8 +4,8 @@
  */
 
 const LAMBDA_ENDPOINTS = {
-    AGENT_CORE: import.meta.env.VITE_AGENT_CORE_URL || "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/agent-coach",
-    PREMIUM_ANALYSIS: import.meta.env.VITE_PREMIUM_ANALYSIS_URL || "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
+    AGENT_CORE: import.meta.env.VITE_AGENT_CORE_URL || "/api/agent-coach",
+    PREMIUM_ANALYSIS: import.meta.env.VITE_PREMIUM_ANALYSIS_URL || "/api/analyze-workout",
 };
 
 export interface WorkoutData {

@@ -24,6 +24,17 @@ const CORS_HEADERS = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
+function getPathParts(path = "") {
+    return path.split("/").filter(Boolean);
+}
+
+function getAgentIdFromPath(path = "") {
+    const parts = getPathParts(path);
+    const agentsIndex = parts.indexOf("agents");
+    if (agentsIndex === -1) return null;
+    return parts[agentsIndex + 1] || null;
+}
+
 // Initialize registry on cold start with DynamoDB persistence
 let agentRegistry = null;
 let dynamoDb = null;
@@ -188,7 +199,16 @@ const handler = async (event) => {
         // Reserve service slot with x402 payment verification
         if (httpMethod === "POST" && path.includes("/agents/") && path.endsWith("/book")) {
             const registry = await getRegistry();
-            const agentId = path.split("/")[2];
+            const agentId = getAgentIdFromPath(path);
+
+            if (!agentId) {
+                return {
+                    statusCode: 400,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({ error: "Invalid booking path" })
+                };
+            }
+
             const data = JSON.parse(body || "{}");
             const { tier, capability, requestData } = data;
 
@@ -270,6 +290,8 @@ const handler = async (event) => {
                     },
                     body: JSON.stringify({
                         error: "Payment Required",
+                        accepts: [challenge],
+                        schemes: [challenge],
                         message: `Payment of ${tieredPrice.baseFee || "0.01"} USDC required to book ${agent.name} (${tier} tier)`,
                         challenge,
                         instructions: {
@@ -359,8 +381,9 @@ const handler = async (event) => {
         // 5. BOOKING STATUS (GET /agents/{id}/booking/{bookingId}) - Phase D
         // Get booking status and progress
         if (httpMethod === "GET" && path.includes("/agents/") && path.includes("/booking/")) {
-            const parts = path.split("/");
-            const agentId = parts[2];
+            const parts = getPathParts(path);
+            const agentsIndex = parts.indexOf("agents");
+            const agentId = agentsIndex >= 0 ? parts[agentsIndex + 1] : null;
             const bookingId = parts.pop();
 
             // In production, would query database/blockchain
@@ -383,7 +406,16 @@ const handler = async (event) => {
         // Agent updates its tier availability (slots, SLA, etc)
         if (httpMethod === "POST" && path.includes("/agents/") && path.endsWith("/availability")) {
             const registry = await getRegistry();
-            const agentId = path.split("/")[2];
+            const agentId = getAgentIdFromPath(path);
+
+            if (!agentId) {
+                return {
+                    statusCode: 400,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({ error: "Invalid availability path" })
+                };
+            }
+
             const data = JSON.parse(body || "{}");
             const { tier, slotsFilled, nextAvailable, responseSLA } = data;
 

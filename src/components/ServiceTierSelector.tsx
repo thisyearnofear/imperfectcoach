@@ -95,7 +95,7 @@ export const ServiceTierSelector = ({
 
                 {/* SLA */}
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600">Response SLA:</span>
+                  <span className="text-gray-700">Response SLA:</span>
                   <Badge variant="outline">
                     {slaMs < 1000
                       ? `${slaMs}ms`

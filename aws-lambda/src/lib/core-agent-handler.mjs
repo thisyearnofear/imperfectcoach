@@ -70,8 +70,46 @@ const NETWORK_CONFIGS = X402_NETWORKS;
  */
 export async function verifyX402Signature(paymentHeader, expectedAmount, network = "base-sepolia") {
   try {
-    // Decode base64 payment header
-    const decoded = JSON.parse(Buffer.from(paymentHeader, 'base64').toString());
+    // Decode payment header (supports JSON, base64, and base64url)
+    const parsePaymentHeader = (headerValue) => {
+      if (!headerValue || typeof headerValue !== "string") {
+        throw new Error("Missing payment header");
+      }
+
+      const trimmed = headerValue.trim();
+
+      // Raw JSON payload support
+      if (trimmed.startsWith("{")) {
+        return JSON.parse(trimmed);
+      }
+
+      // Standard base64
+      try {
+        const base64Decoded = Buffer.from(trimmed, "base64").toString("utf8");
+        if (base64Decoded.startsWith("{")) {
+          return JSON.parse(base64Decoded);
+        }
+      } catch {
+        // continue
+      }
+
+      // Base64url fallback
+      try {
+        const normalized = trimmed.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+        const base64UrlDecoded = Buffer.from(padded, "base64").toString("utf8");
+        if (base64UrlDecoded.startsWith("{")) {
+          return JSON.parse(base64UrlDecoded);
+        }
+      } catch {
+        // continue
+      }
+
+      throw new Error("Invalid payment payload encoding");
+    };
+
+    const decoded = parsePaymentHeader(paymentHeader);
+    const payerAddress = decoded.payerAddress || decoded.payer || decoded.from;
 
     console.log(`🔐 Verifying x402 signature...`);
     console.log(`   Network: ${network}`);
@@ -79,7 +117,7 @@ export async function verifyX402Signature(paymentHeader, expectedAmount, network
     console.log(`   Provided amount: ${decoded.amount}`);
 
     // Verify required fields
-    if (!decoded.signature || !decoded.message || !decoded.payerAddress) {
+    if (!decoded.signature || !decoded.message || !payerAddress) {
       console.warn(`⚠️ Missing required fields in payment header`);
       return { verified: false, reason: "Missing signature, message, or payer address" };
     }
@@ -91,7 +129,7 @@ export async function verifyX402Signature(paymentHeader, expectedAmount, network
       try {
         const signatureBytes = new Uint8Array(Buffer.from(decoded.signature, 'base64'));
         const messageBytes = new TextEncoder().encode(decoded.message);
-        const publicKeyBytes = bs58.decode(decoded.payerAddress);
+        const publicKeyBytes = bs58.decode(payerAddress);
 
         isValid = nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes);
       } catch (e) {
@@ -102,7 +140,7 @@ export async function verifyX402Signature(paymentHeader, expectedAmount, network
     // B. EVM Verification (EIP-191)
     else {
       isValid = await verifyMessage({
-        address: decoded.payerAddress,
+        address: payerAddress,
         message: decoded.message,
         signature: decoded.signature,
       });
@@ -158,12 +196,12 @@ export async function verifyX402Signature(paymentHeader, expectedAmount, network
     }
 
     console.log(`✅ x402 signature verified!`);
-    console.log(`   Payer: ${decoded.payerAddress}`);
+    console.log(`   Payer: ${payerAddress}`);
     console.log(`   Amount: ${formatUnits(providedAmount, 6)} USDC`);
 
     return {
       verified: true,
-      payerAddress: decoded.payerAddress,
+      payerAddress,
       amount: decoded.amount,
       signature: decoded.signature,
       timestamp: decoded.timestamp || Date.now(),

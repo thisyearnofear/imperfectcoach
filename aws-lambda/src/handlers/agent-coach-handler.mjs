@@ -68,6 +68,16 @@ const X402_CONFIG = {
   },
 };
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, X-Payment, X-Chain, X-Signature, X-Agent-ID",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+};
+
+function getHeader(headers = {}, name) {
+  return headers[name] || headers[name.toLowerCase()] || headers[name.toUpperCase()];
+}
+
 async function getAgentKit() {
   if (agentKitInstance) return agentKitInstance;
   if (!process.env.CX0_API_KEY) {
@@ -897,11 +907,7 @@ export const handler = async (event) => {
   if (httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type, X-Payment, X-Chain, X-Signature, X-Agent-ID",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-      },
+      headers: CORS_HEADERS,
       body: "",
     };
   }
@@ -916,7 +922,7 @@ export const handler = async (event) => {
         statusCode: 400,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
+          ...CORS_HEADERS,
         },
         body: JSON.stringify({
           error: "Missing workoutData in request body",
@@ -925,8 +931,9 @@ export const handler = async (event) => {
     }
 
     // Verify x402 Payment (if available in headers)
-    const paymentHeader = event.headers?.["x-payment"] || event.headers?.["X-Payment"];
-    const network = event.headers?.["x-chain"] || event.headers?.["X-Chain"] || "base-mainnet";
+    const headers = event.headers || {};
+    const paymentHeader = getHeader(headers, "X-Payment");
+    const network = getHeader(headers, "X-Chain") || "base-mainnet";
 
     // Initialize Agent Identity
     await getAgentKit();
@@ -948,9 +955,7 @@ export const handler = async (event) => {
         statusCode: 402,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type, X-Payment, X-Chain, X-Signature",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          ...CORS_HEADERS,
         },
         body: JSON.stringify({
           error: "Payment Required",
@@ -986,8 +991,7 @@ export const handler = async (event) => {
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
+        ...CORS_HEADERS,
       },
       body: JSON.stringify({
         success: true,
@@ -1005,7 +1009,7 @@ export const handler = async (event) => {
       statusCode: 500,
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
+        ...CORS_HEADERS,
       },
       body: JSON.stringify({
         error: "AI Coach Agent processing failed",
