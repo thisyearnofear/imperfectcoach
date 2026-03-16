@@ -44,7 +44,7 @@ npx esbuild src/handlers/coach-gemini-handler.mjs \
   --target=node18 \
   --format=esm \
   '--external:@aws-sdk/*' \
-  --outfile=dist/coach-gemini-handler.js
+  --outfile=dist/coach-gemini-handler.mjs
 
 echo ""
 echo "🎉 Build complete!"

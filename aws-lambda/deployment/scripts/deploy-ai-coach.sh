@@ -28,11 +28,11 @@ npx esbuild src/handlers/coach-gemini-handler.mjs \
   --target=node18 \
   --format=esm \
   '--external:@aws-sdk/*' \
-  --outfile=dist/coach-gemini-handler.js
+  --outfile=dist/coach-gemini-handler.mjs
 
 echo -e "${BLUE}🗜️  Creating deployment package...${NC}"
 cd dist
-zip -r ../coach-gemini-lambda.zip coach-gemini-handler.js
+zip -r ../coach-gemini-lambda.zip coach-gemini-handler.mjs
 cd ..
 
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)

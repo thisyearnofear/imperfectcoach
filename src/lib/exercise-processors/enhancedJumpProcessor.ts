@@ -176,7 +176,8 @@ function calibrateInstantly(
 
 // PERFORMANT: Adaptive thresholds prevent false positives from walking/squats
 function calculateAdaptiveThreshold(jumpState: JumpState, currentAnkleY: number): number {
-  if (!jumpState.lastAnkleY || !jumpState.groundLevel) {
+  if (jumpState.lastAnkleY == null || jumpState.groundLevel == null) {
+    jumpState.lastAnkleY = currentAnkleY;
     return 20;
   }
 
@@ -198,7 +199,7 @@ function detectIntentionalJump(
   avgKneeAngle: number,
   threshold: number
 ): boolean {
-  if (!jumpState.groundLevel) return false;
+  if (jumpState.groundLevel == null) return false;
 
   const heightDifference = jumpState.groundLevel - avgAnkleY;
 
