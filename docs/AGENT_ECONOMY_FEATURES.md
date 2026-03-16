@@ -78,7 +78,7 @@ User receives comprehensive analysis
 ## AI Coach Features (Powered by Amazon Nova 2)
 
 ### Multi-Step "Extended Thinking" Reasoning
-- **Engine**: Upgraded to **Amazon Nova 2 Lite** (`nova-lite-v2:0`).
+- **Engine**: Upgraded to **Amazon Nova 2 Lite** (`amazon.nova-2-lite-v1:0`).
 - **Deep Reasoning**: Uses Nova 2's internal reasoning loop to analyze the physics of movement (leverage, torque, stability) before responding.
 - **Agentic Decision-Making**: Up to 5 iterations where the agent decides which tools to invoke based on user-selected diagnostic focus.
 

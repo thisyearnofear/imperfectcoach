@@ -68,7 +68,7 @@ aws-lambda/
 See `deployment/config/.env.example` for required environment variables.
 
 Key variables include:
-- `BEDROCK_MODEL_ID`: Amazon Bedrock model (use `amazon.nova-lite-v2:0`)
+- `BEDROCK_MODEL_ID`: Amazon Bedrock model (use `amazon.nova-2-lite-v1:0`)
 - `AGENT_PRIVATE_KEY`: Agent wallet private key (EVM)
 - `AGENT_SOLANA_PRIVATE_KEY`: Agent wallet private key (Solana)
 - `PRIVACY_FEATURES_ENABLED`: Flag to enable privacy features

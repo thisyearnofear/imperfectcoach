@@ -49,7 +49,7 @@ cd aws-lambda
 The script automatically:
 - Bundles the handler with `esbuild`
 - Configures the `agent-coach-handler.handler` entry point
-- Sets the `BEDROCK_MODEL_ID` to `amazon.nova-lite-v2:0` (Nova 2 Lite)
+- Sets the `BEDROCK_MODEL_ID` to `amazon.nova-2-lite-v1:0` (Nova 2 Lite)
 - Updates the Lambda to the **Node.js 22.x** runtime
 
 ### Manual Deployment
@@ -71,7 +71,7 @@ aws lambda update-function-configuration \
   --function-name imperfect-coach-premium-analysis \
   --handler agent-coach-handler.handler \
   --environment Variables='{
-    "BEDROCK_MODEL_ID":"amazon.nova-lite-v2:0",
+    "BEDROCK_MODEL_ID":"amazon.nova-2-lite-v1:0",
     "PRIVACY_FEATURES_ENABLED":"true",
     "AGENT_PRIVATE_KEY":"your-key",
     "AGENT_SOLANA_PRIVATE_KEY":"your-solana-key"

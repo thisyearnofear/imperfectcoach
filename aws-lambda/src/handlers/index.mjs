@@ -245,7 +245,7 @@ function createErrorResponse(message, statusCode = 400) {
  * Get premium analysis from Amazon Bedrock Nova Lite
  */
 async function getBedrockAnalysis(workoutData) {
-  const MODEL_ID = "amazon.nova-lite-v1:0";
+  const MODEL_ID = process.env.BEDROCK_MODEL_ID || "amazon.nova-2-lite-v1:0";
 
   const prompt = `
 You are an expert fitness analyst providing premium "Deep Dive" analysis. The user has paid for this comprehensive assessment.

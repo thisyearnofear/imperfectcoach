@@ -74,6 +74,13 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
+const DEFAULT_BEDROCK_MODEL_ID = "amazon.nova-2-lite-v1:0";
+
+function getBedrockModelCandidates() {
+  const configuredModelId = process.env.BEDROCK_MODEL_ID;
+  return [...new Set([configuredModelId, DEFAULT_BEDROCK_MODEL_ID].filter(Boolean))];
+}
+
 function getHeader(headers = {}, name) {
   return headers[name] || headers[name.toLowerCase()] || headers[name.toUpperCase()];
 }
@@ -685,6 +692,8 @@ async function runAgentReasoning(workoutData) {
   console.log("🤖 Starting AI Agent reasoning loop with Nova 2 Lite (Multimodal)...");
   const injuryFocus = workoutData.injuryFocus || "none";
   const repImage = workoutData.representativeImage;
+  const modelCandidates = getBedrockModelCandidates();
+  let activeModelId = modelCandidates[0];
   const clinicalNote = workoutData.clinicalNote || "";
 
   const conversationHistory = [];
@@ -754,28 +763,50 @@ If INJURY FOCUS is specified, prioritize checking for biomechanical stress in th
     console.log(`🔄 Agent iteration ${iteration}/${maxIterations}`);
 
     try {
-      const response = await bedrockClient.send(
-        new ConverseCommand({
-          modelId: "eu.amazon.nova-lite-v2:0", // Nova 2 Lite (Cross-region eu-north-1)
-          messages: conversationHistory,
-          system: [systemPrompt],
-          // Enable Extended Thinking (Nova 2 feature)
-          additionalModelRequestFields: {
-             "reasoningConfig": {
-                "type": "enabled"
-             }
-          },
-          toolConfig: {
-            tools: AGENT_TOOLS.map((tool) => ({
-              toolSpec: {
-                name: tool.name,
-                description: tool.description,
-                inputSchema: { json: tool.input_schema },
+      let response;
+      let modelError = null;
+
+      for (const modelId of modelCandidates) {
+        try {
+          response = await bedrockClient.send(
+            new ConverseCommand({
+              modelId,
+              messages: conversationHistory,
+              system: [systemPrompt],
+              // Enable Extended Thinking (Nova 2 feature)
+              additionalModelRequestFields: {
+                 "reasoningConfig": {
+                    "type": "enabled"
+                 }
               },
-            })),
-          },
-        })
-      );
+              toolConfig: {
+                tools: AGENT_TOOLS.map((tool) => ({
+                  toolSpec: {
+                    name: tool.name,
+                    description: tool.description,
+                    inputSchema: { json: tool.input_schema },
+                  },
+                })),
+              },
+            })
+          );
+          activeModelId = modelId;
+          modelError = null;
+          break;
+        } catch (error) {
+          modelError = error;
+          const message = error?.message || "";
+          if (message.includes("model identifier is invalid") && modelId !== DEFAULT_BEDROCK_MODEL_ID) {
+            console.warn(`⚠️ Invalid Bedrock model id '${modelId}', falling back to '${DEFAULT_BEDROCK_MODEL_ID}'`);
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      if (!response && modelError) {
+        throw modelError;
+      }
 
       const message = response.output.message;
       
@@ -834,6 +865,7 @@ If INJURY FOCUS is specified, prioritize checking for biomechanical stress in th
         return {
           success: true,
           agentResponse: finalText,
+          model: activeModelId,
           reasoning_text: fullReasoningChain.map(r => r.thought).join("\n\n"), // Nova 2 Specific
           rehab_protocol: extractRehabProtocol(conversationHistory), // New
           toolsUsed: extractToolsUsed(conversationHistory),
@@ -996,7 +1028,7 @@ export const handler = async (event) => {
       body: JSON.stringify({
         success: true,
         agent_type: "autonomous_coach",
-        model: "amazon.nova-lite-v2:0",
+        model: agentResult.model || DEFAULT_BEDROCK_MODEL_ID,
         agentCore_primitives_used: ["tool_use", "multi_step_reasoning", "autonomous_decision_making", "extended_thinking"],
         ...agentResult,
         timestamp: new Date().toISOString(),

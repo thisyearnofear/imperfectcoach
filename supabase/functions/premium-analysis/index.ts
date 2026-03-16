@@ -14,7 +14,7 @@ const corsHeaders = {
  * The actual premium analysis is handled by AWS Lambda with Amazon Nova Lite.
  *
  * AWS Lambda Endpoint: https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout
- * Model: amazon.nova-lite-v1:0
+ * Model: amazon.nova-2-lite-v1:0
  * Region: eu-north-1
  */
 
@@ -33,9 +33,9 @@ async function handler(req: Request): Promise<Response> {
       JSON.stringify({
         service: "Premium Fitness Analysis",
         status: "active",
-        description: "AI-powered workout analysis using Amazon Nova Lite",
+        description: "AI-powered workout analysis using Amazon Nova 2 Lite",
         endpoint: AWS_API_URL,
-        model: "amazon.nova-lite-v1:0",
+        model: "amazon.nova-2-lite-v1:0",
         region: "eu-north-1",
         features: [
           "Comprehensive form analysis",
