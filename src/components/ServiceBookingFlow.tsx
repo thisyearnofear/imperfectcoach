@@ -16,7 +16,7 @@ import { AgentServiceBrowser } from "./AgentServiceBrowser";
 import { Loader2, CheckCircle, AlertCircle, ExternalLink } from "lucide-react";
 import { ServiceTier, AgentCapability, AgentProfile } from "@/lib/agents/types";
 import { PaymentRouter, RoutingContext } from "@/lib/payments/payment-router";
-import { API_ENDPOINTS } from "@/lib/config";
+import { getAgentDiscoveryUrl } from "@/lib/config";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { calculateTieredPrice } from "@/lib/agents/service-tiers";
 
@@ -103,7 +103,7 @@ export const ServiceBookingFlow = ({
 
       // Prepare payment context
       const context: RoutingContext = {
-        apiUrl: `${API_ENDPOINTS.AGENT_DISCOVERY}/agents/${booking.selectedAgent.id}/book`,
+        apiUrl: getAgentDiscoveryUrl(`${booking.selectedAgent.id}/book`),
         requestBody: {
           capability,
           tier: booking.selectedTier,

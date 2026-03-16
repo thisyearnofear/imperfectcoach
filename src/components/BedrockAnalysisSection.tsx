@@ -422,13 +422,39 @@ const BedrockAnalysisSection = ({
       onAnalysisComplete?.(result);
     } catch (err) {
       console.error("Premium Analysis Error:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : "An unknown error occurred.";
-      setError(errorMessage);
+
+      // Provide a local fallback analysis instead of a dead end
+      const fallback = buildLocalFallbackAnalysis(workoutData, injuryFocus);
+      setAnalysisResult(fallback);
+      setError("Advanced AI analysis is temporarily unavailable. Showing a local summary instead.");
       setPaymentStatus("idle");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const buildLocalFallbackAnalysis = (
+    data: WorkoutData,
+    focus: "none" | "back" | "knee"
+  ): BedrockAnalysisResult => {
+    const score = Math.round(data.averageFormScore || 0);
+    const tips: string[] = [];
+    if (score < 70) tips.push("Reduce speed and prioritise controlled reps.");
+    if (focus === "knee") tips.push("Focus on knee tracking and softer landings.");
+    if (focus === "back") tips.push("Keep your trunk braced and avoid excessive forward lean.");
+    if (data.reps > 0) tips.push(`You completed ${data.reps} reps — review consistency, not just max effort.`);
+
+    return {
+      model: "local-fallback",
+      score,
+      recommendations: tips,
+      analysis:
+        `Instant summary:\n` +
+        `• Exercise: ${data.exercise}\n` +
+        `• Reps: ${data.reps}\n` +
+        `• Average form score: ${score}/100\n\n` +
+        (tips.length ? `Tips:\n` + tips.map(t => `• ${t}`).join("\n") : ""),
+    };
   };
 
   const extractScore = (analysis: string): string => {
@@ -650,9 +676,15 @@ const BedrockAnalysisSection = ({
               <Badge variant="secondary" className="bg-green-100 text-green-800">
                 Complete
               </Badge>
-              <Badge variant="outline" className="border-purple-300 text-purple-700">
-                Nova 2 Powered
-              </Badge>
+              {analysisResult.model === "local-fallback" ? (
+                <Badge variant="outline" className="border-amber-300 text-amber-700">
+                  Local Summary
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-purple-300 text-purple-700">
+                  Nova 2 Powered
+                </Badge>
+              )}
             </div>
           </CardTitle>
         </CardHeader>

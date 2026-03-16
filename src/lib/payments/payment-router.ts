@@ -169,9 +169,19 @@ export class PaymentRouter {
             console.error("💥 PaymentRouter Error:", error);
             return {
                 success: false,
-                error: error.message || "Unknown payment error"
+                error: this.getFriendlyError(error?.message || "Unknown payment error")
             };
         }
+    }
+
+    private static getFriendlyError(message: string): string {
+        if (/failed to fetch|load failed|networkerror/i.test(message)) {
+            return "Service temporarily unavailable. Please try again later.";
+        }
+        if (/500|internal server/i.test(message)) {
+            return "The service is experiencing issues. Please try again shortly.";
+        }
+        return message;
     }
 
 

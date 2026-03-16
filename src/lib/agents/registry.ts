@@ -1,5 +1,5 @@
 import { AgentProfile, DiscoveryQuery, AgentCapability, ServiceTier } from "./types";
-import { API_ENDPOINTS } from "@/lib/config";
+import { API_ENDPOINTS, getAgentDiscoveryUrl } from "@/lib/config";
 
 /**
  * Client-Side Registry Wrapper
@@ -13,6 +13,23 @@ import { API_ENDPOINTS } from "@/lib/config";
  * Reap Protocol reserved for future agentic commerce (product search, inventory verification)
  */
 export class AgentRegistry {
+    private static readonly CACHE_KEY = "agent-discovery-cache";
+
+    private static readCachedAgents(): AgentProfile[] | null {
+        try {
+            const raw = localStorage.getItem(this.CACHE_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    private static writeCachedAgents(agents: AgentProfile[]) {
+        try {
+            localStorage.setItem(this.CACHE_KEY, JSON.stringify(agents));
+        } catch { /* quota exceeded – ignore */ }
+    }
+
     /**
      * Find agents matching specific criteria
      * Queries backend Discovery Service (agent-discovery.js)
@@ -26,14 +43,14 @@ export class AgentRegistry {
             if (query.minReputation) params.append("minReputation", query.minReputation.toString());
             if (query.maxResponseTime) params.append("maxResponseTime", query.maxResponseTime.toString());
 
-            const response = await fetch(`${API_ENDPOINTS.AGENT_DISCOVERY}?${params.toString()}`, {
+            const response = await fetch(`${getAgentDiscoveryUrl()}?${params.toString()}`, {
                 method: "GET",
                 headers: { "Content-Type": "application/json" }
             });
 
             if (!response.ok) {
                 console.warn("Discovery Query Failed:", response.statusText);
-                return this.getMockAgents(query);
+                return this.getFallbackAgents(query);
             }
 
             const data = await response.json();
@@ -49,12 +66,31 @@ export class AgentRegistry {
             if (query.tier || query.minReputation || query.maxResponseTime) {
                 agents = this.filterAgentsByTierAndSLA(agents, query);
             }
+
+            // Cache successful response
+            this.writeCachedAgents(agents);
             
             return agents;
         } catch (error) {
             console.error("Agent Registry Error:", error);
-            return this.getMockAgents(query);
+            return this.getFallbackAgents(query);
         }
+    }
+
+    /** Try cached agents first, then fall back to mock data */
+    private static getFallbackAgents(query: DiscoveryQuery): AgentProfile[] {
+        const cached = this.readCachedAgents();
+        if (cached?.length) {
+            let agents = cached;
+            if (query.capability) {
+                agents = agents.filter(a => a.capabilities.includes(query.capability!));
+            }
+            if (query.tier || query.minReputation || query.maxResponseTime) {
+                agents = this.filterAgentsByTierAndSLA(agents, query);
+            }
+            if (agents.length) return agents;
+        }
+        return this.getMockAgents(query);
     }
 
     /**
@@ -93,7 +129,7 @@ export class AgentRegistry {
      */
     static async getAgent(id: string): Promise<AgentProfile | null> {
         try {
-            const response = await fetch(`${API_ENDPOINTS.AGENT_DISCOVERY}/agents/${id}`, {
+            const response = await fetch(getAgentDiscoveryUrl(id), {
                 method: "GET",
                 headers: { "Content-Type": "application/json" }
             });
@@ -130,7 +166,7 @@ export class AgentRegistry {
      */
     static async bookServiceSlot(agentId: string, tier: ServiceTier, capability: AgentCapability): Promise<{ bookingId: string; expiresAt: number } | null> {
         try {
-            const response = await fetch(`${API_ENDPOINTS.AGENT_DISCOVERY}/agents/${agentId}/book`, {
+            const response = await fetch(getAgentDiscoveryUrl(`${agentId}/book`), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ tier, capability })

@@ -5,6 +5,37 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# Proxy Lambda APIs to avoid CORS issues
+[[redirects]]
+  from = "/api/analyze-workout"
+  to = "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout"
+  status = 200
+  force = true
+  [redirects.headers]
+    X-Chain = ":X-Chain"
+    X-Payment = ":X-Payment"
+
+[[redirects]]
+  from = "/api/agent-coach"
+  to = "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/agent-coach"
+  status = 200
+  force = true
+  [redirects.headers]
+    X-Chain = ":X-Chain"
+    X-Payment = ":X-Payment"
+    X-Signature = ":X-Signature"
+
+[[redirects]]
+  from = "/api/agents/*"
+  to = "https://r03m1wznai.execute-api.eu-north-1.amazonaws.com/prod/agents/:splat"
+  status = 200
+  force = true
+  [redirects.headers]
+    X-Chain = ":X-Chain"
+    X-Payment = ":X-Payment"
+    X-Signature = ":X-Signature"
+    X-Agent-ID = ":X-Agent-ID"
+
 # SPA redirect - this is crucial for React Router
 [[redirects]]
   from = "/*"

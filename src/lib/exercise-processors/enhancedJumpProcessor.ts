@@ -175,25 +175,23 @@ function calibrateInstantly(
 }
 
 // PERFORMANT: Adaptive thresholds prevent false positives from walking/squats
-// FIX: Increased base threshold from 15 to 30 to differentiate jumps from squats
 function calculateAdaptiveThreshold(jumpState: JumpState, currentAnkleY: number): number {
   if (!jumpState.lastAnkleY || !jumpState.groundLevel) {
-    return 30; // Increased default threshold for better jump/squat discrimination
+    return 20;
   }
 
   // Learn from user's natural movement patterns
   const recentMovement = Math.abs(currentAnkleY - jumpState.lastAnkleY);
-  const baseThreshold = 30; // Increased from 15 to 30
+  const baseThreshold = 20;
 
   // If user moves a lot naturally, increase threshold to prevent false positives
-  const adaptiveThreshold = Math.max(baseThreshold, recentMovement * 1.5);
+  const adaptiveThreshold = Math.max(baseThreshold, recentMovement * 1.2);
 
   jumpState.lastAnkleY = currentAnkleY;
-  return Math.min(adaptiveThreshold, 60); // Increased cap from 40 to 60
+  return Math.min(adaptiveThreshold, 45);
 }
 
 // CLEAN: Clear logic for distinguishing intentional jumps from walking/squats
-// FIX: More strict requirements to prevent squat detection as jumps
 function detectIntentionalJump(
   jumpState: JumpState,
   avgAnkleY: number,
@@ -204,15 +202,15 @@ function detectIntentionalJump(
 
   const heightDifference = jumpState.groundLevel - avgAnkleY;
 
-  // FIX: More strict requirements for jump detection:
-  // 1. Significant upward movement (ankles well above ground level)
+  // 1. Significant upward movement (ankles above ground level)
   const hasSignificantHeight = heightDifference > threshold;
 
-  // 2. Extended legs indicate jumping (during squat, knees are bent <120°)
-  const hasJumpingPosture = avgKneeAngle > 150; // Increased from 140 to 150 for stricter check
+  // 2. Legs reasonably extended – during a squat, knees are bent <120°,
+  //    but during a real jump knees can be slightly bent at takeoff/landing
+  const hasJumpingPosture = avgKneeAngle > 120;
 
-  // 3. Additional check: Must be a clear jump, not just raised heels
-  const isClearlyAirborne = heightDifference > 25; // Minimum 25px off ground
+  // 3. Clear airborne displacement (not just raised heels)
+  const isClearlyAirborne = heightDifference > 16;
 
   return hasSignificantHeight && hasJumpingPosture && isClearlyAirborne;
 }
@@ -247,9 +245,8 @@ function processJumpMovement({
     const currentHeight = jumpState.groundLevel! - avgAnkleY;
     jumpState.peakHeight = Math.max(jumpState.peakHeight, currentHeight);
 
-    // FIX: Mark as valid jump only after being airborne for minimum frames
-    // This prevents squat standing motions from being counted
-    if (jumpState.consecutiveAirborneFrames >= 3 && currentHeight >= 25) {
+    // Mark as valid jump after sustained airborne state with meaningful height
+    if (jumpState.consecutiveAirborneFrames >= 2 && currentHeight >= 16) {
       jumpState.validJumpDetected = true;
     }
 
@@ -289,13 +286,15 @@ function processJumpMovement({
     jumpState.consecutiveGroundedFrames++;
     jumpState.consecutiveAirborneFrames = 0;
 
-    // FIX: Complete rep only when:
-    // 1. User lands after being airborne (repState check)
-    // 2. Stayed grounded for at least 4 frames (increased from 2 for stability)
-    // 3. Had a valid jump with meaningful height (not just small movements)
-    const minPeakHeightForValidJump = 20; // Must have at least 20px peak height
+    // Re-smooth ground level while stably grounded to adapt to camera drift
+    if (jumpState.consecutiveGroundedFrames >= 2 && avgKneeAngle > 135 && jumpState.groundLevel != null) {
+      jumpState.groundLevel = jumpState.groundLevel * 0.85 + avgAnkleY * 0.15;
+    }
 
-    if (repState === "AIRBORNE" && jumpState.consecutiveGroundedFrames >= 4) {
+    // Complete rep when user lands after being airborne with meaningful height
+    const minPeakHeightForValidJump = 14;
+
+    if (repState === "AIRBORNE" && jumpState.consecutiveGroundedFrames >= 3) {
       // Only count as valid rep if the jump was meaningful
       if (jumpState.validJumpDetected && jumpState.peakHeight >= minPeakHeightForValidJump) {
         jumpState.repsCompleted++;

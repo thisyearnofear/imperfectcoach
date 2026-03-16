@@ -6,7 +6,7 @@ import {
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
-import { clusterApiUrl } from "@solana/web3.js";
+import { SOLANA_RPC_URL } from "@/lib/solana/config";
 
 // Import Solana wallet styles
 import "@solana/wallet-adapter-react-ui/styles.css";
@@ -21,12 +21,8 @@ interface SolanaProviderProps {
  * Uses Solana Devnet for Phase 1 (matches Base Sepolia environment)
  */
 export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
-  // Use devnet to match Base Sepolia (testnet) environment
-  // Use Alchemy RPC for consistency with indexer queries
-  const endpoint = useMemo(() => 
-    import.meta.env.VITE_SOLANA_DEVNET_RPC_URL || "https://api.devnet.solana.com", 
-    []
-  );
+  // Use centralized RPC config (Helius when available, public devnet fallback)
+  const endpoint = useMemo(() => SOLANA_RPC_URL, []);
 
   const wallets = useMemo(
     () => [

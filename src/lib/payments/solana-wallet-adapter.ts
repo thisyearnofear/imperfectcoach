@@ -5,7 +5,7 @@ import { WalletAdapter } from '@solana/wallet-adapter-base';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
 import { Connection, PublicKey, Transaction } from '@solana/web3.js';
-import { solanaConfig } from '../../wagmi';
+import { SOLANA_RPC_URL } from '@/lib/solana/config';
 
 export interface SolanaWalletState {
   adapter: WalletAdapter | null;
@@ -36,7 +36,7 @@ export class SolanaWalletManager {
       connected: false,
       connecting: false,
       publicKey: null,
-      connection: new Connection(solanaConfig.rpcUrl, 'confirmed')
+      connection: new Connection(SOLANA_RPC_URL, 'confirmed')
     };
 
     // Initialize event listener maps

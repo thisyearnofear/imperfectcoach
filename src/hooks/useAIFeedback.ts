@@ -10,6 +10,7 @@ import {
 } from "@/lib/types";
 import { getRandomFeedback } from "@/lib/feedbackUtils";
 import { getPersonalityFeedback } from "@/lib/coachPersonalities";
+import { FEATURES } from "@/lib/config";
 
 // Legacy personality type for API compatibility
 type LegacyPersonality = "supportive" | "competitive" | "zen";
@@ -90,6 +91,39 @@ export const useAIFeedback = ({
         return;
       }
 
+      // Use Netlify Function when Supabase is disabled
+      if (!FEATURES.ENABLE_SUPABASE_AI) {
+        try {
+          const response = await fetch("/.netlify/functions/coach-gemini", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "feedback",
+              exercise,
+              personality: coachPersonality,
+              ...data,
+            }),
+          });
+          if (response.ok) {
+            const result = await response.json();
+            if (result.feedback) {
+              onFormFeedback(result.feedback);
+              apiErrorCount.current = 0;
+              return;
+            }
+          }
+        } catch {
+          // fall through to local fallback
+        }
+        const personalityFeedback = getFallbackFeedback(
+          exercise,
+          coachPersonality,
+          lastIssues
+        );
+        onFormFeedback(personalityFeedback);
+        return;
+      }
+
       try {
         const { data: responseData, error } = await supabase.functions.invoke(
           "coach-gemini",
@@ -146,6 +180,31 @@ export const useAIFeedback = ({
       }
       if (models.length === 0) {
         return {};
+      }
+
+      // Use Netlify Function when Supabase is disabled
+      if (!FEATURES.ENABLE_SUPABASE_AI) {
+        try {
+          const response = await fetch("/.netlify/functions/coach-gemini", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "summary",
+              exercise: (summaryData.exercise as string) || exercise,
+              personality: coachPersonality,
+              ...summaryData,
+            }),
+          });
+          if (response.ok) {
+            const result = await response.json();
+            if (result.feedback) {
+              return { gemini: result.feedback };
+            }
+          }
+        } catch {
+          // fall through to local fallback
+        }
+        return { gemini: getFallbackSummary(exercise, summaryData) };
       }
 
       const userApiKeys = JSON.parse(
@@ -213,6 +272,32 @@ export const useAIFeedback = ({
     ): Promise<string> => {
       if (!navigator.onLine) {
         return "You're offline. Please connect to the internet to chat with the coach.";
+      }
+
+      // Use Netlify Function when Supabase is disabled
+      if (!FEATURES.ENABLE_SUPABASE_AI) {
+        try {
+          const response = await fetch("/.netlify/functions/coach-gemini", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "chat",
+              exercise,
+              personality: coachPersonality,
+              ...sessionData,
+              chatHistory,
+            }),
+          });
+          if (response.ok) {
+            const result = await response.json();
+            if (result.feedback) {
+              return result.feedback;
+            }
+          }
+        } catch {
+          // fall through to local fallback
+        }
+        return getFallbackChatResponse(exercise, sessionData);
       }
 
       // Only try Gemini to reduce API errors

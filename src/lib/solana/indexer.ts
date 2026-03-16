@@ -182,7 +182,7 @@ async function fetchWithFallback(params: any[]): Promise<any> {
  */
 async function fetchFromSingleEndpoint(endpoint: string, method: string, params: any[]): Promise<any> {
   let attempts = 0;
-  const maxAttempts = 2;
+  const maxAttempts = 3;
 
   while (attempts < maxAttempts) {
     attempts++;
@@ -214,7 +214,7 @@ async function fetchFromSingleEndpoint(endpoint: string, method: string, params:
     } catch (error: any) {
       if (attempts >= maxAttempts) throw error;
       if (error.message?.includes('429') || error.message?.includes('Rate')) {
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 2000));
         continue;
       }
       throw error;

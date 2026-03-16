@@ -7,17 +7,25 @@
 // Lambda/API Gateway Endpoints
 export const API_ENDPOINTS = {
     // Premium Analysis (Bedrock + x402 Payment)
-    PREMIUM_ANALYSIS: import.meta.env.VITE_PREMIUM_ANALYSIS_URL ||
-        "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/analyze-workout",
+    PREMIUM_ANALYSIS: import.meta.env.VITE_PREMIUM_ANALYSIS_URL || "/api/analyze-workout",
 
     // Agent Core (Autonomous reasoning)
-    AGENT_CORE: import.meta.env.VITE_AGENT_CORE_URL ||
-        "https://viaqmsudab.execute-api.eu-north-1.amazonaws.com/agent-coach",
+    AGENT_CORE: import.meta.env.VITE_AGENT_CORE_URL || "/api/agent-coach",
 
-    // Agent Discovery Service
-    AGENT_DISCOVERY: import.meta.env.VITE_AGENT_DISCOVERY_URL ||
-        "https://r03m1wznai.execute-api.eu-north-1.amazonaws.com/prod/agents",
+    // Agent Discovery Service (base URL without /agents suffix)
+    AGENT_DISCOVERY: import.meta.env.VITE_AGENT_DISCOVERY_URL || "/api",
 } as const;
+
+/**
+ * Build a URL for the agent discovery service.
+ * Handles env values that may or may not include a trailing /agents segment.
+ */
+export const getAgentDiscoveryUrl = (path = ""): string => {
+    // Strip any trailing /agents from the base to avoid double-pathing
+    const base = API_ENDPOINTS.AGENT_DISCOVERY.replace(/\/agents\/?$/, "");
+    const segments = ["agents", path].filter(Boolean).join("/");
+    return `${base.replace(/\/+$/, "")}/${segments}`;
+};
 
 // Network Configuration
 export const NETWORKS = {
@@ -94,6 +102,8 @@ export const FEATURES = {
     ENABLE_PREMIUM_ANALYSIS: import.meta.env.VITE_ENABLE_PREMIUM !== "false",
     ENABLE_AGENT_DISCOVERY: import.meta.env.VITE_ENABLE_DISCOVERY !== "false",
     ENABLE_MULTI_NETWORK: import.meta.env.VITE_ENABLE_MULTI_NETWORK !== "false",
+    // Supabase AI function (coach-gemini) — default off since the project is unavailable
+    ENABLE_SUPABASE_AI: import.meta.env.VITE_ENABLE_SUPABASE_AI === "true",
 } as const;
 
 // Network utilities
