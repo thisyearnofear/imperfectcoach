@@ -1,5 +1,4 @@
 import { useRef, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Exercise,
   WorkoutMode,
@@ -8,9 +7,8 @@ import {
   ChatMessage,
   CoachPersonality,
 } from "@/lib/types";
-import { getRandomFeedback } from "@/lib/feedbackUtils";
 import { getPersonalityFeedback } from "@/lib/coachPersonalities";
-import { FEATURES } from "@/lib/config";
+import { API_ENDPOINTS } from "@/lib/config";
 
 // Legacy personality type for API compatibility
 type LegacyPersonality = "supportive" | "competitive" | "zen";
@@ -54,6 +52,20 @@ export const useAIFeedback = ({
   const apiErrorCount = useRef(0);
   const lastErrorTime = useRef(0);
 
+  const invokeCoachApi = useCallback(async (payload: Record<string, unknown>) => {
+    const response = await fetch(API_ENDPOINTS.AI_COACH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Coach API request failed with status ${response.status}`);
+    }
+
+    return response.json();
+  }, []);
+
   const getAIFeedback = useCallback(
     async (data: Record<string, unknown>) => {
       if (aiFeedbackCooldown.current || workoutMode === "assessment") return;
@@ -91,54 +103,16 @@ export const useAIFeedback = ({
         return;
       }
 
-      // Use Netlify Function when Supabase is disabled
-      if (!FEATURES.ENABLE_SUPABASE_AI) {
-        try {
-          const response = await fetch("/.netlify/functions/coach-gemini", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "feedback",
-              exercise,
-              personality: coachPersonality,
-              ...data,
-            }),
-          });
-          if (response.ok) {
-            const result = await response.json();
-            if (result.feedback) {
-              onFormFeedback(result.feedback);
-              apiErrorCount.current = 0;
-              return;
-            }
-          }
-        } catch {
-          // fall through to local fallback
-        }
-        const personalityFeedback = getFallbackFeedback(
-          exercise,
-          coachPersonality,
-          lastIssues
-        );
-        onFormFeedback(personalityFeedback);
-        return;
-      }
-
       try {
-        const { data: responseData, error } = await supabase.functions.invoke(
-          "coach-gemini",
-          {
-            body: {
-              type: "feedback",
-              exercise,
-              personality: coachPersonality,
-              ...data,
-            },
-          }
-        );
-        if (error) throw error;
-        if (responseData.feedback) {
-          onFormFeedback(responseData.feedback);
+        const result = await invokeCoachApi({
+          type: "feedback",
+          exercise,
+          personality: coachPersonality,
+          ...data,
+        });
+
+        if (result.feedback) {
+          onFormFeedback(result.feedback);
           // Reset error count on successful call
           apiErrorCount.current = 0;
         }
@@ -164,7 +138,7 @@ export const useAIFeedback = ({
         onFormFeedback(fallbackFeedback);
       }
     },
-    [exercise, coachPersonality, workoutMode, onFormFeedback]
+    [exercise, coachPersonality, workoutMode, onFormFeedback, invokeCoachApi]
   );
 
   const getAISessionSummary = useCallback(
@@ -182,86 +156,32 @@ export const useAIFeedback = ({
         return {};
       }
 
-      // Use Netlify Function when Supabase is disabled
-      if (!FEATURES.ENABLE_SUPABASE_AI) {
-        try {
-          const response = await fetch("/.netlify/functions/coach-gemini", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "summary",
-              exercise: (summaryData.exercise as string) || exercise,
-              personality: coachPersonality,
-              ...summaryData,
-            }),
-          });
-          if (response.ok) {
-            const result = await response.json();
-            if (result.feedback) {
-              return { gemini: result.feedback };
-            }
-          }
-        } catch {
-          // fall through to local fallback
-        }
+      if (!models.includes("gemini")) {
         return { gemini: getFallbackSummary(exercise, summaryData) };
       }
 
-      const userApiKeys = JSON.parse(
-        localStorage.getItem("user-api-keys") || "{}"
-      );
+      try {
+        const userApiKeys = JSON.parse(localStorage.getItem("user-api-keys") || "{}");
+        const result = await invokeCoachApi({
+          userApiKeys,
+          model: "gemini",
+          type: "summary",
+          exercise: (summaryData.exercise as string) || exercise,
+          personality: coachPersonality,
+          ...summaryData,
+        });
 
-      // Only try Gemini to reduce API errors
-      const promises = models
-        .filter(model => model === "gemini") // Only try Gemini model
-        .map((model) =>
-          supabase.functions.invoke("coach-gemini", {
-            body: {
-              userApiKeys,
-              model,
-              type: "summary",
-              // Use exercise from summaryData if provided, otherwise use hook's exercise
-              exercise: (summaryData.exercise as string) || exercise,
-              personality: coachPersonality,
-              ...summaryData,
-            },
-          })
-        );
-
-      if (promises.length === 0) {
-        // Fallback if no Gemini model
+        return {
+          gemini: result.feedback || getFallbackSummary(exercise, summaryData),
+        };
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("Error getting AI session summary:", error);
+        }
         return { gemini: getFallbackSummary(exercise, summaryData) };
       }
-
-      const results = await Promise.allSettled(promises);
-      const summaries: SessionSummaries = {};
-
-      results.forEach((result, index) => {
-        const model = "gemini"; // We only attempted Gemini
-        if (result.status === "fulfilled" && !result.value.error) {
-          summaries[model] =
-            result.value.data.feedback ||
-            `Could not generate summary from ${model}.`;
-        } else {
-          summaries[model] = getFallbackSummary(exercise, summaryData);
-          // Only log in development mode to reduce console spam
-          if (process.env.NODE_ENV === "development") {
-            console.warn(
-              `Error getting AI session summary for ${model}:`,
-              result.status === "rejected" ? result.reason : result.value.error
-            );
-          }
-        }
-      });
-
-      // Ensure we have at least a Gemini summary
-      if (!summaries.gemini) {
-        summaries.gemini = getFallbackSummary(exercise, summaryData);
-      }
-
-      return summaries;
     },
-    [exercise, coachPersonality]
+    [exercise, coachPersonality, invokeCoachApi]
   );
 
   const getAIChatResponse = useCallback(
@@ -274,58 +194,22 @@ export const useAIFeedback = ({
         return "You're offline. Please connect to the internet to chat with the coach.";
       }
 
-      // Use Netlify Function when Supabase is disabled
-      if (!FEATURES.ENABLE_SUPABASE_AI) {
-        try {
-          const response = await fetch("/.netlify/functions/coach-gemini", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "chat",
-              exercise,
-              personality: coachPersonality,
-              ...sessionData,
-              chatHistory,
-            }),
-          });
-          if (response.ok) {
-            const result = await response.json();
-            if (result.feedback) {
-              return result.feedback;
-            }
-          }
-        } catch {
-          // fall through to local fallback
-        }
-        return getFallbackChatResponse(exercise, sessionData);
-      }
-
       // Only try Gemini to reduce API errors
       if (model !== "gemini") {
         return getFallbackChatResponse(exercise, sessionData);
       }
 
-      const userApiKeys = JSON.parse(
-        localStorage.getItem("user-api-keys") || "{}"
-      );
-
       try {
-        const { data: responseData, error } = await supabase.functions.invoke(
-          "coach-gemini",
-          {
-            body: {
-              userApiKeys,
-              model,
-              type: "chat",
-              exercise,
-              personality: coachPersonality,
-              ...sessionData,
-              chatHistory,
-            },
-          }
-        );
-
-        if (error) throw error;
+        const userApiKeys = JSON.parse(localStorage.getItem("user-api-keys") || "{}");
+        const responseData = await invokeCoachApi({
+          userApiKeys,
+          model,
+          type: "chat",
+          exercise,
+          personality: coachPersonality,
+          ...sessionData,
+          chatHistory,
+        });
 
         return (
           responseData.feedback || "Sorry, I couldn't come up with a response."
@@ -338,7 +222,7 @@ export const useAIFeedback = ({
         return getFallbackChatResponse(exercise, sessionData);
       }
     },
-    [exercise, coachPersonality]
+    [exercise, coachPersonality, invokeCoachApi]
   );
 
   return { getAIFeedback, getAISessionSummary, getAIChatResponse };

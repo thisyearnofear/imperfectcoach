@@ -19,6 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "@0xgasless/agentkit": "^0.0.16",
+    "@google/generative-ai": "^0.24.1",
     "@aws-sdk/client-bedrock-agent-runtime": "^3.914.0",
     "@aws-sdk/client-bedrock-runtime": "^3.0.0",
     "@aws-sdk/client-dynamodb": "3.948.0",

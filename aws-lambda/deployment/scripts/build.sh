@@ -38,6 +38,14 @@ npx esbuild src/handlers/agent-coach-handler.mjs \
   '--external:@aws-sdk/*' \
   --outfile=dist/agent-coach.js
 
+npx esbuild src/handlers/coach-gemini-handler.mjs \
+  --bundle \
+  --platform=node \
+  --target=node18 \
+  --format=esm \
+  '--external:@aws-sdk/*' \
+  --outfile=dist/coach-gemini-handler.js
+
 echo ""
 echo "🎉 Build complete!"
 echo "📊 Bundle sizes:"

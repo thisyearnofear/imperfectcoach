@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from "sonner";
 
 export function ApiKeySettings() {
-    const [keys, setKeys] = useState({ gemini: '', openai: '', anthropic: '' });
+    const [keys, setKeys] = useState({ venice: '', gemini: '', openai: '', anthropic: '' });
     const [isClient, setIsClient] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
 
@@ -53,7 +53,11 @@ export function ApiKeySettings() {
     const content = (
         <div className="space-y-4">
             <div className="space-y-2">
-                <Label htmlFor="gemini-key">Gemini API Key</Label>
+                <Label htmlFor="venice-key">Venice API Key (default)</Label>
+                <Input id="venice-key" name="venice" type="password" value={keys.venice} onChange={handleChange} placeholder="Enter your Venice key" />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="gemini-key">Gemini API Key (fallback)</Label>
                 <Input id="gemini-key" name="gemini" type="password" value={keys.gemini} onChange={handleChange} placeholder="Enter your Gemini key" />
             </div>
             <div className="space-y-2">

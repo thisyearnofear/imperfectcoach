@@ -138,7 +138,7 @@ export const OnboardingCarousel = ({
                           Multi-AI Coaching
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Insights from Gemini, GPT-4, Claude
+                          Insights from Venice, GPT-4, Claude
                         </p>
                       </div>
                     </div>
@@ -266,7 +266,7 @@ export const OnboardingCarousel = ({
                       <ul className="space-y-2 text-sm">
                         <li className="flex items-center gap-2">
                           <CheckCircle className="h-4 w-4 text-green-600" />
-                          Basic AI analysis (Gemini)
+                          Basic AI analysis (Venice)
                         </li>
                         <li className="flex items-center gap-2">
                           <CheckCircle className="h-4 w-4 text-green-600" />

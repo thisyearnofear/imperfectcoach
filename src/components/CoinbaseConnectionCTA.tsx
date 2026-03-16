@@ -74,7 +74,7 @@ const CoinbaseConnectionCTA = ({
           </Badge>
         </div>
         <p className="text-blue-700 text-sm">
-          Free Gemini analysis of{" "}
+          Free Venice analysis of{" "}
           <span className="font-semibold">
             {reps} {exercise.replace("-", " ")}
           </span>{" "}

@@ -236,7 +236,7 @@ export const UnifiedActionCTA = ({
               </Badge>
             </div>
             <p className="text-blue-700 text-sm">
-              Free Gemini analysis of <WorkoutSummary /> - once connected - is
+              Free Venice analysis of <WorkoutSummary /> - once connected - is
               just the beginning.
             </p>
           </CardHeader>

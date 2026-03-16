@@ -3,8 +3,11 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts"; // Required for OpenAI library
 
 // API Keys from Supabase secrets (as fallbacks)
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const VENICE_API_KEY = Deno.env.get("VENICE_API_KEY");
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const VENICE_BASE_URL = "https://api.venice.ai/api/v1";
+const VENICE_MODEL = "venice-uncensored";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -235,9 +238,54 @@ const analyzeJumpSession = (repHistory) => {
 
 // --- API HELPERS ---
 
+const getPromptData = (body) => {
+  const { type = "summary" } = body;
+
+  if (type === "feedback" && body.exercise === "jumps") {
+    return getJumpFeedbackPrompt(body);
+  }
+  if (type === "summary") {
+    return getSummaryPrompt(body);
+  }
+  return getChatPrompt(body);
+};
+
+const generateVeniceFeedback = async (body, apiKey) => {
+  const finalApiKey = apiKey || VENICE_API_KEY;
+  if (!finalApiKey) throw new Error("VENICE_API_KEY is not set.");
+
+  const { system, user } = getPromptData(body);
+
+  const response = await fetch(`${VENICE_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${finalApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: VENICE_MODEL,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      temperature: 0.8,
+      max_tokens: 150,
+    }),
+  });
+
+  if (!response.ok)
+    throw new Error(`Venice API Error (${response.status}): ${await response.text()}`);
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (typeof content !== "string" || !content.trim()) {
+    throw new Error("Unexpected response structure from Venice API");
+  }
+  return content.trim();
+};
+
 const generateGeminiFeedback = async (body, apiKey) => {
   console.log("Starting Gemini feedback generation...");
-  const { type = "summary" } = body;
   const finalApiKey = apiKey || GEMINI_API_KEY;
 
   if (!finalApiKey) {
@@ -247,14 +295,8 @@ const generateGeminiFeedback = async (body, apiKey) => {
 
   let promptData;
   try {
-    if (type === "feedback" && body.exercise === "jumps") {
-      promptData = getJumpFeedbackPrompt(body);
-    } else if (type === "summary") {
-      promptData = getSummaryPrompt(body);
-    } else {
-      promptData = getChatPrompt(body);
-    }
-    console.log("Generated prompt data for type:", type);
+    promptData = getPromptData(body);
+    console.log("Generated prompt data for type:", body.type || "summary");
   } catch (promptError) {
     console.error("Error generating prompt:", promptError);
     throw new Error(`Failed to generate prompt: ${promptError.message}`);
@@ -302,18 +344,10 @@ const generateGeminiFeedback = async (body, apiKey) => {
 };
 
 const generateOpenAIFeedback = async (body, apiKey) => {
-  const { type = "summary" } = body;
   const finalApiKey = apiKey || OPENAI_API_KEY;
   if (!finalApiKey) throw new Error("OPENAI_API_KEY is not set.");
 
-  let promptData;
-  if (type === "feedback" && body.exercise === "jumps") {
-    promptData = getJumpFeedbackPrompt(body);
-  } else if (type === "summary") {
-    promptData = getSummaryPrompt(body);
-  } else {
-    promptData = getChatPrompt(body);
-  }
+  const promptData = getPromptData(body);
 
   const { system, user } = promptData;
   const API_URL = "https://api.openai.com/v1/chat/completions";
@@ -344,18 +378,10 @@ const generateOpenAIFeedback = async (body, apiKey) => {
 };
 
 const generateAnthropicFeedback = async (body, apiKey) => {
-  const { type = "summary" } = body;
   const finalApiKey = apiKey || ANTHROPIC_API_KEY;
   if (!finalApiKey) throw new Error("ANTHROPIC_API_KEY is not set.");
 
-  let promptData;
-  if (type === "feedback" && body.exercise === "jumps") {
-    promptData = getJumpFeedbackPrompt(body);
-  } else if (type === "summary") {
-    promptData = getSummaryPrompt(body);
-  } else {
-    promptData = getChatPrompt(body);
-  }
+  const promptData = getPromptData(body);
 
   const { system, user } = promptData;
   const API_URL = "https://api.anthropic.com/v1/messages";
@@ -409,7 +435,7 @@ serve(async (req) => {
       );
     }
 
-    const { model = "gemini", type, userApiKeys } = body;
+    const { model = "venice", type, userApiKeys } = body;
 
     console.log("Processing request:", { model, type });
 
@@ -427,6 +453,15 @@ serve(async (req) => {
     let feedback;
     try {
       switch (model) {
+        case "venice":
+          console.log("Calling Venice...");
+          try {
+            feedback = await generateVeniceFeedback(body, userApiKeys?.venice);
+          } catch (veniceError) {
+            console.warn("Venice failed, falling back to Gemini:", veniceError);
+            feedback = await generateGeminiFeedback(body, userApiKeys?.gemini);
+          }
+          break;
         case "openai":
           console.log("Calling OpenAI...");
           feedback = await generateOpenAIFeedback(body, userApiKeys?.openai);
@@ -439,9 +474,17 @@ serve(async (req) => {
           );
           break;
         case "gemini":
-        default:
           console.log("Calling Gemini...");
           feedback = await generateGeminiFeedback(body, userApiKeys?.gemini);
+          break;
+        default:
+          console.log("Unknown model, defaulting to Venice with Gemini fallback...");
+          try {
+            feedback = await generateVeniceFeedback(body, userApiKeys?.venice);
+          } catch (veniceError) {
+            console.warn("Venice failed, falling back to Gemini:", veniceError);
+            feedback = await generateGeminiFeedback(body, userApiKeys?.gemini);
+          }
           break;
       }
       console.log("Generated feedback successfully");

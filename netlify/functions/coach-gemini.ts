@@ -1,6 +1,9 @@
 import type { Handler } from "@netlify/functions";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const VENICE_API_KEY = process.env.VENICE_API_KEY;
+const VENICE_BASE_URL = "https://api.venice.ai/api/v1";
+const VENICE_MODEL = "venice-uncensored";
 
 // --- PROMPT ENGINEERING ---
 
@@ -193,27 +196,74 @@ const getChatPrompt = (data: any) => {
   };
 };
 
-// --- GEMINI API CALL ---
+// --- AI PROVIDER API CALLS ---
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getPromptData = (body: any) => {
+  const { type = "summary" } = body;
+
+  if (type === "feedback" && body.exercise === "jumps") {
+    return getJumpFeedbackPrompt(body);
+  }
+  if (type === "summary") {
+    return getSummaryPrompt(body);
+  }
+  return getChatPrompt(body);
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const generateVeniceFeedback = async (body: any): Promise<string> => {
+  const { userApiKeys } = body;
+  const apiKey = userApiKeys?.venice || VENICE_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("VENICE_API_KEY is not set.");
+  }
+
+  const { system, user } = getPromptData(body);
+
+  const response = await fetch(`${VENICE_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: VENICE_MODEL,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      temperature: 0.8,
+      max_tokens: 150,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Venice API Error (${response.status}): ${errorText}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+
+  if (typeof content !== "string" || !content.trim()) {
+    throw new Error("Unexpected response structure from Venice API");
+  }
+
+  return content.trim();
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const generateGeminiFeedback = async (body: any): Promise<string> => {
-  const { type = "summary", userApiKeys } = body;
+  const { userApiKeys } = body;
   const apiKey = userApiKeys?.gemini || GEMINI_API_KEY;
 
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set.");
   }
 
-  let promptData;
-  if (type === "feedback" && body.exercise === "jumps") {
-    promptData = getJumpFeedbackPrompt(body);
-  } else if (type === "summary") {
-    promptData = getSummaryPrompt(body);
-  } else {
-    promptData = getChatPrompt(body);
-  }
-
-  const { system, user } = promptData;
+  const { system, user } = getPromptData(body);
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
 
   const requestBody = {
@@ -268,7 +318,13 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    const feedback = await generateGeminiFeedback(body);
+    let feedback: string;
+    try {
+      feedback = await generateVeniceFeedback(body);
+    } catch (veniceError) {
+      console.warn("Venice failed, falling back to Gemini", veniceError);
+      feedback = await generateGeminiFeedback(body);
+    }
 
     return {
       statusCode: 200,

@@ -14,6 +14,9 @@ export const API_ENDPOINTS = {
 
     // Agent Discovery Service (base URL without /agents suffix)
     AGENT_DISCOVERY: import.meta.env.VITE_AGENT_DISCOVERY_URL || "/api",
+
+    // AI Coach endpoint (migrated from Supabase function)
+    AI_COACH: import.meta.env.VITE_AI_COACH_URL || "/api/coach-gemini",
 } as const;
 
 /**
@@ -102,7 +105,7 @@ export const FEATURES = {
     ENABLE_PREMIUM_ANALYSIS: import.meta.env.VITE_ENABLE_PREMIUM !== "false",
     ENABLE_AGENT_DISCOVERY: import.meta.env.VITE_ENABLE_DISCOVERY !== "false",
     ENABLE_MULTI_NETWORK: import.meta.env.VITE_ENABLE_MULTI_NETWORK !== "false",
-    // Supabase AI function (coach-gemini) — default off since the project is unavailable
+    // Legacy flag kept for backward compatibility only
     ENABLE_SUPABASE_AI: import.meta.env.VITE_ENABLE_SUPABASE_AI === "true",
 } as const;
 

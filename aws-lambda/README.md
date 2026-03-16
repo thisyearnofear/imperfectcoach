@@ -35,6 +35,7 @@ aws-lambda/
 │   │   ├── build.sh        # Build and bundle functions
 │   │   ├── deploy-core.sh  # Deploy core agent function
 │   │   ├── deploy-agent.sh # Deploy agent coach function
+│   │   ├── deploy-ai-coach.sh # Deploy Venice→Gemini AI coach endpoint
 │   │   └── setup-dynamodb.sh # DynamoDB setup script
 │   ├── infrastructure/     # IaC templates (Terraform/CloudFormation)
 │   └── config/             # Environment configuration
@@ -80,6 +81,7 @@ To deploy the Lambda functions:
 2. Run the build script: `./deployment/scripts/build.sh`
 3. Deploy the core function: `./deployment/scripts/deploy-core.sh`
 4. Deploy the agent function: `./deployment/scripts/deploy-agent.sh`
+5. Deploy the AI coach endpoint: `./deployment/scripts/deploy-ai-coach.sh`
 
 ## Testing
 
